@@ -352,6 +352,91 @@
       grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
     }
 
+    /* Dedicated Vertical Mobile Layout (Auto on Portrait Mobile + Manual Toggle) */
+    html[data-vertical-mobile="true"] body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    html[data-vertical-mobile="true"] #mainStudioShell {
+      width: 100%;
+      max-width: 430px;
+      height: 100dvh;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    @media (min-width: 520px) {
+      html[data-vertical-mobile="true"] #mainStudioShell {
+        height: 94dvh;
+        border-radius: 28px;
+        border: 1px solid var(--shell-border);
+        box-shadow: 0 28px 70px -15px rgba(0, 0, 0, 0.32), 0 0 0 1px rgba(15, 23, 42, 0.08);
+      }
+    }
+
+    html[data-vertical-mobile="true"] #studioSidebar {
+      position: fixed !important;
+      top: 0 !important;
+      bottom: 0 !important;
+      left: 0 !important;
+      width: 16.5rem !important;
+      z-index: 40 !important;
+      transform: translateX(-100%);
+    }
+
+    html[data-vertical-mobile="true"] #studioSidebar.vertical-drawer-open {
+      transform: translateX(0) !important;
+    }
+
+    html[data-vertical-mobile="true"] #mobileSidebarBackdrop.vertical-backdrop-open {
+      display: block !important;
+    }
+
+    html[data-vertical-mobile="true"] #mobileMenuBtn,
+    html[data-vertical-mobile="true"] #mobileSidebarCloseBtn {
+      display: inline-flex !important;
+    }
+
+    html[data-vertical-mobile="true"] #headerSegmentWrap {
+      display: none !important;
+    }
+
+    html[data-vertical-mobile="true"] #mobileBottomNav {
+      display: grid !important;
+    }
+
+    html[data-vertical-mobile="true"] #studioHeader {
+      padding: 0.7rem 0.95rem !important;
+      gap: 0.5rem !important;
+    }
+
+    html[data-vertical-mobile="true"] #studioMainViewport {
+      padding: 0.9rem 0.9rem 5.25rem 0.9rem !important;
+    }
+
+    html[data-vertical-mobile="true"] #studioMainViewport .grid.grid-cols-1 {
+      grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    html[data-vertical-mobile="true"] #studioMainViewport [class*="lg:col-span-"],
+    html[data-vertical-mobile="true"] #studioMainViewport [class*="xl:col-span-"],
+    html[data-vertical-mobile="true"] #studioMainViewport [class*="md:col-span-"] {
+      grid-column: span 1 / span 1 !important;
+    }
+
+    html[data-vertical-mobile="true"] #billingTemplateSelector {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    html[data-vertical-mobile="true"] .helios-card {
+      padding: 1rem !important;
+      border-radius: 14px !important;
+    }
+
     @media print {
       body * { visibility: hidden; }
       #invoicePreviewPrintArea, #invoicePreviewPrintArea * { visibility: visible; }
@@ -434,7 +519,7 @@
             <div id="sidebarStudioTitle" class="text-sm font-semibold tracking-tight truncate">Zubair Alam</div>
             <div id="sidebarStudioSubtitle" class="text-xs text-slate-500 dark:text-slate-400 truncate">Event Management Studio</div>
           </div>
-          <button type="button" onclick="toggleMobileSidebar(false)" aria-label="Close navigation" class="lg:hidden btn-mac-secondary px-2 py-1 text-xs shrink-0">&times;</button>
+          <button id="mobileSidebarCloseBtn" type="button" onclick="toggleMobileSidebar(false)" aria-label="Close navigation" class="lg:hidden btn-mac-secondary px-2 py-1 text-xs shrink-0">&times;</button>
         </div>
 
         <!-- Categorized Navigation -->
@@ -548,6 +633,11 @@
             <button type="button" onclick="switchView('converter')" data-top-segment="converter" class="mac-segment-btn">Converter</button>
             <button type="button" onclick="switchView('calendar')" data-top-segment="calendar" class="mac-segment-btn">Calendar</button>
           </div>
+
+          <button id="verticalModeToggleBtn" type="button" onclick="toggleVerticalMobileMode()" class="btn-mac-secondary px-2.5 sm:px-3 py-1.5 text-xs shrink-0 flex items-center gap-1.5" title="Switch between Vertical Mobile and Desktop layout">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+            <span id="verticalModeToggleLabel">Mobile View</span>
+          </button>
 
           <button type="button" onclick="downloadOrganizedZipArchive()" class="btn-mac-secondary px-3 sm:px-3.5 py-1.5 text-xs shrink-0">
             <span class="hidden sm:inline">Export .ZIP</span>
@@ -2090,6 +2180,7 @@
     };
 
     let isMobileSidebarOpen = false;
+    let manualVerticalModeOverride = null; // null = auto, true = force vertical mobile, false = force desktop/wide
 
     function toggleMobileSidebar(forceState) {
       const sidebar = document.getElementById('studioSidebar');
@@ -2098,24 +2189,54 @@
       isMobileSidebarOpen = typeof forceState === 'boolean' ? forceState : !isMobileSidebarOpen;
       if (isMobileSidebarOpen) {
         sidebar.classList.remove('-translate-x-full');
+        sidebar.classList.add('vertical-drawer-open');
         backdrop.classList.remove('hidden');
+        backdrop.classList.add('vertical-backdrop-open');
       } else {
         sidebar.classList.add('-translate-x-full');
+        sidebar.classList.remove('vertical-drawer-open');
         backdrop.classList.add('hidden');
+        backdrop.classList.remove('vertical-backdrop-open');
       }
+    }
+
+    function updateVerticalToggleBtnUI(isVerticalActive) {
+      const label = document.getElementById('verticalModeToggleLabel');
+      const btn = document.getElementById('verticalModeToggleBtn');
+      if (label) {
+        label.textContent = isVerticalActive ? 'Desktop View' : 'Vertical Mobile';
+      }
+      if (btn) {
+        btn.classList.toggle('border-[#007AFF]', isVerticalActive);
+        btn.classList.toggle('text-[#007AFF]', isVerticalActive);
+      }
+    }
+
+    function toggleVerticalMobileMode() {
+      const currentlyVertical = document.documentElement.getAttribute('data-vertical-mobile') === 'true';
+      manualVerticalModeOverride = !currentlyVertical;
+      syncMobileViewportOrientation();
+      showToast(manualVerticalModeOverride ? 'Switched to Vertical Mobile layout.' : 'Switched to Full Wide layout.');
     }
 
     function syncMobileViewportOrientation() {
       const width = window.innerWidth || document.documentElement.clientWidth || 1024;
       const height = window.innerHeight || document.documentElement.clientHeight || 768;
       const isCoarsePointer = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+      const isMobileUA = /Android|iPhone|iPad|iPod|Mobile/i.test((navigator && navigator.userAgent) || '');
       const isPortrait = height >= width;
-      const isMobile = width < 1024 || (isCoarsePointer && height <= 560);
+      const isMobile = width < 1024 || isMobileUA || (isCoarsePointer && height <= 560);
 
-      document.documentElement.setAttribute('data-device', isMobile ? 'mobile' : 'desktop');
-      document.documentElement.setAttribute('data-orientation', isPortrait ? 'portrait' : 'landscape');
+      const autoVertical = (isMobile && isPortrait) || width < 680;
+      const isVerticalActive = manualVerticalModeOverride !== null ? manualVerticalModeOverride : autoVertical;
 
-      if (!isMobile && isMobileSidebarOpen) {
+      document.documentElement.setAttribute('data-device', (isMobile || isVerticalActive) ? 'mobile' : 'desktop');
+      document.documentElement.setAttribute('data-orientation', (isPortrait || isVerticalActive) ? 'portrait' : 'landscape');
+      document.documentElement.setAttribute('data-vertical-mobile', isVerticalActive ? 'true' : 'false');
+
+      updateVerticalToggleBtnUI(isVerticalActive);
+
+      if (!isMobile && !isVerticalActive && isMobileSidebarOpen) {
         toggleMobileSidebar(false);
       }
     }
