@@ -2,7 +2,7 @@
 <html lang="en" class="light">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Zubair Freelance — Event Management Studio</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -274,7 +274,82 @@
       width: 100vw !important;
       max-width: 100vw !important;
       height: 100vh !important;
+      height: 100dvh !important;
       border-radius: 0 !important;
+    }
+
+    html, body, #mainStudioShell {
+      width: 100%;
+      height: 100vh;
+      height: 100dvh;
+    }
+
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    .mobile-bottom-nav {
+      background: var(--sidebar-bg);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border-top: 1px solid var(--card-border);
+      padding-bottom: max(0.35rem, env(safe-area-inset-bottom));
+    }
+
+    .mobile-bottom-btn {
+      color: var(--text-secondary);
+      transition: color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .mobile-bottom-btn.active {
+      color: var(--mac-blue);
+      background: rgba(0, 122, 255, 0.10);
+    }
+
+    /* Adaptive Mobile Portrait & Landscape Orientation Rules */
+    @media (max-width: 1023px), (max-height: 540px) and (pointer: coarse) {
+      #studioHeader {
+        padding: 0.65rem 1rem;
+        gap: 0.5rem;
+      }
+      #studioMainViewport {
+        padding: 1rem;
+      }
+      .helios-card {
+        padding: 1rem;
+      }
+    }
+
+    html[data-device="mobile"][data-orientation="portrait"] #headerSegmentWrap {
+      display: none;
+    }
+
+    html[data-device="mobile"][data-orientation="portrait"] #studioMainViewport {
+      padding-bottom: 5rem;
+    }
+
+    html[data-device="mobile"][data-orientation="landscape"] #mobileBottomNav {
+      display: none !important;
+    }
+
+    html[data-device="mobile"][data-orientation="landscape"] #headerSegmentWrap {
+      display: flex;
+      max-width: 100%;
+    }
+
+    html[data-device="mobile"][data-orientation="landscape"] #studioHeader {
+      padding: 0.5rem 0.875rem;
+    }
+
+    html[data-device="mobile"][data-orientation="landscape"] #studioMainViewport {
+      padding: 0.75rem 1rem 1rem 1rem;
+    }
+
+    html[data-device="mobile"][data-orientation="landscape"] .mobile-landscape-2col {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    html[data-device="mobile"][data-orientation="landscape"] .mobile-landscape-3col {
+      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
     }
 
     @media print {
@@ -292,7 +367,7 @@
     }
   </style>
 </head>
-<body class="m-0 p-0 w-screen h-screen overflow-hidden select-none">
+<body class="m-0 p-0 w-full h-screen overflow-hidden select-none">
 
   <!-- =================================================================== -->
   <!-- 1. MINIMAL AUTHENTICATION LOCK SCREEN                               -->
@@ -343,17 +418,23 @@
   </div>
 
   <!-- =================================================================== -->
-  <!-- 2. MAIN MACOS DESKTOP SHELL                                         -->
+  <!-- 2. MAIN MACOS DESKTOP & ADAPTIVE MOBILE SHELL                       -->
   <!-- =================================================================== -->
-  <div id="mainStudioShell" class="helios-outer-shell w-screen h-screen flex overflow-hidden">
+  <div id="mainStudioShell" class="helios-outer-shell w-full h-screen flex overflow-hidden relative">
 
-    <!-- LEFT SIDEBAR -->
-    <aside class="helios-sidebar w-60 shrink-0 flex flex-col justify-between p-5">
+    <!-- MOBILE DRAWER BACKDROP -->
+    <div id="mobileSidebarBackdrop" onclick="toggleMobileSidebar(false)" class="fixed inset-0 z-30 bg-slate-900/40 backdrop-blur-xs hidden lg:hidden transition-opacity duration-200"></div>
+
+    <!-- LEFT SIDEBAR (Desktop persistent rail / Mobile slide-over drawer) -->
+    <aside id="studioSidebar" class="helios-sidebar fixed inset-y-0 left-0 z-40 w-64 -translate-x-full lg:static lg:translate-x-0 lg:w-60 shrink-0 flex flex-col justify-between p-5 transition-transform duration-200 ease-out overflow-y-auto">
       <div class="space-y-6">
         <!-- Studio Title -->
-        <div class="px-1 pt-1">
-          <div id="sidebarStudioTitle" class="text-sm font-semibold tracking-tight">Zubair Alam</div>
-          <div id="sidebarStudioSubtitle" class="text-xs text-slate-500 dark:text-slate-400">Event Management Studio</div>
+        <div class="px-1 pt-1 flex items-start justify-between gap-2">
+          <div class="min-w-0">
+            <div id="sidebarStudioTitle" class="text-sm font-semibold tracking-tight truncate">Zubair Alam</div>
+            <div id="sidebarStudioSubtitle" class="text-xs text-slate-500 dark:text-slate-400 truncate">Event Management Studio</div>
+          </div>
+          <button type="button" onclick="toggleMobileSidebar(false)" aria-label="Close navigation" class="lg:hidden btn-mac-secondary px-2 py-1 text-xs shrink-0">&times;</button>
         </div>
 
         <!-- Categorized Navigation -->
@@ -450,11 +531,17 @@
     <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
 
       <!-- TOP HEADER WITH SEGMENTED CONTROL BAR -->
-      <header class="px-7 py-4 border-b border-slate-200/60 dark:border-white/10 flex flex-wrap items-center justify-between gap-4 shrink-0">
-        <h2 id="currentViewTitle" class="text-lg font-semibold tracking-tight">Dashboard</h2>
+      <header id="studioHeader" class="px-4 py-3 lg:px-7 lg:py-4 border-b border-slate-200/60 dark:border-white/10 flex flex-wrap items-center justify-between gap-3 shrink-0">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <button id="mobileMenuBtn" type="button" onclick="toggleMobileSidebar()" aria-label="Open menu" class="lg:hidden btn-mac-secondary px-2.5 py-1.5 text-xs flex items-center gap-1.5 shrink-0">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+            <span class="hidden sm:inline">Menu</span>
+          </button>
+          <h2 id="currentViewTitle" class="text-base sm:text-lg font-semibold tracking-tight truncate">Dashboard</h2>
+        </div>
 
-        <div class="flex items-center gap-3">
-          <div class="mac-segmented-bar" role="tablist" aria-label="Primary Views">
+        <div class="flex items-center gap-2 sm:gap-3 min-w-0 max-w-full">
+          <div id="headerSegmentWrap" class="mac-segmented-bar overflow-x-auto no-scrollbar max-w-full" role="tablist" aria-label="Primary Views">
             <button type="button" onclick="switchView('dashboard')" data-top-segment="dashboard" class="mac-segment-btn active">Dashboard</button>
             <button type="button" onclick="switchView('projects')" data-top-segment="projects" class="mac-segment-btn">Projects</button>
             <button type="button" onclick="switchView('billing')" data-top-segment="billing" class="mac-segment-btn">Billing</button>
@@ -462,14 +549,15 @@
             <button type="button" onclick="switchView('calendar')" data-top-segment="calendar" class="mac-segment-btn">Calendar</button>
           </div>
 
-          <button type="button" onclick="downloadOrganizedZipArchive()" class="btn-mac-secondary px-3.5 py-1.5 text-xs">
-            Export .ZIP
+          <button type="button" onclick="downloadOrganizedZipArchive()" class="btn-mac-secondary px-3 sm:px-3.5 py-1.5 text-xs shrink-0">
+            <span class="hidden sm:inline">Export .ZIP</span>
+            <span class="sm:hidden">.ZIP</span>
           </button>
         </div>
       </header>
 
       <!-- SCROLLABLE CONTENT -->
-      <main id="studioMainViewport" class="flex-1 overflow-y-auto scroll-smooth p-7 space-y-6">
+      <main id="studioMainViewport" class="flex-1 overflow-y-auto scroll-smooth p-4 sm:p-6 lg:p-7 space-y-5 lg:space-y-6">
 
         <!-- =============================================================== -->
         <!-- VIEW A: DASHBOARD                                               -->
@@ -477,7 +565,7 @@
         <section id="view-dashboard" class="tab-view active-view space-y-6">
 
           <!-- 3 Clean Metric Cards (No revenue or profit figures) -->
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5 mobile-landscape-3col">
             <div class="helios-card p-5">
               <div id="metricPendingLabel" class="text-xs font-medium text-slate-500 dark:text-slate-400">Pending Events</div>
               <div id="metricPendingEvents" class="text-3xl font-semibold tracking-tight mt-2">0</div>
@@ -601,7 +689,7 @@
         <!-- =============================================================== -->
         <section id="view-projects" class="tab-view space-y-6">
           <div class="flex flex-wrap items-center justify-between gap-3">
-            <input id="projectSearchInput" type="search" placeholder="Search projects..." oninput="renderProjectsModule()" class="helios-input px-3.5 py-2 text-xs w-64" />
+            <input id="projectSearchInput" type="search" placeholder="Search projects..." oninput="renderProjectsModule()" class="helios-input px-3.5 py-2 text-xs w-full sm:w-64" />
             <button id="addProjectBtnLabel" type="button" onclick="openProjectWorkspaceForNew()" class="btn-mac-primary px-4 py-2 text-xs">
               + Add Event / Project
             </button>
@@ -776,7 +864,7 @@
                   <h3 class="text-sm font-semibold">Saved Clients</h3>
                   <span id="clientsDirectoryCountBadge" class="text-xs text-slate-400">0 Clients</span>
                 </div>
-                <input id="clientSearchInput" type="search" placeholder="Search clients..." oninput="renderClientsDirectory()" class="helios-input px-3 py-1.5 text-xs w-48" />
+                <input id="clientSearchInput" type="search" placeholder="Search clients..." oninput="renderClientsDirectory()" class="helios-input px-3 py-1.5 text-xs w-full sm:w-48" />
               </div>
               <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
@@ -841,7 +929,7 @@
                   <h3 class="text-sm font-semibold">Verified Suppliers</h3>
                   <span id="suppliersDirectoryCountBadge" class="text-xs text-slate-400">0 Suppliers</span>
                 </div>
-                <input id="supplierSearchInput" type="search" placeholder="Search suppliers..." oninput="renderSuppliersDirectory()" class="helios-input px-3 py-1.5 text-xs w-48" />
+                <input id="supplierSearchInput" type="search" placeholder="Search suppliers..." oninput="renderSuppliersDirectory()" class="helios-input px-3 py-1.5 text-xs w-full sm:w-48" />
               </div>
               <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
@@ -1078,8 +1166,8 @@
 
                 <div id="invoicePreviewPrintArea" class="bg-white text-slate-900 rounded-xl overflow-hidden border border-slate-200 transition-all">
                   <div id="previewTopAccentBar" class="h-2 bg-[#007AFF]"></div>
-                  <div id="previewInnerBody" class="p-8 space-y-6">
-                    <div id="previewHeaderBlock" class="flex items-start justify-between border-b border-slate-200 pb-6">
+                  <div id="previewInnerBody" class="p-4 sm:p-8 space-y-5 sm:space-y-6">
+                    <div id="previewHeaderBlock" class="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 pb-5 sm:pb-6">
                       <div>
                         <h2 id="previewSenderTitle" class="text-lg font-bold text-slate-900">Zubair Freelance</h2>
                         <p id="previewSenderAddress" class="text-xs text-slate-600 mt-1"></p>
@@ -1100,28 +1188,30 @@
                       <div id="previewClientEmailText" class="text-slate-500 font-mono mt-0.5"></div>
                     </div>
 
-                    <table class="w-full text-left border-collapse text-xs">
-                      <thead>
-                        <tr id="previewTableHeadRow" class="border-b border-slate-200 text-slate-500">
-                          <th class="py-2 pr-3 pl-2">Description</th>
-                          <th class="py-2 px-3 text-right">Qty</th>
-                          <th class="py-2 px-3 text-right">Unit Price ($)</th>
-                          <th class="py-2 pl-3 pr-2 text-right">Total</th>
-                        </tr>
-                      </thead>
-                      <tbody id="previewLineItemsBody" class="divide-y divide-slate-100 text-slate-800"></tbody>
-                    </table>
+                    <div class="overflow-x-auto">
+                      <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr id="previewTableHeadRow" class="border-b border-slate-200 text-slate-500">
+                            <th class="py-2 pr-3 pl-2">Description</th>
+                            <th class="py-2 px-3 text-right">Qty</th>
+                            <th class="py-2 px-3 text-right">Unit Price ($)</th>
+                            <th class="py-2 pl-3 pr-2 text-right">Total</th>
+                          </tr>
+                        </thead>
+                        <tbody id="previewLineItemsBody" class="divide-y divide-slate-100 text-slate-800"></tbody>
+                      </table>
+                    </div>
 
                     <div id="previewSummaryDivider" class="pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-start justify-between gap-4">
                       <div id="previewBankDetailsBlock" class="text-[11px] text-slate-600 space-y-0.5 max-w-xs">
                         <div class="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Sender Bank Details</div>
                         <div id="previewBankNameText" class="font-medium text-slate-800"></div>
                         <div id="previewBankHolderText"></div>
-                        <div id="previewBankIbanText" class="font-mono text-[10.5px] text-slate-700"></div>
+                        <div id="previewBankIbanText" class="font-mono text-[10.5px] text-slate-700 break-all"></div>
                         <div id="previewBankSwiftText" class="font-mono text-[10.5px] text-slate-500"></div>
                       </div>
 
-                      <div id="previewSummaryBox" class="w-60 space-y-2 text-xs p-3 rounded-lg shrink-0 self-end sm:self-auto">
+                      <div id="previewSummaryBox" class="w-full sm:w-60 space-y-2 text-xs p-3 rounded-lg shrink-0 self-end sm:self-auto">
                         <div class="flex justify-between text-slate-600">
                           <span>Subtotal</span>
                           <span id="previewSubtotalText" class="font-mono">$0.00</span>
@@ -1377,6 +1467,30 @@
         </section>
 
       </main>
+
+      <!-- MOBILE PORTRAIT BOTTOM TAB BAR (Hidden on Desktop and Mobile Landscape) -->
+      <nav id="mobileBottomNav" aria-label="Mobile Quick Navigation" class="lg:hidden grid grid-cols-5 gap-1 px-2 pt-1.5 mobile-bottom-nav shrink-0">
+        <button type="button" onclick="switchView('dashboard')" data-mobile-nav="dashboard" class="mobile-bottom-btn active flex flex-col items-center justify-center py-1.5 rounded-xl text-[10px] font-medium">
+          <svg class="w-4 h-4 mb-0.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4"/></svg>
+          <span>Home</span>
+        </button>
+        <button type="button" onclick="switchView('projects')" data-mobile-nav="projects" class="mobile-bottom-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-[10px] font-medium">
+          <svg class="w-4 h-4 mb-0.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+          <span>Projects</span>
+        </button>
+        <button type="button" onclick="switchView('billing')" data-mobile-nav="billing" class="mobile-bottom-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-[10px] font-medium">
+          <svg class="w-4 h-4 mb-0.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/></svg>
+          <span>Billing</span>
+        </button>
+        <button type="button" onclick="switchView('ocr')" data-mobile-nav="ocr" class="mobile-bottom-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-[10px] font-medium">
+          <svg class="w-4 h-4 mb-0.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          <span>Scan</span>
+        </button>
+        <button type="button" onclick="switchView('calendar')" data-mobile-nav="calendar" class="mobile-bottom-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-[10px] font-medium">
+          <svg class="w-4 h-4 mb-0.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          <span>Calendar</span>
+        </button>
+      </nav>
     </div>
   </div>
 
@@ -1975,6 +2089,37 @@
       archive: 'Local Archive'
     };
 
+    let isMobileSidebarOpen = false;
+
+    function toggleMobileSidebar(forceState) {
+      const sidebar = document.getElementById('studioSidebar');
+      const backdrop = document.getElementById('mobileSidebarBackdrop');
+      if (!sidebar || !backdrop) return;
+      isMobileSidebarOpen = typeof forceState === 'boolean' ? forceState : !isMobileSidebarOpen;
+      if (isMobileSidebarOpen) {
+        sidebar.classList.remove('-translate-x-full');
+        backdrop.classList.remove('hidden');
+      } else {
+        sidebar.classList.add('-translate-x-full');
+        backdrop.classList.add('hidden');
+      }
+    }
+
+    function syncMobileViewportOrientation() {
+      const width = window.innerWidth || document.documentElement.clientWidth || 1024;
+      const height = window.innerHeight || document.documentElement.clientHeight || 768;
+      const isCoarsePointer = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+      const isPortrait = height >= width;
+      const isMobile = width < 1024 || (isCoarsePointer && height <= 560);
+
+      document.documentElement.setAttribute('data-device', isMobile ? 'mobile' : 'desktop');
+      document.documentElement.setAttribute('data-orientation', isPortrait ? 'portrait' : 'landscape');
+
+      if (!isMobile && isMobileSidebarOpen) {
+        toggleMobileSidebar(false);
+      }
+    }
+
     function switchView(viewKey) {
       currentActiveView = viewKey;
       renderViewIfNeeded(viewKey, false);
@@ -1991,7 +2136,15 @@
         btn.classList.toggle('active', btn.getAttribute('data-top-segment') === viewKey);
       });
 
+      document.querySelectorAll('[data-mobile-nav]').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-mobile-nav') === viewKey);
+      });
+
       document.getElementById('currentViewTitle').textContent = VIEW_TITLES[viewKey] || 'Dashboard';
+
+      if (isMobileSidebarOpen) {
+        toggleMobileSidebar(false);
+      }
 
       const viewport = document.getElementById('studioMainViewport');
       if (viewport) viewport.scrollTop = 0;
@@ -2879,7 +3032,7 @@
       sheet.className = 'rounded-xl overflow-hidden border transition-all';
       sheet.style.fontFamily = '';
       topBar.className = 'h-2';
-      headerBlock.className = 'flex items-start justify-between pb-6';
+      headerBlock.className = 'flex flex-wrap items-start justify-between gap-3 pb-5 sm:pb-6';
       senderTitle.className = 'text-lg font-bold';
       senderAddr.className = 'text-xs mt-1';
       senderMeta.className = 'text-xs font-mono mt-0.5';
@@ -2887,13 +3040,13 @@
       docNum.className = 'text-xs font-mono mt-1';
       docDate.className = 'text-xs font-mono mt-0.5';
       tableHeadRow.className = 'border-b';
-      summaryBox.className = 'w-60 space-y-2 text-xs p-3 rounded-lg';
+      summaryBox.className = 'w-full sm:w-60 space-y-2 text-xs p-3 rounded-lg shrink-0 self-end sm:self-auto';
       totalDueText.className = 'font-mono';
 
       if (tpl === 'executive') {
         sheet.classList.add('bg-white', 'text-slate-900', 'border-slate-300');
         topBar.classList.add('bg-amber-500');
-        headerBlock.classList.add('bg-slate-900', 'text-white', '-mx-8', '-mt-8', 'p-8', 'mb-2');
+        headerBlock.classList.add('bg-slate-900', 'text-white', '-mx-4', '-mt-4', 'p-4', 'sm:-mx-8', 'sm:-mt-8', 'sm:p-8', 'mb-2');
         senderTitle.classList.add('text-white');
         senderAddr.classList.add('text-slate-300');
         senderMeta.classList.add('text-slate-400');
@@ -4521,7 +4674,11 @@
       }
     });
 
+    window.addEventListener('resize', syncMobileViewportOrientation);
+    window.addEventListener('orientationchange', () => setTimeout(syncMobileViewportOrientation, 60));
+
     window.addEventListener('DOMContentLoaded', async () => {
+      syncMobileViewportOrientation();
       initAppearanceTheme();
       const passcodeEl = document.getElementById('passcodeInput');
       if (passcodeEl) passcodeEl.focus();
