@@ -29,32 +29,54 @@
   <style>
     :root {
       --mac-blue: #007AFF;
-      --mac-blue-hover: #0066D6;
-      --shell-bg: rgba(255, 255, 255, 0.80);
-      --shell-border: rgba(255, 255, 255, 0.70);
-      --sidebar-bg: rgba(245, 246, 250, 0.72);
+      --mac-blue-hover: #0062CC;
+      --mac-blue-glow: rgba(0, 122, 255, 0.24);
+      --shell-bg: rgba(255, 255, 255, 0.78);
+      --shell-border: rgba(255, 255, 255, 0.85);
+      --sidebar-bg: rgba(246, 248, 252, 0.74);
       --card-bg: rgba(255, 255, 255, 0.88);
-      --card-border: rgba(15, 23, 42, 0.07);
-      --input-bg: #FFFFFF;
-      --text-primary: #111827;
-      --text-secondary: #4B5563;
-      --text-muted: #9CA3AF;
-      --segmented-bg: rgba(15, 23, 42, 0.05);
+      --card-bg-hover: rgba(255, 255, 255, 0.96);
+      --card-border: rgba(15, 23, 42, 0.075);
+      --card-inner-highlight: rgba(255, 255, 255, 0.90);
+      --input-bg: rgba(255, 255, 255, 0.92);
+      --text-primary: #0F172A;
+      --text-secondary: #475569;
+      --text-muted: #94A3B8;
+      --segmented-bg: rgba(15, 23, 42, 0.055);
+      --card-shadow:
+        0 1px 2px rgba(15, 23, 42, 0.03),
+        0 8px 24px -6px rgba(15, 23, 42, 0.05),
+        inset 0 1px 0 var(--card-inner-highlight);
+      --card-shadow-hover:
+        0 4px 12px rgba(15, 23, 42, 0.05),
+        0 16px 32px -8px rgba(15, 23, 42, 0.09),
+        inset 0 1px 0 var(--card-inner-highlight);
     }
 
     html.dark {
       --mac-blue: #0A84FF;
       --mac-blue-hover: #3399FF;
-      --shell-bg: rgba(24, 26, 32, 0.82);
-      --shell-border: rgba(255, 255, 255, 0.10);
-      --sidebar-bg: rgba(18, 20, 26, 0.75);
-      --card-bg: rgba(32, 35, 44, 0.82);
-      --card-border: rgba(255, 255, 255, 0.08);
-      --input-bg: rgba(18, 20, 26, 0.90);
-      --text-primary: #F9FAFB;
-      --text-secondary: #D1D5DB;
-      --text-muted: #9CA3AF;
-      --segmented-bg: rgba(255, 255, 255, 0.07);
+      --mac-blue-glow: rgba(10, 132, 255, 0.32);
+      --shell-bg: rgba(18, 21, 29, 0.82);
+      --shell-border: rgba(255, 255, 255, 0.09);
+      --sidebar-bg: rgba(13, 15, 22, 0.78);
+      --card-bg: rgba(26, 30, 41, 0.78);
+      --card-bg-hover: rgba(31, 36, 49, 0.88);
+      --card-border: rgba(255, 255, 255, 0.085);
+      --card-inner-highlight: rgba(255, 255, 255, 0.06);
+      --input-bg: rgba(15, 18, 26, 0.88);
+      --text-primary: #F8FAFC;
+      --text-secondary: #CBD5E1;
+      --text-muted: #64748B;
+      --segmented-bg: rgba(255, 255, 255, 0.065);
+      --card-shadow:
+        0 2px 6px rgba(0, 0, 0, 0.25),
+        0 14px 30px -8px rgba(0, 0, 0, 0.38),
+        inset 0 1px 0 var(--card-inner-highlight);
+      --card-shadow-hover:
+        0 6px 16px rgba(0, 0, 0, 0.34),
+        0 20px 38px -10px rgba(0, 0, 0, 0.48),
+        inset 0 1px 0 rgba(255, 255, 255, 0.10);
     }
 
     * {
@@ -67,125 +89,223 @@
       margin: 0;
       min-height: 100vh;
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
+      font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+      letter-spacing: -0.011em;
       color: var(--text-primary);
       transition: background 0.35s ease, color 0.2s ease;
-      background-color: #E5ECF6;
+      background-color: #E6EDF7;
       background-image:
-        radial-gradient(at 15% 20%, rgba(0, 122, 255, 0.14) 0px, transparent 55%),
-        radial-gradient(at 85% 20%, rgba(99, 102, 241, 0.12) 0px, transparent 55%),
-        radial-gradient(at 50% 90%, rgba(16, 185, 129, 0.10) 0px, transparent 55%),
-        linear-gradient(145deg, #F1F5FB 0%, #E2E9F5 100%);
+        radial-gradient(circle at 12% 16%, rgba(0, 122, 255, 0.16) 0px, transparent 48%),
+        radial-gradient(circle at 88% 14%, rgba(99, 102, 241, 0.14) 0px, transparent 50%),
+        radial-gradient(circle at 75% 88%, rgba(16, 185, 129, 0.11) 0px, transparent 52%),
+        radial-gradient(circle at 20% 85%, rgba(14, 165, 233, 0.10) 0px, transparent 45%),
+        linear-gradient(145deg, #F4F7FC 0%, #E3EAF6 100%);
       background-attachment: fixed;
     }
 
     html.dark body {
-      background-color: #0B0D12;
+      background-color: #090B10;
       background-image:
-        radial-gradient(at 15% 20%, rgba(10, 132, 255, 0.16) 0px, transparent 55%),
-        radial-gradient(at 85% 20%, rgba(99, 102, 241, 0.14) 0px, transparent 55%),
-        radial-gradient(at 50% 90%, rgba(16, 185, 129, 0.08) 0px, transparent 55%),
-        linear-gradient(145deg, #090B10 0%, #111520 100%);
+        radial-gradient(circle at 12% 16%, rgba(10, 132, 255, 0.19) 0px, transparent 50%),
+        radial-gradient(circle at 88% 14%, rgba(99, 102, 241, 0.16) 0px, transparent 52%),
+        radial-gradient(circle at 75% 88%, rgba(16, 185, 129, 0.09) 0px, transparent 52%),
+        radial-gradient(circle at 20% 85%, rgba(56, 189, 248, 0.08) 0px, transparent 45%),
+        linear-gradient(145deg, #07090E 0%, #0E131F 100%);
+    }
+
+    h1, h2, h3, h4 {
+      letter-spacing: -0.022em;
+    }
+
+    .font-mono {
+      font-variant-numeric: tabular-nums;
     }
 
     .helios-outer-shell {
       background: var(--shell-bg);
-      backdrop-filter: blur(28px) saturate(180%);
-      -webkit-backdrop-filter: blur(28px) saturate(180%);
+      backdrop-filter: blur(32px) saturate(190%);
+      -webkit-backdrop-filter: blur(32px) saturate(190%);
       transform: translateZ(0);
     }
 
     .helios-lock-card {
-      background: var(--shell-bg);
-      backdrop-filter: blur(28px) saturate(180%);
-      -webkit-backdrop-filter: blur(28px) saturate(180%);
+      background: var(--card-bg);
+      backdrop-filter: blur(36px) saturate(200%);
+      -webkit-backdrop-filter: blur(36px) saturate(200%);
       border: 1px solid var(--shell-border);
-      box-shadow: 0 24px 60px -15px rgba(0, 0, 0, 0.20), 0 8px 20px -8px rgba(0, 0, 0, 0.08);
-      border-radius: 22px;
+      box-shadow:
+        0 30px 70px -15px rgba(15, 23, 42, 0.25),
+        0 10px 24px -8px rgba(15, 23, 42, 0.10),
+        inset 0 1px 0 var(--card-inner-highlight);
+      border-radius: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .helios-lock-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 15%;
+      right: 15%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(0, 122, 255, 0.55), transparent);
+      pointer-events: none;
+    }
+
+    #lockBrandBadge {
+      background: linear-gradient(145deg, #2E90FA 0%, #0066D6 100%);
+      box-shadow:
+        0 10px 22px -6px rgba(0, 122, 255, 0.48),
+        inset 0 1px 1px rgba(255, 255, 255, 0.35);
     }
 
     .helios-sidebar {
       background: var(--sidebar-bg);
+      backdrop-filter: blur(28px) saturate(180%);
+      -webkit-backdrop-filter: blur(28px) saturate(180%);
       border-right: 1px solid var(--card-border);
+      box-shadow: inset -1px 0 0 var(--card-inner-highlight);
+    }
+
+    #studioHeader {
+      background: rgba(255, 255, 255, 0.42);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02);
+    }
+
+    html.dark #studioHeader {
+      background: rgba(15, 18, 26, 0.45);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.20);
     }
 
     .helios-card {
       background: var(--card-bg);
+      backdrop-filter: blur(20px) saturate(170%);
+      -webkit-backdrop-filter: blur(20px) saturate(170%);
       border: 1px solid var(--card-border);
-      border-radius: 16px;
-      box-shadow: 0 2px 10px -2px rgba(0, 0, 0, 0.04);
+      border-radius: 18px;
+      box-shadow: var(--card-shadow);
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease, background-color 0.2s ease;
       contain: layout style;
+    }
+
+    .helios-card[onclick]:hover,
+    #projectsCardsGrid > .helios-card:hover,
+    #clientsDirectoryGrid > .helios-card:hover {
+      transform: translateY(-2px);
+      background: var(--card-bg-hover);
+      box-shadow: var(--card-shadow-hover);
+      border-color: rgba(0, 122, 255, 0.28);
     }
 
     .helios-input {
       background: var(--input-bg);
       border: 1px solid var(--card-border);
       color: var(--text-primary);
-      border-radius: 10px;
-      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      border-radius: 11px;
+      box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.03);
+      transition: border-color 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
+    }
+
+    html.dark .helios-input {
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.28);
+    }
+
+    .helios-input:hover:not(:focus) {
+      border-color: rgba(148, 163, 184, 0.45);
     }
 
     .helios-input:focus {
       outline: none;
       border-color: var(--mac-blue);
-      box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.16);
+      box-shadow: 0 0 0 3.5px var(--mac-blue-glow), inset 0 1px 1px rgba(15, 23, 42, 0.02);
     }
 
     .btn-mac-primary {
-      background-color: var(--mac-blue);
+      background: linear-gradient(180deg, #1A88FF 0%, var(--mac-blue) 100%);
       color: #FFFFFF;
-      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 11px;
       font-weight: 500;
-      transition: background-color 0.15s ease, transform 0.12s ease;
+      box-shadow:
+        0 2px 6px rgba(0, 122, 255, 0.26),
+        0 6px 14px -4px rgba(0, 122, 255, 0.22),
+        inset 0 1px 0 rgba(255, 255, 255, 0.28);
+      transition: background 0.16s ease, transform 0.14s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.16s ease;
     }
 
     .btn-mac-primary:hover {
-      background-color: var(--mac-blue-hover);
+      background: linear-gradient(180deg, #0F7CF5 0%, var(--mac-blue-hover) 100%);
+      box-shadow:
+        0 4px 12px rgba(0, 122, 255, 0.34),
+        0 8px 18px -4px rgba(0, 122, 255, 0.28),
+        inset 0 1px 0 rgba(255, 255, 255, 0.32);
+      transform: translateY(-0.5px);
     }
 
     .btn-mac-primary:active {
-      transform: scale(0.985);
+      transform: scale(0.985) translateY(0);
     }
 
     .btn-mac-secondary {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
       color: var(--text-primary);
-      border-radius: 10px;
+      border-radius: 11px;
       font-weight: 500;
-      transition: border-color 0.15s ease, background-color 0.15s ease;
+      box-shadow:
+        0 1px 2px rgba(15, 23, 42, 0.04),
+        inset 0 1px 0 var(--card-inner-highlight);
+      transition: border-color 0.16s ease, background-color 0.16s ease, transform 0.14s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.16s ease;
     }
 
     .btn-mac-secondary:hover {
-      border-color: var(--mac-blue);
+      background: var(--card-bg-hover);
+      border-color: rgba(0, 122, 255, 0.42);
+      box-shadow:
+        0 3px 8px rgba(15, 23, 42, 0.06),
+        inset 0 1px 0 var(--card-inner-highlight);
+      transform: translateY(-0.5px);
+    }
+
+    .btn-mac-secondary:active {
+      transform: scale(0.985) translateY(0);
     }
 
     .mac-segmented-bar {
       background: var(--segmented-bg);
       padding: 4px;
-      border-radius: 12px;
+      border-radius: 13px;
+      border: 1px solid var(--card-border);
+      box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
       display: inline-flex;
       align-items: center;
-      gap: 2px;
+      gap: 3px;
     }
 
     .mac-segment-btn {
       padding: 6px 14px;
       font-size: 0.8125rem;
       font-weight: 500;
-      border-radius: 8px;
+      border-radius: 9px;
       color: var(--text-secondary);
-      transition: background-color 0.18s cubic-bezier(0.16, 1, 0.3, 1), color 0.15s ease, box-shadow 0.18s ease;
+      transition: background 0.18s cubic-bezier(0.16, 1, 0.3, 1), color 0.15s ease, box-shadow 0.18s ease, transform 0.12s ease;
       white-space: nowrap;
     }
 
     .mac-segment-btn:hover {
       color: var(--text-primary);
+      background: rgba(148, 163, 184, 0.10);
     }
 
     .mac-segment-btn.active {
-      background: var(--mac-blue);
+      background: linear-gradient(180deg, #1A88FF 0%, var(--mac-blue) 100%);
       color: #FFFFFF;
-      box-shadow: 0 2px 6px rgba(0, 122, 255, 0.28);
+      box-shadow:
+        0 2px 8px rgba(0, 122, 255, 0.32),
+        inset 0 1px 0 rgba(255, 255, 255, 0.25);
     }
 
     .sidebar-nav-btn {
@@ -193,18 +313,19 @@
       align-items: center;
       gap: 10px;
       width: 100%;
-      padding: 9px 12px;
-      border-radius: 10px;
+      padding: 9.5px 12px;
+      border-radius: 11px;
       font-size: 0.875rem;
       font-weight: 500;
       color: var(--text-secondary);
-      transition: background-color 0.16s cubic-bezier(0.16, 1, 0.3, 1), color 0.14s ease, transform 0.12s ease;
+      transition: background 0.16s cubic-bezier(0.16, 1, 0.3, 1), color 0.14s ease, transform 0.12s ease, box-shadow 0.16s ease;
       text-align: left;
     }
 
     .sidebar-nav-btn:hover {
-      background: rgba(128, 128, 128, 0.08);
+      background: rgba(148, 163, 184, 0.12);
       color: var(--text-primary);
+      transform: translateX(2px);
     }
 
     .sidebar-nav-btn:active {
@@ -212,24 +333,68 @@
     }
 
     .sidebar-nav-btn.active {
-      background: var(--mac-blue);
+      background: linear-gradient(180deg, #1A88FF 0%, var(--mac-blue) 100%);
       color: #FFFFFF;
+      box-shadow:
+        0 4px 12px -2px rgba(0, 122, 255, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    }
+
+    /* Subtle KPI & Table Refinements */
+    #view-dashboard .grid.grid-cols-1.sm\:grid-cols-2 > .helios-card {
+      position: relative;
+      overflow: hidden;
+    }
+
+    #view-dashboard .grid.grid-cols-1.sm\:grid-cols-2 > .helios-card::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2.5px;
+      background: linear-gradient(90deg, var(--mac-blue), rgba(99, 102, 241, 0.65));
+      opacity: 0.75;
+    }
+
+    table thead th {
+      letter-spacing: 0.06em;
+    }
+
+    table tbody tr {
+      transition: background-color 0.14s ease;
+    }
+
+    table tbody tr:hover {
+      background-color: rgba(0, 122, 255, 0.035);
+    }
+
+    html.dark table tbody tr:hover {
+      background-color: rgba(255, 255, 255, 0.03);
+    }
+
+    #invoicePreviewPrintArea {
+      box-shadow:
+        0 18px 42px -12px rgba(15, 23, 42, 0.14),
+        0 4px 12px -2px rgba(15, 23, 42, 0.06),
+        0 0 0 1px rgba(15, 23, 42, 0.06);
+      border-radius: 14px;
     }
 
     .tab-view {
       display: none;
       opacity: 0;
-      transform: translate3d(0, 6px, 0);
+      transform: translate3d(0, 8px, 0);
     }
 
     .tab-view.active-view {
       display: block;
       will-change: transform, opacity;
-      animation: macSlideFade 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      animation: macSlideFade 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
 
     @keyframes macSlideFade {
-      0% { opacity: 0; transform: translate3d(0, 6px, 0); }
+      0% { opacity: 0; transform: translate3d(0, 8px, 0); }
       100% { opacity: 1; transform: translate3d(0, 0, 0); }
     }
 
@@ -260,15 +425,36 @@
       border-radius: 9999px;
       display: inline-block;
       cursor: pointer;
-      transition: transform 0.15s ease;
+      box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.45), 0 1px 2px rgba(0, 0, 0, 0.15);
+      transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), filter 0.15s ease;
     }
     .traffic-dot:hover {
-      transform: scale(1.1);
+      transform: scale(1.14);
+      filter: brightness(1.06);
     }
 
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.28); border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.32);
+      border-radius: 9999px;
+      transition: background 0.15s ease;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(148, 163, 184, 0.55);
+    }
+
+    /* Project Overview File Cards & Badges Polish */
+    #projectInfoOverviewPanel button.p-3.rounded-xl {
+      background: var(--card-bg);
+      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03), inset 0 1px 0 var(--card-inner-highlight);
+      transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.16s ease, border-color 0.16s ease;
+    }
+
+    #projectInfoOverviewPanel button.p-3.rounded-xl:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px -6px rgba(0, 122, 255, 0.18), inset 0 1px 0 var(--card-inner-highlight);
+    }
 
     .helios-outer-shell.window-maximized {
       width: 100vw !important;
@@ -289,20 +475,27 @@
 
     .mobile-bottom-nav {
       background: var(--sidebar-bg);
-      backdrop-filter: blur(24px) saturate(180%);
-      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      backdrop-filter: blur(28px) saturate(190%);
+      -webkit-backdrop-filter: blur(28px) saturate(190%);
       border-top: 1px solid var(--card-border);
+      box-shadow: 0 -4px 20px rgba(15, 23, 42, 0.05);
       padding-bottom: max(0.35rem, env(safe-area-inset-bottom));
     }
 
     .mobile-bottom-btn {
       color: var(--text-secondary);
-      transition: color 0.15s ease, background-color 0.15s ease;
+      border-radius: 10px;
+      transition: color 0.15s ease, background-color 0.15s ease, transform 0.12s ease;
+    }
+
+    .mobile-bottom-btn:active {
+      transform: scale(0.95);
     }
 
     .mobile-bottom-btn.active {
       color: var(--mac-blue);
-      background: rgba(0, 122, 255, 0.10);
+      background: rgba(0, 122, 255, 0.12);
+      font-weight: 600;
     }
 
     /* Adaptive Mobile Portrait & Landscape Orientation Rules */
@@ -634,6 +827,14 @@
             <button type="button" onclick="switchView('calendar')" data-top-segment="calendar" class="mac-segment-btn">Calendar</button>
           </div>
 
+          <select id="headerCurrencySelect" onchange="setStudioCurrency(this.value)" aria-label="Select Currency" class="helios-input px-2.5 py-1.5 text-xs font-mono font-medium shrink-0 cursor-pointer" title="Active Studio Currency">
+            <option value="USD">USD ($)</option>
+            <option value="AED">AED</option>
+            <option value="EUR">EUR (€)</option>
+            <option value="GBP">GBP (£)</option>
+            <option value="BDT">BDT (৳)</option>
+          </select>
+
           <button id="verticalModeToggleBtn" type="button" onclick="toggleVerticalMobileMode()" class="btn-mac-secondary px-2.5 sm:px-3 py-1.5 text-xs shrink-0 flex items-center gap-1.5" title="Switch between Vertical Mobile and Desktop layout">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
             <span id="verticalModeToggleLabel">Mobile View</span>
@@ -780,26 +981,168 @@
         <section id="view-projects" class="tab-view space-y-6">
           <div class="flex flex-wrap items-center justify-between gap-3">
             <input id="projectSearchInput" type="search" placeholder="Search projects..." oninput="renderProjectsModule()" class="helios-input px-3.5 py-2 text-xs w-full sm:w-64" />
-            <button id="addProjectBtnLabel" type="button" onclick="openProjectWorkspaceForNew()" class="btn-mac-primary px-4 py-2 text-xs">
-              + Add Event / Project
-            </button>
+            <div class="flex flex-wrap items-center gap-2">
+              <label class="btn-mac-secondary px-3.5 py-2 text-xs cursor-pointer" title="Add and merge multiple JSON files without altering existing records">
+                + Add JSON Files
+                <input type="file" accept=".json,application/json" multiple onchange="addMultipleJsonFilesNonDestructive(event)" class="hidden" />
+              </label>
+              <button id="addProjectBtnLabel" type="button" onclick="openProjectWorkspaceForNew()" class="btn-mac-primary px-4 py-2 text-xs">
+                + Add Event / Project
+              </button>
+            </div>
           </div>
 
           <!-- Collapsible Project Workspace (Hidden by default) -->
           <div id="projectWorkspaceContainer" class="hidden helios-card p-6 space-y-6">
             <div class="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-200/70 dark:border-white/10">
-              <div class="flex items-center gap-3">
+              <div class="flex flex-wrap items-center gap-3">
                 <h4 id="projectWorkspaceHeading" class="text-base font-semibold">Project Workspace</h4>
                 <div id="projectRefHeaderBadges" class="hidden flex items-center gap-2 text-xs font-mono">
                   <span class="px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400" id="badgeQuotationRef">QTN-000000</span>
                   <span class="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" id="badgeInvoiceRef">INV-000000</span>
                 </div>
               </div>
-              <button type="button" onclick="closeProjectWorkspace()" class="btn-mac-secondary px-3 py-1.5 text-xs">
-                Close
-              </button>
+              <div class="flex items-center gap-2">
+                <button id="btnSwitchToEditProject" type="button" onclick="enableProjectEditMode()" class="hidden btn-mac-primary px-3.5 py-1.5 text-xs">
+                  Edit Information
+                </button>
+                <button id="btnSwitchToViewProject" type="button" onclick="showProjectOverviewMode()" class="hidden btn-mac-secondary px-3.5 py-1.5 text-xs">
+                  View Information
+                </button>
+                <button type="button" onclick="closeProjectWorkspace()" class="btn-mac-secondary px-3 py-1.5 text-xs">
+                  Close
+                </button>
+              </div>
             </div>
 
+            <!-- 1. READ-ONLY PROJECT INFORMATION VIEW & SPECIFIC FILE DOWNLOADS -->
+            <div id="projectInfoOverviewPanel" class="hidden space-y-6">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="p-4 rounded-xl bg-slate-500/5 border border-slate-200/60 dark:border-white/10 space-y-1">
+                  <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Client &amp; Contact</div>
+                  <div id="viewProjClientCompany" class="text-sm font-semibold">—</div>
+                  <div id="viewProjClientMeta" class="text-xs text-slate-500 dark:text-slate-400">—</div>
+                  <div id="viewProjClientBank" class="text-xs font-mono text-slate-500 dark:text-slate-400 pt-0.5"></div>
+                </div>
+
+                <div class="p-4 rounded-xl bg-slate-500/5 border border-slate-200/60 dark:border-white/10 space-y-1">
+                  <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Schedule &amp; Role</div>
+                  <div class="flex items-center justify-between gap-2">
+                    <span id="viewProjDate" class="text-sm font-mono font-semibold">—</span>
+                    <span id="viewProjStatusPill"></span>
+                  </div>
+                  <div id="viewProjRole" class="text-xs text-slate-500 dark:text-slate-400 pt-0.5">—</div>
+                </div>
+
+                <div class="p-4 rounded-xl bg-slate-500/5 border border-slate-200/60 dark:border-white/10 space-y-1">
+                  <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Financial Summary</div>
+                  <div class="flex items-baseline justify-between gap-2">
+                    <span class="text-xs text-slate-500 dark:text-slate-400">Project Total:</span>
+                    <span id="viewProjTotalAmount" class="text-sm font-mono font-semibold text-[#007AFF] dark:text-[#0A84FF]">$0.00</span>
+                  </div>
+                  <div class="flex items-baseline justify-between gap-2">
+                    <span class="text-xs text-slate-500 dark:text-slate-400">Supplier Costs:</span>
+                    <span id="viewProjSupplierCost" class="text-xs font-mono">$0.00</span>
+                  </div>
+                  <div class="flex items-baseline justify-between gap-2 pt-0.5">
+                    <span class="text-xs text-slate-500 dark:text-slate-400">Currency:</span>
+                    <span id="viewProjCurrencyBadge" class="text-xs font-mono font-medium">USD</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="p-4 rounded-xl bg-slate-500/5 border border-slate-200/60 dark:border-white/10 space-y-1.5">
+                  <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Job Description &amp; Scope of Work</div>
+                  <p id="viewProjScope" class="text-xs leading-relaxed text-slate-700 dark:text-slate-300 whitespace-pre-line">—</p>
+                </div>
+                <div class="p-4 rounded-xl bg-slate-500/5 border border-slate-200/60 dark:border-white/10 space-y-1.5">
+                  <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Internal Cost &amp; Supplier Notes</div>
+                  <p id="viewProjInternalNotes" class="text-xs leading-relaxed text-slate-700 dark:text-slate-300 whitespace-pre-line">—</p>
+                </div>
+              </div>
+
+              <!-- Read-only Line Items Breakdown -->
+              <div class="p-4 rounded-xl bg-slate-500/5 border border-slate-200/60 dark:border-white/10 space-y-3">
+                <div class="flex items-center justify-between">
+                  <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Project Line Items</span>
+                  <span id="viewProjLineItemsSubtotal" class="text-xs font-mono font-semibold">$0.00</span>
+                </div>
+                <div class="overflow-x-auto">
+                  <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr class="border-b border-slate-200/70 dark:border-white/10 text-slate-400">
+                        <th class="py-2 pr-3">Description</th>
+                        <th class="py-2 px-3 text-right">Qty</th>
+                        <th class="py-2 px-3 text-right">Unit Price</th>
+                        <th class="py-2 pl-3 text-right">Line Total</th>
+                      </tr>
+                    </thead>
+                    <tbody id="viewProjLineItemsTableBody" class="divide-y divide-slate-200/40 dark:divide-white/5"></tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Specific Project Files Download & Attachment Hub -->
+              <div class="p-4 rounded-xl bg-slate-500/5 border border-slate-200/60 dark:border-white/10 space-y-4">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <div class="text-xs font-semibold">Download Specific Project Files</div>
+                    <div class="text-[11px] text-slate-500 dark:text-slate-400">Download individual documents or attach project-specific files</div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <label class="btn-mac-secondary px-3 py-1.5 text-xs cursor-pointer" title="Attach multiple files or JSON files to this project without altering existing files">
+                      + Attach Project Files
+                      <input id="projAttachFileInput" type="file" multiple class="hidden" onchange="handleAttachFileToCurrentProject(event)" />
+                    </label>
+                    <button type="button" onclick="enableProjectEditMode()" class="btn-mac-primary px-3.5 py-1.5 text-xs">
+                      Edit Existing Information
+                    </button>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                  <button type="button" onclick="downloadProjectSpecificFile('QuotationPDF')" class="btn-mac-secondary p-3 text-left flex items-center justify-between gap-2">
+                    <div class="min-w-0">
+                      <div class="text-xs font-semibold truncate">Quotation PDF</div>
+                      <div id="dlCardQuotationRef" class="text-[11px] font-mono text-slate-500 dark:text-slate-400 truncate">QTN-000000.pdf</div>
+                    </div>
+                    <span class="text-xs font-medium text-[#007AFF] dark:text-[#0A84FF] shrink-0">Download</span>
+                  </button>
+
+                  <button type="button" onclick="downloadProjectSpecificFile('InvoicePDF')" class="btn-mac-secondary p-3 text-left flex items-center justify-between gap-2">
+                    <div class="min-w-0">
+                      <div class="text-xs font-semibold truncate">Invoice PDF</div>
+                      <div id="dlCardInvoiceRef" class="text-[11px] font-mono text-slate-500 dark:text-slate-400 truncate">INV-000000.pdf</div>
+                    </div>
+                    <span class="text-xs font-medium text-[#007AFF] dark:text-[#0A84FF] shrink-0">Download</span>
+                  </button>
+
+                  <button type="button" onclick="downloadProjectSpecificFile('BriefTXT')" class="btn-mac-secondary p-3 text-left flex items-center justify-between gap-2">
+                    <div class="min-w-0">
+                      <div class="text-xs font-semibold truncate">Project Brief (.TXT)</div>
+                      <div class="text-[11px] text-slate-500 dark:text-slate-400 truncate">Full info &amp; scope summary</div>
+                    </div>
+                    <span class="text-xs font-medium text-[#007AFF] dark:text-[#0A84FF] shrink-0">Download</span>
+                  </button>
+
+                  <button type="button" onclick="downloadProjectSpecificFile('LineItemsCSV')" class="btn-mac-secondary p-3 text-left flex items-center justify-between gap-2">
+                    <div class="min-w-0">
+                      <div class="text-xs font-semibold truncate">Cost Breakdown (.CSV)</div>
+                      <div class="text-[11px] text-slate-500 dark:text-slate-400 truncate">Spreadsheet line items</div>
+                    </div>
+                    <span class="text-xs font-medium text-[#007AFF] dark:text-[#0A84FF] shrink-0">Download</span>
+                  </button>
+                </div>
+
+                <div class="pt-2 border-t border-slate-200/50 dark:border-white/5 space-y-2">
+                  <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Saved &amp; Attached Files for This Project</div>
+                  <div id="viewProjLinkedFilesList" class="space-y-1.5 text-xs"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 2. EDIT PROJECT INFORMATION FORM -->
             <form id="projectWorkspaceForm" onsubmit="saveProjectFromWorkspace(event)" class="space-y-5">
               <input type="hidden" id="projIdInput" />
 
@@ -831,12 +1174,22 @@
                   <input id="projRoleInput" type="text" required placeholder="e.g., Lead Producer" class="helios-input w-full px-3 py-2 text-sm" />
                 </div>
                 <div>
-                  <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Supplier &amp; Operational Costs ($)</label>
+                  <label id="projSupplierCostLabel" class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Supplier &amp; Operational Costs (USD)</label>
                   <input id="projSupplierCostInput" type="number" step="0.01" min="0" value="0" class="helios-input w-full px-3 py-2 text-sm font-mono" />
                 </div>
               </div>
 
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Currency</label>
+                  <select id="projCurrencySelect" onchange="setStudioCurrency(this.value)" class="helios-input w-full px-3 py-2 text-sm font-mono">
+                    <option value="USD">USD ($)</option>
+                    <option value="AED">AED (Dirham)</option>
+                    <option value="EUR">EUR (€)</option>
+                    <option value="GBP">GBP (£)</option>
+                    <option value="BDT">BDT (৳)</option>
+                  </select>
+                </div>
                 <div>
                   <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Assigned Quotation Number</label>
                   <input id="projQuotationNumInput" type="text" placeholder="QTN-XXXXXX" class="helios-input w-full px-3 py-2 text-sm font-mono" />
@@ -867,7 +1220,7 @@
                 <div class="grid grid-cols-12 gap-2 text-xs text-slate-400">
                   <div class="col-span-6">Line Item Description</div>
                   <div class="col-span-2">Quantity (Qty)</div>
-                  <div class="col-span-3">Unit Price ($)</div>
+                  <div id="projUnitPriceHeader" class="col-span-3">Unit Price (USD)</div>
                   <div class="col-span-1 text-right"></div>
                 </div>
                 <div id="projectLineItemsRows" class="space-y-2"></div>
@@ -943,6 +1296,16 @@
                 <div>
                   <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Default Billing Address *</label>
                   <textarea id="clientAddressInput" rows="2" required class="helios-input w-full px-3 py-2 text-sm"></textarea>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 border-t border-slate-200/60 dark:border-white/10">
+                  <div>
+                    <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Client Bank Name</label>
+                    <input id="clientBankNameInput" type="text" placeholder="Bank Name" class="helios-input w-full px-3 py-2 text-sm" />
+                  </div>
+                  <div>
+                    <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Client Account No.</label>
+                    <input id="clientAccountNumberInput" type="text" placeholder="Account Number" class="helios-input w-full px-3 py-2 text-sm font-mono" />
+                  </div>
                 </div>
                 <button type="submit" class="btn-mac-primary w-full py-2.5 text-xs">Save Client</button>
               </form>
@@ -1143,8 +1506,9 @@
                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <input id="billingOrgBankName" type="text" placeholder="Bank Name" oninput="renderLiveBillingPreview()" class="helios-input px-3 py-2 text-sm" />
                     <input id="billingOrgAccountHolder" type="text" placeholder="Account Holder Name" oninput="renderLiveBillingPreview()" class="helios-input px-3 py-2 text-sm" />
-                    <input id="billingOrgIban" type="text" placeholder="IBAN / Account Number" oninput="renderLiveBillingPreview()" class="helios-input px-3 py-2 text-sm font-mono" />
-                    <input id="billingOrgSwift" type="text" placeholder="SWIFT / Routing Code" oninput="renderLiveBillingPreview()" class="helios-input px-3 py-2 text-sm font-mono" />
+                    <input id="billingOrgAccountNumber" type="text" placeholder="Account Number" oninput="renderLiveBillingPreview()" class="helios-input px-3 py-2 text-sm font-mono" />
+                    <input id="billingOrgIban" type="text" placeholder="IBAN" oninput="renderLiveBillingPreview()" class="helios-input px-3 py-2 text-sm font-mono" />
+                    <input id="billingOrgSwift" type="text" placeholder="SWIFT / Routing Code" oninput="renderLiveBillingPreview()" class="helios-input px-3 py-2 text-sm font-mono sm:col-span-2" />
                   </div>
                 </div>
               </div>
@@ -1164,6 +1528,15 @@
                   <input id="billingClientEmail" type="email" placeholder="Client Email" oninput="renderLiveBillingPreview()" class="helios-input px-3 py-2 text-sm" />
                   <input id="billingClientAddress" type="text" placeholder="Billing Address" oninput="renderLiveBillingPreview()" class="helios-input px-3 py-2 text-sm" />
                 </div>
+
+                <div class="pt-2 border-t border-slate-200/60 dark:border-white/10 space-y-2.5">
+                  <div class="text-xs font-medium text-slate-500 dark:text-slate-400">Billed To Bank Details</div>
+                  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <input id="billingClientBankName" type="text" placeholder="Client Bank Name" oninput="renderLiveBillingPreview()" class="helios-input px-3 py-2 text-sm" />
+                    <input id="billingClientAccountNumber" type="text" placeholder="Account Number" oninput="renderLiveBillingPreview()" class="helios-input px-3 py-2 text-sm font-mono" />
+                    <input id="billingClientIban" type="text" placeholder="IBAN / Routing" oninput="renderLiveBillingPreview()" class="helios-input px-3 py-2 text-sm font-mono" />
+                  </div>
+                </div>
               </div>
 
               <!-- Document Controls & Line Items -->
@@ -1176,7 +1549,7 @@
                   </div>
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Number</label>
                     <input id="billingDocNumberInput" type="text" value="INV-849201" oninput="renderLiveBillingPreview()" class="helios-input w-full px-3 py-2 text-sm font-mono" />
@@ -1184,6 +1557,16 @@
                   <div>
                     <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Issue Date</label>
                     <input id="billingIssueDateInput" type="date" oninput="renderLiveBillingPreview()" class="helios-input w-full px-3 py-2 text-sm font-mono" />
+                  </div>
+                  <div>
+                    <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Currency</label>
+                    <select id="billingCurrencySelect" onchange="setStudioCurrency(this.value)" class="helios-input w-full px-3 py-2 text-sm font-mono">
+                      <option value="USD">USD ($)</option>
+                      <option value="AED">AED (Dirham)</option>
+                      <option value="EUR">EUR (€)</option>
+                      <option value="GBP">GBP (£)</option>
+                      <option value="BDT">BDT (৳)</option>
+                    </select>
                   </div>
                   <div>
                     <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Load Project</label>
@@ -1224,7 +1607,7 @@
                   <div class="grid grid-cols-12 gap-2 text-xs text-slate-400">
                     <div class="col-span-6">Line Item Description</div>
                     <div class="col-span-2">Quantity (Qty)</div>
-                    <div class="col-span-3">Unit Price ($)</div>
+                    <div id="billingUnitPriceHeader" class="col-span-3">Unit Price (USD)</div>
                     <div class="col-span-1"></div>
                   </div>
                   <div id="billingLineItemsContainer" class="space-y-2"></div>
@@ -1276,6 +1659,11 @@
                       <div id="previewClientContactText" class="text-slate-600"></div>
                       <div id="previewClientAddressText" class="text-slate-600 mt-0.5"></div>
                       <div id="previewClientEmailText" class="text-slate-500 font-mono mt-0.5"></div>
+                      <div id="previewClientBankBlock" class="hidden mt-1.5 pt-1.5 border-t border-slate-200/70 text-[10.5px] font-mono text-slate-600 space-y-0.5">
+                        <div id="previewClientBankNameText"></div>
+                        <div id="previewClientAccountNumText"></div>
+                        <div id="previewClientIbanText"></div>
+                      </div>
                     </div>
 
                     <div class="overflow-x-auto">
@@ -1284,7 +1672,7 @@
                           <tr id="previewTableHeadRow" class="border-b border-slate-200 text-slate-500">
                             <th class="py-2 pr-3 pl-2">Description</th>
                             <th class="py-2 px-3 text-right">Qty</th>
-                            <th class="py-2 px-3 text-right">Unit Price ($)</th>
+                            <th id="previewUnitPriceHeader" class="py-2 px-3 text-right">Unit Price (USD)</th>
                             <th class="py-2 pl-3 pr-2 text-right">Total</th>
                           </tr>
                         </thead>
@@ -1297,6 +1685,7 @@
                         <div class="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Sender Bank Details</div>
                         <div id="previewBankNameText" class="font-medium text-slate-800"></div>
                         <div id="previewBankHolderText"></div>
+                        <div id="previewBankAccountNumText" class="font-mono text-[10.5px] text-slate-700"></div>
                         <div id="previewBankIbanText" class="font-mono text-[10.5px] text-slate-700 break-all"></div>
                         <div id="previewBankSwiftText" class="font-mono text-[10.5px] text-slate-500"></div>
                       </div>
@@ -1395,10 +1784,14 @@
                 <p class="text-xs text-slate-500 dark:text-slate-400">Stored in IndexedDB (ZubairFreelanceLocalVaultDB) and localStorage.</p>
               </div>
               <div class="flex flex-wrap items-center gap-2">
+                <label class="btn-mac-secondary px-3.5 py-2 text-xs cursor-pointer text-[#007AFF] dark:text-[#0A84FF] font-semibold" title="Add and merge multiple JSON files without overwriting existing records or files">
+                  + Add Multiple JSON Files
+                  <input type="file" accept=".json,application/json" multiple onchange="addMultipleJsonFilesNonDestructive(event)" class="hidden" />
+                </label>
                 <button type="button" onclick="exportWorkspaceJsonBackup()" class="btn-mac-secondary px-3.5 py-2 text-xs">Export JSON</button>
                 <label class="btn-mac-secondary px-3.5 py-2 text-xs cursor-pointer">
-                  Restore JSON
-                  <input type="file" accept=".json" onchange="restoreWorkspaceJsonBackup(event)" class="hidden" />
+                  Restore / Merge JSON
+                  <input type="file" accept=".json,application/json" multiple onchange="restoreWorkspaceJsonBackup(event)" class="hidden" />
                 </label>
                 <button type="button" onclick="downloadOrganizedZipArchive()" class="btn-mac-primary px-4 py-2 text-xs">
                   Download Organized Folder (.ZIP)
@@ -1595,6 +1988,14 @@
     const STORAGE_KEY_ACTIVE_PROFILE = 'ZUBAIR_FREELANCE_ACTIVE_PROFILE';
     const STORAGE_KEY_THEME = 'ZUBAIR_FREELANCE_THEME_MODE';
 
+    const STUDIO_CURRENCIES = {
+      USD: { code: 'USD', symbol: '$', pdfPrefix: '$', label: 'USD ($)' },
+      AED: { code: 'AED', symbol: 'AED ', pdfPrefix: 'AED ', label: 'AED (Dirham)' },
+      EUR: { code: 'EUR', symbol: '€', pdfPrefix: 'EUR ', label: 'EUR (€)' },
+      GBP: { code: 'GBP', symbol: '£', pdfPrefix: 'GBP ', label: 'GBP (£)' },
+      BDT: { code: 'BDT', symbol: '৳', pdfPrefix: 'BDT ', label: 'BDT (৳)' }
+    };
+
     const STUDIO_PROFILES = {
       zubair: {
         id: 'zubair',
@@ -1780,6 +2181,7 @@
           address: '350 Fifth Avenue, Suite 4100, New York, NY 10118',
           bankName: 'Emirates NBD / Chase Business',
           accountHolder: 'Zubair Alam',
+          accountNumber: '1015284920101',
           iban: 'AE07 0260 0010 1528 4920 101',
           swift: 'EBILAEAD'
         }
@@ -1914,6 +2316,7 @@
           address: 'Dubai Design District (d3), Building 7, Dubai, UAE',
           bankName: 'First Abu Dhabi Bank (FAB)',
           accountHolder: 'Banzir Hazra',
+          accountNumber: '011002948172001',
           iban: 'AE45 0351 0110 0294 8172 001',
           swift: 'NBADAEAA'
         }
@@ -2612,6 +3015,11 @@
     function openProjectWorkspaceForNew() {
       const container = document.getElementById('projectWorkspaceContainer');
       container.classList.remove('hidden');
+      document.getElementById('projectInfoOverviewPanel').classList.add('hidden');
+      document.getElementById('projectWorkspaceForm').classList.remove('hidden');
+      document.getElementById('btnSwitchToEditProject').classList.add('hidden');
+      document.getElementById('btnSwitchToViewProject').classList.add('hidden');
+
       document.getElementById('projectWorkspaceHeading').textContent = 'New Project';
       document.getElementById('projIdInput').value = '';
       document.getElementById('projNameInput').value = '';
@@ -2630,9 +3038,236 @@
       document.getElementById('badgeInvoiceRef').textContent = inv;
       document.getElementById('projectRefHeaderBadges').classList.remove('hidden');
 
+      const projCurSelect = document.getElementById('projCurrencySelect');
+      if (projCurSelect) projCurSelect.value = getActiveCurrencyCode();
+      syncCurrencyLabelsUI();
+
       currentProjectLineItems = [{ description: getActiveProfile().labels.defaultServiceDesc, qty: 1, price: 3500 }];
       renderProjectLineItemRows();
       container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function enableProjectEditMode() {
+      document.getElementById('projectInfoOverviewPanel').classList.add('hidden');
+      document.getElementById('projectWorkspaceForm').classList.remove('hidden');
+      document.getElementById('btnSwitchToEditProject').classList.add('hidden');
+      if (document.getElementById('projIdInput').value) {
+        document.getElementById('btnSwitchToViewProject').classList.remove('hidden');
+      }
+    }
+
+    function showProjectOverviewMode() {
+      const projId = document.getElementById('projIdInput').value;
+      const proj = (studioState.projects || []).find(p => p.id === projId);
+      if (proj) {
+        renderProjectInfoOverview(proj);
+      }
+      document.getElementById('projectWorkspaceForm').classList.add('hidden');
+      document.getElementById('projectInfoOverviewPanel').classList.remove('hidden');
+      document.getElementById('btnSwitchToEditProject').classList.remove('hidden');
+      document.getElementById('btnSwitchToViewProject').classList.add('hidden');
+    }
+
+    async function renderProjectInfoOverview(proj) {
+      if (!proj) return;
+      const curCode = proj.currency || getActiveCurrencyCode();
+      const client = (studioState.clients || []).find(c => c.id === proj.clientId);
+
+      document.getElementById('viewProjClientCompany').textContent = client ? client.company : 'Unassigned Client';
+      document.getElementById('viewProjClientMeta').textContent = client
+        ? [client.contactPerson, client.email, client.phone].filter(Boolean).join(' • ')
+        : '—';
+      const clientBankParts = [];
+      if (client && client.bankName) clientBankParts.push(`Bank: ${client.bankName}`);
+      if (client && client.accountNumber) clientBankParts.push(`Acct: ${client.accountNumber}`);
+      if (client && client.iban) clientBankParts.push(`IBAN: ${client.iban}`);
+      document.getElementById('viewProjClientBank').textContent = clientBankParts.join(' • ');
+
+      document.getElementById('viewProjDate').textContent = proj.dateCreated || '—';
+      document.getElementById('viewProjStatusPill').innerHTML = getStatusPillHTML(proj.status || 'Planning');
+      document.getElementById('viewProjRole').textContent = proj.role ? `Role: ${proj.role}` : '—';
+
+      let total = 0;
+      const items = proj.lineItems || [];
+      const tbody = document.getElementById('viewProjLineItemsTableBody');
+      if (items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="py-4 text-center text-slate-400">No line items.</td></tr>`;
+      } else {
+        tbody.innerHTML = items.map(item => {
+          const qty = Number(item.qty) || 0;
+          const price = Number(item.price) || 0;
+          const lineTotal = qty * price;
+          total += lineTotal;
+          return `
+            <tr>
+              <td class="py-2 pr-3 font-medium">${escapeHtml(item.description || 'Service')}</td>
+              <td class="py-2 px-3 text-right font-mono">${qty}</td>
+              <td class="py-2 px-3 text-right font-mono">${formatCurrency(price, curCode)}</td>
+              <td class="py-2 pl-3 text-right font-mono font-semibold">${formatCurrency(lineTotal, curCode)}</td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      document.getElementById('viewProjTotalAmount').textContent = formatCurrency(total, curCode);
+      document.getElementById('viewProjLineItemsSubtotal').textContent = formatCurrency(total, curCode);
+      document.getElementById('viewProjSupplierCost').textContent = formatCurrency(proj.supplierCosts || 0, curCode);
+      document.getElementById('viewProjCurrencyBadge').textContent = curCode;
+
+      document.getElementById('viewProjScope').textContent = proj.scope || 'No job description or scope provided.';
+      document.getElementById('viewProjInternalNotes').textContent = proj.internalNotes || 'No internal notes recorded.';
+
+      const qtn = proj.quotationNumber || 'QTN-000000';
+      const inv = proj.invoiceNumber || 'INV-000000';
+      document.getElementById('dlCardQuotationRef').textContent = `${qtn}.pdf`;
+      document.getElementById('dlCardInvoiceRef').textContent = `${inv}.pdf`;
+
+      await refreshProjectLinkedFilesList(proj);
+    }
+
+    async function refreshProjectLinkedFilesList(proj) {
+      const listEl = document.getElementById('viewProjLinkedFilesList');
+      if (!listEl || !proj) return;
+      const allFiles = await getAllVaultFiles();
+      const qtn = (proj.quotationNumber || '').toLowerCase();
+      const inv = (proj.invoiceNumber || '').toLowerCase();
+      const pName = (proj.name || '').toLowerCase();
+      const matched = allFiles.filter(f => {
+        if (f.projectId && f.projectId === proj.id) return true;
+        const fn = (f.filename || '').toLowerCase();
+        return (qtn && fn.includes(qtn)) || (inv && fn.includes(inv)) || (pName && pName.length > 3 && fn.includes(pName));
+      });
+
+      if (matched.length === 0) {
+        listEl.innerHTML = `<div class="py-2 text-slate-400">No archived or attached files for this project yet. Use the download buttons above or click "+ Attach Project File".</div>`;
+        return;
+      }
+
+      listEl.innerHTML = matched.map(f => `
+        <div class="flex items-center justify-between gap-3 py-1.5 px-3 rounded-lg bg-slate-500/5 border border-slate-200/50 dark:border-white/5">
+          <div class="min-w-0">
+            <div class="font-medium truncate">${escapeHtml(f.filename)}</div>
+            <div class="text-[11px] font-mono text-slate-400">${escapeHtml(f.folder || '/01_Event_Projects/')} • ${formatBytes(f.size)}</div>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <button type="button" onclick="downloadVaultFileById('${f.id}')" class="btn-mac-secondary px-2.5 py-1 text-xs text-[#007AFF] dark:text-[#0A84FF]">Download</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function handleAttachFileToCurrentProject(event) {
+      const files = Array.from((event.target && event.target.files) || []);
+      if (files.length === 0) return;
+      const projId = document.getElementById('projIdInput').value;
+      const proj = (studioState.projects || []).find(p => p.id === projId);
+      if (!proj) return;
+
+      const existingVaultFiles = await getAllVaultFiles();
+      const usedNames = new Set(existingVaultFiles.map(f => (f.filename || '').toLowerCase()));
+
+      for (const file of files) {
+        let safeFilename = file.name;
+        if (usedNames.has(safeFilename.toLowerCase())) {
+          const dotIdx = safeFilename.lastIndexOf('.');
+          const base = dotIdx > 0 ? safeFilename.slice(0, dotIdx) : safeFilename;
+          const ext = dotIdx > 0 ? safeFilename.slice(dotIdx) : '';
+          let counter = 2;
+          while (usedNames.has(`${base}-${counter}${ext}`.toLowerCase())) counter++;
+          safeFilename = `${base}-${counter}${ext}`;
+        }
+        usedNames.add(safeFilename.toLowerCase());
+
+        const record = await saveFileToIndexedDBVault(safeFilename, '/01_Event_Projects/', file.type || 'application/octet-stream', file);
+        if (record && dbInstance) {
+          record.projectId = proj.id;
+          const tx = dbInstance.transaction([IDB_STORE], 'readwrite');
+          tx.objectStore(IDB_STORE).put(record);
+        }
+      }
+
+      event.target.value = '';
+      await refreshProjectLinkedFilesList(proj);
+      showToast(`Attached ${files.length} file${files.length > 1 ? 's' : ''} to ${proj.name}`);
+    }
+
+    async function downloadProjectSpecificFile(kind) {
+      const projId = document.getElementById('projIdInput').value;
+      const proj = (studioState.projects || []).find(p => p.id === projId);
+      if (!proj) return;
+      const curCode = proj.currency || getActiveCurrencyCode();
+      const client = (studioState.clients || []).find(c => c.id === proj.clientId) || {};
+      const safeSlug = (proj.name || 'Project').replace(/[^a-zA-Z0-9_-]+/g, '-');
+
+      if (kind === 'QuotationPDF') {
+        await generateProjectDirectPDF('Quotation');
+        await renderProjectInfoOverview(proj);
+      } else if (kind === 'InvoicePDF') {
+        await generateProjectDirectPDF('Invoice');
+        await renderProjectInfoOverview(proj);
+      } else if (kind === 'BriefTXT') {
+        let total = 0;
+        const itemLines = (proj.lineItems || []).map((it, i) => {
+          const lt = (Number(it.qty) || 0) * (Number(it.price) || 0);
+          total += lt;
+          return `${i + 1}. ${it.description || 'Service'} — Qty: ${it.qty} × ${formatCurrency(it.price, curCode)} = ${formatCurrency(lt, curCode)}`;
+        });
+        const content = [
+          `PROJECT BRIEF — ${proj.name}`,
+          `====================================================`,
+          `Date: ${proj.dateCreated || '—'}`,
+          `Status: ${proj.status || '—'}`,
+          `Role: ${proj.role || '—'}`,
+          `Currency: ${curCode}`,
+          `Quotation Ref: ${proj.quotationNumber || '—'}`,
+          `Invoice Ref: ${proj.invoiceNumber || '—'}`,
+          ``,
+          `CLIENT INFORMATION`,
+          `----------------------------------------------------`,
+          `Company: ${client.company || '—'}`,
+          `Contact: ${client.contactPerson || '—'}`,
+          `Email: ${client.email || '—'}`,
+          `Phone: ${client.phone || '—'}`,
+          `Address: ${client.address || '—'}`,
+          client.bankName ? `Bank Name: ${client.bankName}` : '',
+          client.accountNumber ? `Account No: ${client.accountNumber}` : '',
+          ``,
+          `JOB DESCRIPTION & SCOPE OF WORK`,
+          `----------------------------------------------------`,
+          proj.scope || '—',
+          ``,
+          `INTERNAL NOTES & SUPPLIER COSTS`,
+          `----------------------------------------------------`,
+          `Supplier & Operational Costs: ${formatCurrency(proj.supplierCosts || 0, curCode)}`,
+          `Notes: ${proj.internalNotes || '—'}`,
+          ``,
+          `LINE ITEMS`,
+          `----------------------------------------------------`,
+          ...itemLines,
+          ``,
+          `TOTAL: ${formatCurrency(total, curCode)}`
+        ].filter(l => l !== null).join('\n');
+        const filename = `${safeSlug}-Brief.txt`;
+        const blob = new Blob([content], { type: 'text/plain' });
+        triggerBrowserBlobDownload(blob, filename);
+        await saveFileToIndexedDBVault(filename, '/01_Event_Projects/', 'text/plain', blob);
+        await refreshProjectLinkedFilesList(proj);
+        showToast(`Downloaded "${filename}"`);
+      } else if (kind === 'LineItemsCSV') {
+        const rows = [['Description', 'Qty', `Unit Price (${curCode})`, `Line Total (${curCode})`]];
+        (proj.lineItems || []).forEach(it => {
+          const qty = Number(it.qty) || 0;
+          const price = Number(it.price) || 0;
+          rows.push([`"${String(it.description || '').replace(/"/g, '""')}"`, qty, price.toFixed(2), (qty * price).toFixed(2)]);
+        });
+        const csv = rows.map(r => r.join(',')).join('\n');
+        const filename = `${safeSlug}-Costs.csv`;
+        const blob = new Blob([csv], { type: 'text/csv' });
+        triggerBrowserBlobDownload(blob, filename);
+        await saveFileToIndexedDBVault(filename, '/01_Event_Projects/', 'text/csv', blob);
+        await refreshProjectLinkedFilesList(proj);
+        showToast(`Downloaded "${filename}"`);
+      }
     }
 
     function openProjectWorkspaceForEdit(projectId) {
@@ -2640,6 +3275,14 @@
       if (!proj) return;
       const container = document.getElementById('projectWorkspaceContainer');
       container.classList.remove('hidden');
+
+      if (proj.currency && STUDIO_CURRENCIES[proj.currency]) {
+        studioState.currency = proj.currency;
+        if (studioState.billingDraft) studioState.billingDraft.currency = proj.currency;
+      }
+      const projCurSelect = document.getElementById('projCurrencySelect');
+      if (projCurSelect) projCurSelect.value = getActiveCurrencyCode();
+      syncCurrencyLabelsUI();
 
       document.getElementById('projectWorkspaceHeading').textContent = proj.name;
       document.getElementById('projIdInput').value = proj.id;
@@ -2654,6 +3297,8 @@
 
       const qtn = proj.quotationNumber || generateRandomRef('QTN');
       const inv = proj.invoiceNumber || generateRandomRef('INV');
+      proj.quotationNumber = qtn;
+      proj.invoiceNumber = inv;
       document.getElementById('projQuotationNumInput').value = qtn;
       document.getElementById('projInvoiceNumInput').value = inv;
       document.getElementById('badgeQuotationRef').textContent = qtn;
@@ -2663,6 +3308,9 @@
       currentProjectLineItems = JSON.parse(JSON.stringify(proj.lineItems || []));
       if (currentProjectLineItems.length === 0) currentProjectLineItems.push({ description: getActiveProfile().labels.defaultServiceDesc, qty: 1, price: 2500 });
       renderProjectLineItemRows();
+
+      // Show Read-Only Project Information View first when opening a project
+      showProjectOverviewMode();
       container.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
@@ -2727,6 +3375,7 @@
         internalNotes: document.getElementById('projInternalNotesInput').value.trim(),
         quotationNumber: qtn,
         invoiceNumber: inv,
+        currency: (document.getElementById('projCurrencySelect') || {}).value || getActiveCurrencyCode(),
         lineItems: JSON.parse(JSON.stringify(currentProjectLineItems))
       };
 
@@ -2737,11 +3386,15 @@
       else studioState.projects.unshift(record);
 
       document.getElementById('projIdInput').value = record.id;
+      document.getElementById('projectWorkspaceHeading').textContent = record.name;
       document.getElementById('badgeQuotationRef').textContent = record.quotationNumber;
       document.getElementById('badgeInvoiceRef').textContent = record.invoiceNumber;
       document.getElementById('projectRefHeaderBadges').classList.remove('hidden');
 
       saveStudioState();
+      if (event) {
+        showProjectOverviewMode();
+      }
       showToast(`Saved "${record.name}"`);
       return record;
     }
@@ -2768,11 +3421,14 @@
         orgName: org.name, orgAddress: org.address, orgTaxId: org.taxId, orgEmail: org.email,
         orgBankName: org.bankName || 'Emirates NBD / Chase Business',
         orgAccountHolder: org.accountHolder || org.name || 'Zubair Freelance Studio',
+        orgAccountNumber: org.accountNumber || '',
         orgIban: org.iban || 'AE07 0260 0010 1528 4920 101',
         orgSwift: org.swift || 'EBILAEAD',
         paymentTerms: (studioState.billingDraft && studioState.billingDraft.paymentTerms) || 'Payment is due within 14 days of invoice date via bank transfer. Please quote the document reference number on your remittance.',
         clientCompany: client.company, clientContact: client.contactPerson, clientAddress: client.address, clientEmail: client.email,
+        clientBankName: client.bankName || '', clientAccountNumber: client.accountNumber || '', clientIban: client.iban || '',
         projectName: project.name, projectRole: project.role, projectScope: project.scope,
+        currency: project.currency || getActiveCurrencyCode(),
         lineItems: project.lineItems
       });
 
@@ -2805,7 +3461,9 @@
         email: document.getElementById('clientEmailInput').value.trim(),
         phone: document.getElementById('clientPhoneInput').value.trim(),
         eventType: document.getElementById('clientEventTypeInput').value.trim() || 'Corporate Event',
-        address: document.getElementById('clientAddressInput').value.trim()
+        address: document.getElementById('clientAddressInput').value.trim(),
+        bankName: (document.getElementById('clientBankNameInput') || {}).value ? document.getElementById('clientBankNameInput').value.trim() : '',
+        accountNumber: (document.getElementById('clientAccountNumberInput') || {}).value ? document.getElementById('clientAccountNumberInput').value.trim() : ''
       });
       document.getElementById('clientDirectoryForm').reset();
       saveStudioState();
@@ -2826,7 +3484,8 @@
             (c.company || '').toLowerCase().includes(query) ||
             (c.contactPerson || '').toLowerCase().includes(query) ||
             (c.email || '').toLowerCase().includes(query) ||
-            (c.eventType || '').toLowerCase().includes(query)
+            (c.eventType || '').toLowerCase().includes(query) ||
+            (c.accountNumber || '').toLowerCase().includes(query)
           )
         : allClients;
 
@@ -2841,7 +3500,10 @@
           <td class="py-3 pr-3"><div class="font-medium">${escapeHtml(c.company)}</div><div class="text-xs text-slate-500 dark:text-slate-400">${escapeHtml(c.contactPerson)}</div></td>
           <td class="py-3 px-3 text-xs"><div class="font-mono">${escapeHtml(c.email)}</div><div class="font-mono text-slate-500 dark:text-slate-400">${escapeHtml(c.phone)}</div></td>
           <td class="py-3 px-3 text-xs">${escapeHtml(c.eventType || '')}</td>
-          <td class="py-3 px-3 text-xs text-slate-500 dark:text-slate-400 max-w-xs truncate">${escapeHtml(c.address)}</td>
+          <td class="py-3 px-3 text-xs text-slate-500 dark:text-slate-400 max-w-xs">
+            <div class="truncate">${escapeHtml(c.address)}</div>
+            ${(c.bankName || c.accountNumber) ? `<div class="font-mono text-[11px] text-slate-400 mt-0.5 truncate">${escapeHtml([c.bankName, c.accountNumber ? 'Acct: ' + c.accountNumber : ''].filter(Boolean).join(' • '))}</div>` : ''}
+          </td>
           <td class="py-3 pl-3 text-right"><button type="button" onclick="removeClientById('${c.id}')" class="btn-mac-secondary px-2.5 py-1 text-xs text-rose-500">Remove</button></td>
         </tr>
       `).join('');
@@ -2917,6 +3579,7 @@
       document.getElementById('billingOrgAddress').value = activeOrg.address || '';
       document.getElementById('billingOrgBankName').value = activeOrg.bankName || 'Emirates NBD / Chase Business';
       document.getElementById('billingOrgAccountHolder').value = activeOrg.accountHolder || activeOrg.name || 'Zubair Freelance Studio';
+      document.getElementById('billingOrgAccountNumber').value = activeOrg.accountNumber || '';
       document.getElementById('billingOrgIban').value = activeOrg.iban || 'AE07 0260 0010 1528 4920 101';
       document.getElementById('billingOrgSwift').value = activeOrg.swift || 'EBILAEAD';
 
@@ -2947,8 +3610,12 @@
       document.getElementById('billingClientContact').value = draft.clientContact || '';
       document.getElementById('billingClientEmail').value = draft.clientEmail || '';
       document.getElementById('billingClientAddress').value = draft.clientAddress || '';
+      document.getElementById('billingClientBankName').value = draft.clientBankName || '';
+      document.getElementById('billingClientAccountNumber').value = draft.clientAccountNumber || '';
+      document.getElementById('billingClientIban').value = draft.clientIban || '';
       document.getElementById('billingPaymentTermsInput').value = draft.paymentTerms || '';
 
+      syncCurrencyLabelsUI();
       updateDocTypeToggleUI(draft.docType || 'Invoice');
       renderBillingLineItemsRows();
       renderLiveBillingPreview();
@@ -2963,6 +3630,7 @@
       document.getElementById('billingOrgAddress').value = org.address || '';
       document.getElementById('billingOrgBankName').value = org.bankName || '';
       document.getElementById('billingOrgAccountHolder').value = org.accountHolder || '';
+      document.getElementById('billingOrgAccountNumber').value = org.accountNumber || '';
       document.getElementById('billingOrgIban').value = org.iban || '';
       document.getElementById('billingOrgSwift').value = org.swift || '';
       saveStudioState();
@@ -2975,6 +3643,7 @@
       const address = document.getElementById('billingOrgAddress').value.trim();
       const bankName = document.getElementById('billingOrgBankName').value.trim();
       const accountHolder = document.getElementById('billingOrgAccountHolder').value.trim();
+      const accountNumber = document.getElementById('billingOrgAccountNumber').value.trim();
       const iban = document.getElementById('billingOrgIban').value.trim();
       const swift = document.getElementById('billingOrgSwift').value.trim();
       if (!name) return;
@@ -2982,10 +3651,10 @@
       const existing = (studioState.orgProfiles || []).find(o => o.name.toLowerCase() === name.toLowerCase());
       if (existing) {
         existing.taxId = taxId; existing.email = email; existing.address = address;
-        existing.bankName = bankName; existing.accountHolder = accountHolder; existing.iban = iban; existing.swift = swift;
+        existing.bankName = bankName; existing.accountHolder = accountHolder; existing.accountNumber = accountNumber; existing.iban = iban; existing.swift = swift;
         studioState.selectedOrgProfileId = existing.id;
       } else {
-        const newOrg = { id: 'org-' + Date.now(), name, taxId, email, address, bankName, accountHolder, iban, swift };
+        const newOrg = { id: 'org-' + Date.now(), name, taxId, email, address, bankName, accountHolder, accountNumber, iban, swift };
         studioState.orgProfiles.push(newOrg);
         studioState.selectedOrgProfileId = newOrg.id;
       }
@@ -3013,6 +3682,9 @@
         document.getElementById('billingClientContact').value = client.contactPerson;
         document.getElementById('billingClientEmail').value = client.email;
         document.getElementById('billingClientAddress').value = client.address;
+        document.getElementById('billingClientBankName').value = client.bankName || '';
+        document.getElementById('billingClientAccountNumber').value = client.accountNumber || '';
+        document.getElementById('billingClientIban').value = client.iban || '';
       }
       renderLiveBillingPreview();
     }
@@ -3023,13 +3695,17 @@
       const contactPerson = document.getElementById('billingClientContact').value.trim();
       const email = document.getElementById('billingClientEmail').value.trim();
       const address = document.getElementById('billingClientAddress').value.trim();
+      const bankName = document.getElementById('billingClientBankName').value.trim();
+      const accountNumber = document.getElementById('billingClientAccountNumber').value.trim();
+      const iban = document.getElementById('billingClientIban').value.trim();
 
       const existing = (studioState.clients || []).find(c => c.id === studioState.billingDraft.selectedClientId || c.company.toLowerCase() === company.toLowerCase());
       if (existing) {
         existing.company = company; existing.contactPerson = contactPerson; existing.email = email; existing.address = address;
+        existing.bankName = bankName; existing.accountNumber = accountNumber; existing.iban = iban;
         studioState.billingDraft.selectedClientId = existing.id;
       } else {
-        const newClient = { id: 'cli-' + Date.now(), company, contactPerson, email, phone: '', eventType: 'Event', address };
+        const newClient = { id: 'cli-' + Date.now(), company, contactPerson, email, phone: '', eventType: 'Event', address, bankName, accountNumber, iban };
         studioState.clients.unshift(newClient);
         studioState.billingDraft.selectedClientId = newClient.id;
       }
@@ -3080,6 +3756,14 @@
         document.getElementById('billingClientContact').value = client.contactPerson;
         document.getElementById('billingClientEmail').value = client.email;
         document.getElementById('billingClientAddress').value = client.address;
+        document.getElementById('billingClientBankName').value = client.bankName || '';
+        document.getElementById('billingClientAccountNumber').value = client.accountNumber || '';
+        document.getElementById('billingClientIban').value = client.iban || '';
+      }
+      if (proj.currency && STUDIO_CURRENCIES[proj.currency]) {
+        studioState.currency = proj.currency;
+        studioState.billingDraft.currency = proj.currency;
+        syncCurrencyLabelsUI();
       }
       studioState.billingDraft.lineItems = JSON.parse(JSON.stringify(proj.lineItems || []));
       renderBillingLineItemsRows();
@@ -3239,6 +3923,7 @@
       const orgAddress = document.getElementById('billingOrgAddress').value || '';
       const orgBankName = document.getElementById('billingOrgBankName').value || '';
       const orgAccountHolder = document.getElementById('billingOrgAccountHolder').value || '';
+      const orgAccountNumber = document.getElementById('billingOrgAccountNumber').value || '';
       const orgIban = document.getElementById('billingOrgIban').value || '';
       const orgSwift = document.getElementById('billingOrgSwift').value || '';
       const paymentTerms = document.getElementById('billingPaymentTermsInput').value || '';
@@ -3247,13 +3932,17 @@
       const clientContact = document.getElementById('billingClientContact').value || '';
       const clientEmail = document.getElementById('billingClientEmail').value || '';
       const clientAddress = document.getElementById('billingClientAddress').value || '';
+      const clientBankName = document.getElementById('billingClientBankName').value || '';
+      const clientAccountNumber = document.getElementById('billingClientAccountNumber').value || '';
+      const clientIban = document.getElementById('billingClientIban').value || '';
 
-      Object.assign(studioState.billingDraft, { docNumber, issueDate, clientCompany, clientContact, clientEmail, clientAddress, paymentTerms });
+      Object.assign(studioState.billingDraft, { docNumber, issueDate, clientCompany, clientContact, clientEmail, clientAddress, clientBankName, clientAccountNumber, clientIban, paymentTerms });
 
       const activeOrg = getSelectedOrgProfile();
       if (activeOrg) {
         activeOrg.bankName = orgBankName;
         activeOrg.accountHolder = orgAccountHolder;
+        activeOrg.accountNumber = orgAccountNumber;
         activeOrg.iban = orgIban;
         activeOrg.swift = orgSwift;
       }
@@ -3272,11 +3961,21 @@
       document.getElementById('previewClientAddressText').textContent = clientAddress;
       document.getElementById('previewClientEmailText').textContent = clientEmail;
 
-      const hasBank = Boolean(orgBankName || orgAccountHolder || orgIban || orgSwift);
+      const hasClientBank = Boolean(clientBankName || clientAccountNumber || clientIban);
+      const clientBankBlockEl = document.getElementById('previewClientBankBlock');
+      if (clientBankBlockEl) {
+        clientBankBlockEl.classList.toggle('hidden', !hasClientBank);
+        document.getElementById('previewClientBankNameText').textContent = clientBankName ? `Bank: ${clientBankName}` : '';
+        document.getElementById('previewClientAccountNumText').textContent = clientAccountNumber ? `Account No: ${clientAccountNumber}` : '';
+        document.getElementById('previewClientIbanText').textContent = clientIban ? `IBAN: ${clientIban}` : '';
+      }
+
+      const hasBank = Boolean(orgBankName || orgAccountHolder || orgAccountNumber || orgIban || orgSwift);
       document.getElementById('previewBankDetailsBlock').classList.toggle('hidden', !hasBank);
       document.getElementById('previewBankNameText').textContent = orgBankName ? `Bank: ${orgBankName}` : '';
       document.getElementById('previewBankHolderText').textContent = orgAccountHolder ? `Account Holder: ${orgAccountHolder}` : '';
-      document.getElementById('previewBankIbanText').textContent = orgIban ? `IBAN / Acct: ${orgIban}` : '';
+      document.getElementById('previewBankAccountNumText').textContent = orgAccountNumber ? `Account No: ${orgAccountNumber}` : '';
+      document.getElementById('previewBankIbanText').textContent = orgIban ? `IBAN: ${orgIban}` : '';
       document.getElementById('previewBankSwiftText').textContent = orgSwift ? `SWIFT / BIC: ${orgSwift}` : '';
 
       document.getElementById('previewPaymentTermsSection').classList.toggle('hidden', !paymentTerms.trim());
@@ -3319,6 +4018,7 @@
         orgEmail: document.getElementById('billingOrgEmail').value,
         orgBankName: document.getElementById('billingOrgBankName').value,
         orgAccountHolder: document.getElementById('billingOrgAccountHolder').value,
+        orgAccountNumber: document.getElementById('billingOrgAccountNumber').value,
         orgIban: document.getElementById('billingOrgIban').value,
         orgSwift: document.getElementById('billingOrgSwift').value,
         paymentTerms: document.getElementById('billingPaymentTermsInput').value,
@@ -3326,6 +4026,10 @@
         clientContact: d.clientContact,
         clientAddress: d.clientAddress,
         clientEmail: d.clientEmail,
+        clientBankName: d.clientBankName || document.getElementById('billingClientBankName').value,
+        clientAccountNumber: d.clientAccountNumber || document.getElementById('billingClientAccountNumber').value,
+        clientIban: d.clientIban || document.getElementById('billingClientIban').value,
+        currency: d.currency || getActiveCurrencyCode(),
         lineItems: d.lineItems
       });
 
@@ -3426,7 +4130,21 @@
       let y = 156;
       if (payload.clientContact) { doc.text(`Attn: ${payload.clientContact}`, 40, y); y += 13; }
       if (payload.clientAddress) { doc.text(payload.clientAddress, 40, y); y += 13; }
-      if (payload.clientEmail) { doc.text(payload.clientEmail, 40, y); y += 18; }
+      if (payload.clientEmail) { doc.text(payload.clientEmail, 40, y); y += 15; }
+      if (payload.clientBankName || payload.clientAccountNumber || payload.clientIban) {
+        doc.setFont(t.font, 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(107, 114, 128);
+        doc.text('BILLED TO BANK DETAILS', 40, y);
+        y += 11;
+        doc.setFont(t.font, 'normal');
+        doc.setFontSize(8.5);
+        doc.setTextColor(55, 65, 81);
+        if (payload.clientBankName) { doc.text(`Bank: ${payload.clientBankName}`, 40, y); y += 11; }
+        if (payload.clientAccountNumber) { doc.text(`Account No: ${payload.clientAccountNumber}`, 40, y); y += 11; }
+        if (payload.clientIban) { doc.text(`IBAN: ${payload.clientIban}`, 40, y); y += 11; }
+        y += 7;
+      }
 
       if (payload.projectName) {
         doc.setFont(t.font, 'bold');
@@ -3435,6 +4153,7 @@
         y += 18;
       }
 
+      const curMeta = getActiveCurrencyMeta(payload.currency);
       doc.setFillColor(...t.tableHeadBg);
       doc.rect(40, y, 515, 24, 'F');
       doc.setFont(t.font, 'bold');
@@ -3442,8 +4161,8 @@
       doc.setTextColor(...t.tableHeadText);
       doc.text('Description', 48, y + 15);
       doc.text('Qty', 370, y + 15, { align: 'right' });
-      doc.text('Unit Price ($)', 455, y + 15, { align: 'right' });
-      doc.text('Total ($)', 547, y + 15, { align: 'right' });
+      doc.text(`Unit Price (${curMeta.code})`, 455, y + 15, { align: 'right' });
+      doc.text(`Total (${curMeta.code})`, 547, y + 15, { align: 'right' });
       y += 24;
 
       let subtotal = 0;
@@ -3456,8 +4175,8 @@
         subtotal += lineTotal;
         doc.text(String(item.description || 'Service').substring(0, 62), 48, y + 15);
         doc.text(String(qty), 370, y + 15, { align: 'right' });
-        doc.text(formatCurrency(price), 455, y + 15, { align: 'right' });
-        doc.text(formatCurrency(lineTotal), 547, y + 15, { align: 'right' });
+        doc.text(formatCurrency(price, curMeta.code, true), 455, y + 15, { align: 'right' });
+        doc.text(formatCurrency(lineTotal, curMeta.code, true), 547, y + 15, { align: 'right' });
         y += 24;
       });
 
@@ -3468,7 +4187,7 @@
 
       // Sender Bank Details on the left of the summary row
       let bankY = summaryTopY + 18;
-      if (payload.orgBankName || payload.orgAccountHolder || payload.orgIban || payload.orgSwift) {
+      if (payload.orgBankName || payload.orgAccountHolder || payload.orgAccountNumber || payload.orgIban || payload.orgSwift) {
         doc.setFont(t.font, 'bold');
         doc.setFontSize(8);
         doc.setTextColor(107, 114, 128);
@@ -3480,7 +4199,8 @@
         doc.setTextColor(31, 41, 55);
         if (payload.orgBankName) { doc.text(`Bank: ${payload.orgBankName}`, 40, bankY); bankY += 11; }
         if (payload.orgAccountHolder) { doc.text(`Account Holder: ${payload.orgAccountHolder}`, 40, bankY); bankY += 11; }
-        if (payload.orgIban) { doc.text(`IBAN / Account: ${payload.orgIban}`, 40, bankY); bankY += 11; }
+        if (payload.orgAccountNumber) { doc.text(`Account No: ${payload.orgAccountNumber}`, 40, bankY); bankY += 11; }
+        if (payload.orgIban) { doc.text(`IBAN: ${payload.orgIban}`, 40, bankY); bankY += 11; }
         if (payload.orgSwift) { doc.text(`SWIFT / BIC: ${payload.orgSwift}`, 40, bankY); bankY += 11; }
       }
 
@@ -3490,7 +4210,7 @@
       doc.setFontSize(12);
       doc.setTextColor(...t.accent);
       doc.text('Total Due:', 360, totalY);
-      doc.text(formatCurrency(subtotal), 547, totalY, { align: 'right' });
+      doc.text(formatCurrency(subtotal, curMeta.code, true), 547, totalY, { align: 'right' });
 
       // Small Terms of Payment at the bottom
       const termsText = (payload.paymentTerms || '').trim();
@@ -3828,22 +4548,161 @@
       showToast('Exported JSON backup.');
     }
 
-    function restoreWorkspaceJsonBackup(event) {
-      const file = event.target.files && event.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = e => {
-        try {
-          const parsed = JSON.parse(e.target.result);
-          const restored = parsed.state || parsed;
-          if (restored && Array.isArray(restored.projects)) {
-            studioState = Object.assign({}, getDefaultStateForProfile(activeProfileId), restored);
-            saveStudioState();
-            showToast('Workspace restored.');
+    function mergeCollectionNonDestructive(existingList, incomingList, keyFields, idPrefix) {
+      if (!Array.isArray(incomingList)) return 0;
+      let addedCount = 0;
+      const existingIds = new Set(existingList.map(item => String(item.id || '')));
+
+      incomingList.forEach(rawItem => {
+        if (!rawItem || typeof rawItem !== 'object') return;
+        const item = JSON.parse(JSON.stringify(rawItem));
+
+        // Check if an identical record already exists so we never alter or overwrite existing records
+        const alreadyExists = existingList.some(ex => {
+          if (item.id && ex.id && String(item.id) === String(ex.id)) {
+            const samePrimary = keyFields.every(k => {
+              if (!item[k] && !ex[k]) return true;
+              return String(item[k] || '').trim().toLowerCase() === String(ex[k] || '').trim().toLowerCase();
+            });
+            if (samePrimary) return true;
           }
-        } catch (_) { showToast('Invalid JSON file.'); }
-      };
-      reader.readAsText(file);
+          return keyFields.length > 0 && keyFields.every(k => {
+            const a = String(item[k] || '').trim().toLowerCase();
+            const b = String(ex[k] || '').trim().toLowerCase();
+            return a && b && a === b;
+          });
+        });
+
+        if (alreadyExists) return;
+
+        // Ensure unique ID so existing items with the same ID are never altered
+        if (!item.id || existingIds.has(String(item.id))) {
+          item.id = `${idPrefix}-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+        }
+        existingIds.add(String(item.id));
+        existingList.push(item);
+        addedCount++;
+      });
+
+      return addedCount;
+    }
+
+    function mergeJsonPayloadNonDestructive(parsed) {
+      if (!parsed) return { projects: 0, clients: 0, suppliers: 0, meetings: 0, orgProfiles: 0 };
+      const counts = { projects: 0, clients: 0, suppliers: 0, meetings: 0, orgProfiles: 0 };
+
+      if (!Array.isArray(studioState.projects)) studioState.projects = [];
+      if (!Array.isArray(studioState.clients)) studioState.clients = [];
+      if (!Array.isArray(studioState.suppliers)) studioState.suppliers = [];
+      if (!Array.isArray(studioState.meetings)) studioState.meetings = [];
+      if (!Array.isArray(studioState.orgProfiles)) studioState.orgProfiles = [];
+      if (!Array.isArray(studioState.usedDocNumbers)) studioState.usedDocNumbers = [];
+
+      // Case 1: Array of records directly (e.g., projects.json, clients.json, suppliers.json)
+      if (Array.isArray(parsed)) {
+        const sample = parsed.find(x => x && typeof x === 'object') || {};
+        if ('lineItems' in sample || 'quotationNumber' in sample || 'invoiceNumber' in sample || 'scope' in sample) {
+          counts.projects += mergeCollectionNonDestructive(studioState.projects, parsed, ['name', 'dateCreated'], 'prj');
+        } else if ('company' in sample && ('contactPerson' in sample || 'eventType' in sample)) {
+          counts.clients += mergeCollectionNonDestructive(studioState.clients, parsed, ['company', 'email'], 'cli');
+        } else if ('serviceCategory' in sample || ('rateCard' in sample)) {
+          counts.suppliers += mergeCollectionNonDestructive(studioState.suppliers, parsed, ['name', 'email'], 'sup');
+        } else if ('startTime' in sample || 'attendeeEmail' in sample) {
+          counts.meetings += mergeCollectionNonDestructive(studioState.meetings, parsed, ['title', 'date', 'startTime'], 'mtg');
+        } else if ('taxId' in sample || 'iban' in sample) {
+          counts.orgProfiles += mergeCollectionNonDestructive(studioState.orgProfiles, parsed, ['name'], 'org');
+        } else if ('name' in sample) {
+          counts.projects += mergeCollectionNonDestructive(studioState.projects, parsed, ['name'], 'prj');
+        }
+        return counts;
+      }
+
+      // Case 2: Full backup object or partial workspace JSON ({ state: {...} } or { projects, clients, ... })
+      const source = (parsed.state && typeof parsed.state === 'object') ? parsed.state : parsed;
+      counts.projects += mergeCollectionNonDestructive(studioState.projects, source.projects, ['name', 'dateCreated'], 'prj');
+      counts.clients += mergeCollectionNonDestructive(studioState.clients, source.clients, ['company', 'email'], 'cli');
+      counts.suppliers += mergeCollectionNonDestructive(studioState.suppliers, source.suppliers, ['name', 'email'], 'sup');
+      counts.meetings += mergeCollectionNonDestructive(studioState.meetings, source.meetings, ['title', 'date', 'startTime'], 'mtg');
+      counts.orgProfiles += mergeCollectionNonDestructive(studioState.orgProfiles, source.orgProfiles, ['name'], 'org');
+
+      if (Array.isArray(source.usedDocNumbers)) {
+        source.usedDocNumbers.forEach(num => {
+          if (num && !studioState.usedDocNumbers.includes(num)) {
+            studioState.usedDocNumbers.push(num);
+          }
+        });
+      }
+
+      // Case 3: Single standalone entity object (e.g., a single project or client JSON file)
+      const totalFromCollections = counts.projects + counts.clients + counts.suppliers + counts.meetings + counts.orgProfiles;
+      if (totalFromCollections === 0 && typeof source === 'object') {
+        if ('lineItems' in source || 'quotationNumber' in source || 'scope' in source) {
+          counts.projects += mergeCollectionNonDestructive(studioState.projects, [source], ['name', 'dateCreated'], 'prj');
+        } else if ('company' in source && ('contactPerson' in source || 'email' in source)) {
+          counts.clients += mergeCollectionNonDestructive(studioState.clients, [source], ['company', 'email'], 'cli');
+        } else if ('serviceCategory' in source) {
+          counts.suppliers += mergeCollectionNonDestructive(studioState.suppliers, [source], ['name', 'email'], 'sup');
+        }
+      }
+
+      return counts;
+    }
+
+    async function addMultipleJsonFilesNonDestructive(event) {
+      const files = Array.from((event.target && event.target.files) || []);
+      if (files.length === 0) return;
+
+      const existingVaultFiles = await getAllVaultFiles();
+      const usedNames = new Set(existingVaultFiles.map(f => (f.filename || '').toLowerCase()));
+
+      let filesAdded = 0;
+      let totalRecordsMerged = 0;
+
+      for (const file of files) {
+        try {
+          const rawText = await file.text();
+          const parsed = JSON.parse(rawText);
+
+          // 1. Non-destructively merge any new workspace records without altering existing records
+          const counts = mergeJsonPayloadNonDestructive(parsed);
+          totalRecordsMerged += (counts.projects + counts.clients + counts.suppliers + counts.meetings + counts.orgProfiles);
+
+          // 2. Save the JSON file into IndexedDB Vault without overwriting existing files of the same name
+          let safeFilename = file.name || `Imported-${Date.now()}.json`;
+          if (usedNames.has(safeFilename.toLowerCase())) {
+            const dotIdx = safeFilename.lastIndexOf('.');
+            const base = dotIdx > 0 ? safeFilename.slice(0, dotIdx) : safeFilename;
+            const ext = dotIdx > 0 ? safeFilename.slice(dotIdx) : '.json';
+            let counter = 2;
+            while (usedNames.has(`${base}-${counter}${ext}`.toLowerCase())) counter++;
+            safeFilename = `${base}-${counter}${ext}`;
+          }
+          usedNames.add(safeFilename.toLowerCase());
+
+          const jsonBlob = new Blob([rawText], { type: 'application/json' });
+          await saveFileToIndexedDBVault(safeFilename, '/04_Converted_Files/', 'application/json', jsonBlob);
+          filesAdded++;
+        } catch (err) {
+          console.error('Error importing JSON file:', file.name, err);
+        }
+      }
+
+      event.target.value = '';
+      saveStudioState();
+      await refreshVaultTableUI();
+
+      if (filesAdded > 0) {
+        showToast(`Added ${filesAdded} JSON file${filesAdded > 1 ? 's' : ''} (${totalRecordsMerged} new record${totalRecordsMerged === 1 ? '' : 's'} merged; existing data untouched).`);
+      } else {
+        showToast('No valid JSON files could be added.');
+      }
+    }
+
+    function restoreWorkspaceJsonBackup(event) {
+      const files = Array.from((event.target && event.target.files) || []);
+      if (files.length === 0) return;
+      // Route through non-destructive multi-file JSON importer so existing files/records are never lost
+      addMultipleJsonFilesNonDestructive(event);
     }
 
     async function downloadOrganizedZipArchive() {
@@ -4769,8 +5628,57 @@
       return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 
-    function formatCurrency(val) {
-      return '$' + (Number(val) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    function getActiveCurrencyCode() {
+      const code = (studioState && (studioState.currency || (studioState.billingDraft && studioState.billingDraft.currency))) || 'USD';
+      return STUDIO_CURRENCIES[code] ? code : 'USD';
+    }
+
+    function getActiveCurrencyMeta(overrideCode) {
+      const code = overrideCode && STUDIO_CURRENCIES[overrideCode] ? overrideCode : getActiveCurrencyCode();
+      return STUDIO_CURRENCIES[code] || STUDIO_CURRENCIES.USD;
+    }
+
+    function syncCurrencyLabelsUI() {
+      const cur = getActiveCurrencyMeta();
+      const setSelect = (id) => {
+        const el = document.getElementById(id);
+        if (el) el.value = cur.code;
+      };
+      setSelect('headerCurrencySelect');
+      setSelect('billingCurrencySelect');
+      setSelect('projCurrencySelect');
+
+      const setText = (id, text) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = text;
+      };
+      setText('projSupplierCostLabel', `Supplier & Operational Costs (${cur.code})`);
+      setText('projUnitPriceHeader', `Unit Price (${cur.code})`);
+      setText('billingUnitPriceHeader', `Unit Price (${cur.code})`);
+      setText('previewUnitPriceHeader', `Unit Price (${cur.code})`);
+    }
+
+    function setStudioCurrency(code) {
+      if (!STUDIO_CURRENCIES[code]) return;
+      studioState.currency = code;
+      if (studioState.billingDraft) {
+        studioState.billingDraft.currency = code;
+      }
+      syncCurrencyLabelsUI();
+      if (typeof renderProjectLineItemRows === 'function') renderProjectLineItemRows();
+      if (typeof renderLiveBillingPreview === 'function') renderLiveBillingPreview();
+      if (lastOcrOrganizedData && typeof organizeAndRenderOcrText === 'function') {
+        const rawEl = document.getElementById('ocrResultTextarea');
+        if (rawEl && rawEl.value) organizeAndRenderOcrText(rawEl.value);
+      }
+      saveStudioState();
+      showToast(`Currency set to ${STUDIO_CURRENCIES[code].label}.`);
+    }
+
+    function formatCurrency(val, overrideCode, forPdf = false) {
+      const cur = getActiveCurrencyMeta(overrideCode);
+      const prefix = forPdf ? cur.pdfPrefix : cur.symbol;
+      return prefix + (Number(val) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
     function formatBytes(bytes) {
@@ -4781,6 +5689,7 @@
     }
 
     function refreshAllUI() {
+      syncCurrencyLabelsUI();
       markAllViewsDirty();
       renderViewIfNeeded(currentActiveView, true);
       renderGoogleAndCalendarModule();
