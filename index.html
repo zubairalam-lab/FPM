@@ -306,11 +306,11 @@
       </div>
 
       <div class="text-center mb-7">
-        <div class="w-14 h-14 mx-auto mb-4 rounded-2xl bg-[#007AFF] dark:bg-[#0A84FF] flex items-center justify-center text-white font-semibold text-lg tracking-tight shadow-sm">
-          ZF
+        <div id="lockBrandBadge" class="w-14 h-14 mx-auto mb-4 rounded-2xl bg-[#007AFF] dark:bg-[#0A84FF] flex items-center justify-center text-white font-semibold text-lg tracking-tight shadow-sm">
+          SM
         </div>
-        <h1 class="text-lg font-semibold tracking-tight">Zubair Freelance</h1>
-        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Event Management Studio</p>
+        <h1 id="lockBrandHeading" class="text-lg font-semibold tracking-tight">Studio Workspace</h1>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Enter profile access code</p>
       </div>
 
       <form id="authPasscodeForm" onsubmit="handlePasscodeSubmit(event)" class="space-y-4">
@@ -319,8 +319,8 @@
             id="passcodeInput"
             type="password"
             inputmode="numeric"
-            maxlength="8"
-            placeholder="Enter passcode (1234)"
+            maxlength="20"
+            placeholder="••••"
             autocomplete="off"
             class="helios-input w-full px-4 py-3 text-center font-mono text-base tracking-[0.25em]"
             required
@@ -332,7 +332,7 @@
         </button>
 
         <div id="authErrorBanner" class="hidden rounded-xl bg-rose-500/10 border border-rose-500/25 px-3 py-2 text-center text-xs text-rose-600 dark:text-rose-400 font-medium">
-          Incorrect passcode. Default passcode is 1234.
+          Invalid access code.
         </div>
       </form>
 
@@ -352,8 +352,8 @@
       <div class="space-y-6">
         <!-- Studio Title -->
         <div class="px-1 pt-1">
-          <div class="text-sm font-semibold tracking-tight">Zubair Freelance</div>
-          <div class="text-xs text-slate-500 dark:text-slate-400">Event Management Studio</div>
+          <div id="sidebarStudioTitle" class="text-sm font-semibold tracking-tight">Zubair Alam</div>
+          <div id="sidebarStudioSubtitle" class="text-xs text-slate-500 dark:text-slate-400">Event Management Studio</div>
         </div>
 
         <!-- Categorized Navigation -->
@@ -367,7 +367,7 @@
           </div>
 
           <div class="space-y-1">
-            <div class="px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Events</div>
+            <div id="sidebarProjectsSectionLabel" class="px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Events</div>
             <button type="button" onclick="switchView('projects')" data-sidebar-nav="projects" class="sidebar-nav-btn">
               <span class="w-1.5 h-1.5 rounded-full bg-current opacity-75"></span>
               <span>Projects</span>
@@ -479,13 +479,13 @@
           <!-- 3 Clean Metric Cards (No revenue or profit figures) -->
           <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
             <div class="helios-card p-5">
-              <div class="text-xs font-medium text-slate-500 dark:text-slate-400">Pending Events</div>
+              <div id="metricPendingLabel" class="text-xs font-medium text-slate-500 dark:text-slate-400">Pending Events</div>
               <div id="metricPendingEvents" class="text-3xl font-semibold tracking-tight mt-2">0</div>
               <div class="text-xs text-slate-400 mt-1">Planning or Quoted</div>
             </div>
 
             <div class="helios-card p-5">
-              <div class="text-xs font-medium text-slate-500 dark:text-slate-400">Confirmed Events</div>
+              <div id="metricConfirmedLabel" class="text-xs font-medium text-slate-500 dark:text-slate-400">Confirmed Events</div>
               <div id="metricConfirmedEvents" class="text-3xl font-semibold tracking-tight mt-2">0</div>
               <div class="text-xs text-slate-400 mt-1">Confirmed, Invoiced or Completed</div>
             </div>
@@ -558,7 +558,7 @@
               </div>
 
               <div class="flex items-center gap-4 mb-3 text-xs text-slate-500 dark:text-slate-400">
-                <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-indigo-500"></span> Booked Event</span>
+                <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-indigo-500"></span> <span id="calendarBookedLegendLabel">Booked Event</span></span>
                 <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Meeting</span>
               </div>
 
@@ -602,7 +602,7 @@
         <section id="view-projects" class="tab-view space-y-6">
           <div class="flex flex-wrap items-center justify-between gap-3">
             <input id="projectSearchInput" type="search" placeholder="Search projects..." oninput="renderProjectsModule()" class="helios-input px-3.5 py-2 text-xs w-64" />
-            <button type="button" onclick="openProjectWorkspaceForNew()" class="btn-mac-primary px-4 py-2 text-xs">
+            <button id="addProjectBtnLabel" type="button" onclick="openProjectWorkspaceForNew()" class="btn-mac-primary px-4 py-2 text-xs">
               + Add Event / Project
             </button>
           </div>
@@ -627,7 +627,7 @@
 
               <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Event / Project Name *</label>
+                  <label id="projNameFieldLabel" class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Event / Project Name *</label>
                   <input id="projNameInput" type="text" required placeholder="e.g., Global FinTech Summit" class="helios-input w-full px-3 py-2 text-sm" />
                 </div>
                 <div>
@@ -635,7 +635,7 @@
                   <select id="projClientSelect" required class="helios-input w-full px-3 py-2 text-sm"></select>
                 </div>
                 <div>
-                  <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Event Date *</label>
+                  <label id="projDateFieldLabel" class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Event Date *</label>
                   <input id="projDateInput" type="date" required class="helios-input w-full px-3 py-2 text-sm font-mono" />
                 </div>
                 <div>
@@ -759,7 +759,7 @@
                   <input id="clientPhoneInput" type="text" required class="helios-input w-full px-3 py-2 text-sm" />
                 </div>
                 <div>
-                  <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Event Type</label>
+                  <label id="clientTypeFieldLabel" class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Event Type</label>
                   <input id="clientEventTypeInput" type="text" placeholder="Corporate Gala / Summit" class="helios-input w-full px-3 py-2 text-sm" />
                 </div>
                 <div>
@@ -784,7 +784,7 @@
                     <tr class="border-b border-slate-200/70 dark:border-white/10 text-xs text-slate-400 font-medium">
                       <th class="py-2.5 pr-3">Company / Contact</th>
                       <th class="py-2.5 px-3">Email &amp; Phone</th>
-                      <th class="py-2.5 px-3">Event Type</th>
+                      <th id="clientsTableTypeHeader" class="py-2.5 px-3">Event Type</th>
                       <th class="py-2.5 px-3">Billing Address</th>
                       <th class="py-2.5 pl-3 text-right">Action</th>
                     </tr>
@@ -1197,7 +1197,7 @@
                 <div id="calendarMeetingsList" class="space-y-2.5"></div>
               </div>
               <div class="pt-4 border-t border-slate-200/70 dark:border-white/10">
-                <h3 class="text-sm font-semibold mb-3">Booked Event Projects</h3>
+                <h3 id="calendarBookedHeading" class="text-sm font-semibold mb-3">Booked Event Projects</h3>
                 <div id="calendarBookedEventsList" class="space-y-2.5"></div>
               </div>
             </div>
@@ -1387,9 +1387,62 @@
   </div>
 
   <script>
-    const STORAGE_KEY_STATE = 'ZUBAIR_FREELANCE_STUDIO_STATE_V1';
+    const STORAGE_KEY_LEGACY = 'ZUBAIR_FREELANCE_STUDIO_STATE_V1';
+    const STORAGE_KEY_ACTIVE_PROFILE = 'ZUBAIR_FREELANCE_ACTIVE_PROFILE';
     const STORAGE_KEY_THEME = 'ZUBAIR_FREELANCE_THEME_MODE';
-    const DEFAULT_PASSCODE = '1234';
+
+    const STUDIO_PROFILES = {
+      zubair: {
+        id: 'zubair',
+        name: 'Zubair Alam',
+        subtitle: 'Event Management Studio',
+        initials: 'ZA',
+        code: '585475109',
+        storageKey: 'ZUBAIR_FREELANCE_STUDIO_PROFILE_ZUBAIR_V1',
+        labels: {
+          projectsSection: 'Events',
+          pendingCard: 'Pending Events',
+          confirmedCard: 'Confirmed Events',
+          bookedLegend: 'Booked Event',
+          addProjectBtn: '+ Add Event / Project',
+          projNameField: 'Event / Project Name *',
+          projNamePlaceholder: 'e.g., Global FinTech Summit',
+          projDateField: 'Event Date *',
+          clientTypeField: 'Event Type',
+          clientTypePlaceholder: 'Corporate Gala / Summit',
+          calendarBookedHeading: 'Booked Event Projects',
+          defaultServiceDesc: 'Event Management Services'
+        }
+      },
+      banzir: {
+        id: 'banzir',
+        name: 'Banzir Hazra',
+        subtitle: 'Business Management System',
+        initials: 'BH',
+        code: '0509569576',
+        storageKey: 'ZUBAIR_FREELANCE_STUDIO_PROFILE_BANZIR_V1',
+        labels: {
+          projectsSection: 'Operations',
+          pendingCard: 'Pending Projects',
+          confirmedCard: 'Confirmed Projects',
+          bookedLegend: 'Scheduled Project',
+          addProjectBtn: '+ Add Business Project',
+          projNameField: 'Project Name *',
+          projNamePlaceholder: 'e.g., Q4 Operations Expansion',
+          projDateField: 'Target Date *',
+          clientTypeField: 'Industry / Sector',
+          clientTypePlaceholder: 'Consulting / Retail / Operations',
+          calendarBookedHeading: 'Active Business Projects',
+          defaultServiceDesc: 'Business Management Services'
+        }
+      }
+    };
+
+    let activeProfileId = 'zubair';
+
+    function getActiveProfile() {
+      return STUDIO_PROFILES[activeProfileId] || STUDIO_PROFILES.zubair;
+    }
 
     const IDB_NAME = 'ZubairFreelanceLocalVaultDB';
     const IDB_VERSION = 1;
@@ -1404,8 +1457,8 @@
     let converterPendingText = null;
     let currentProjectLineItems = [];
 
-    const defaultWorkspaceState = {
-      passcode: '1234',
+    const defaultZubairWorkspaceState = {
+      profileId: 'zubair',
       googleAccount: { connected: true, email: 'zubair.events@gmail.com' },
       clients: [
         {
@@ -1517,12 +1570,12 @@
       orgProfiles: [
         {
           id: 'org-1',
-          name: 'Zubair Freelance — Event Management Studio',
+          name: 'Zubair Alam — Event Management Studio',
           taxId: 'EIN-92-4810294',
           email: 'zubair.events@gmail.com',
           address: '350 Fifth Avenue, Suite 4100, New York, NY 10118',
           bankName: 'Emirates NBD / Chase Business',
-          accountHolder: 'Zubair Freelance Studio',
+          accountHolder: 'Zubair Alam',
           iban: 'AE07 0260 0010 1528 4920 101',
           swift: 'EBILAEAD'
         }
@@ -1572,18 +1625,172 @@
       ]
     };
 
-    let studioState = loadStudioState();
-
-    function loadStudioState() {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY_STATE);
-        if (!raw) {
-          localStorage.setItem(STORAGE_KEY_STATE, JSON.stringify(defaultWorkspaceState));
-          return JSON.parse(JSON.stringify(defaultWorkspaceState));
+    const defaultBanzirWorkspaceState = {
+      profileId: 'banzir',
+      googleAccount: { connected: false, email: 'banzir.hazra@gmail.com' },
+      clients: [
+        {
+          id: 'cli-b101',
+          company: 'Crescent Royal Exhibitions',
+          contactPerson: 'Farhan Siddiqui',
+          email: 'f.siddiqui@crescentroyal.ae',
+          phone: '+971 50 492 8170',
+          eventType: 'Luxury Exhibition & Brand Activation',
+          address: 'DIFC Gate Village, Building 4, Dubai, UAE'
+        },
+        {
+          id: 'cli-b102',
+          company: 'Meridian Lifestyle & Media',
+          contactPerson: 'Hannah Sterling',
+          email: 'hannah@meridianmedia.co',
+          phone: '+971 52 819 3044',
+          eventType: 'Fashion Runway & Press Gala',
+          address: 'Dubai Design District (d3), Building 7, Dubai, UAE'
         }
-        return Object.assign({}, defaultWorkspaceState, JSON.parse(raw));
+      ],
+      suppliers: [
+        {
+          id: 'sup-b201',
+          name: 'Apex Staging & Rigging Solutions',
+          category: 'Staging & Truss',
+          contactPerson: 'Rashed Al-Nuaimi',
+          email: 'ops@apexstaging.ae',
+          phone: '+971 4 388 9200'
+        },
+        {
+          id: 'sup-b202',
+          name: 'Velvet Floral & Event Decor',
+          category: 'Floral & Styling',
+          contactPerson: 'Maya Khoury',
+          email: 'studio@velvetdecor.ae',
+          phone: '+971 4 512 7490'
+        }
+      ],
+      projects: [
+        {
+          id: 'prj-b301',
+          name: 'Crescent Luxury Watch Expo 2026',
+          clientId: 'cli-b101',
+          dateCreated: '2026-11-20',
+          status: 'Confirmed',
+          role: 'Executive Event Producer',
+          scope: 'Bespoke exhibition booths, VIP lounge hospitality, and stage lighting.',
+          supplierCosts: 11200,
+          internalNotes: 'VIP security and valet confirmed with venue.',
+          quotationNumber: 'QTN-610401',
+          invoiceNumber: 'INV-910401',
+          lineItems: [
+            { description: 'Exhibition Production & Creative Direction', qty: 1, price: 9500 },
+            { description: 'Bespoke Pavilion & Lighting Setup', qty: 1, price: 12400 }
+          ]
+        },
+        {
+          id: 'prj-b302',
+          name: 'Meridian Autumn Runway Showcase',
+          clientId: 'cli-b102',
+          dateCreated: '2026-11-26',
+          status: 'Planning',
+          role: 'Event Operations Lead',
+          scope: 'Runway lighting choreography, backstage logistics, and press seating.',
+          supplierCosts: 6400,
+          internalNotes: 'Soundcheck scheduled for 2:00 PM.',
+          quotationNumber: 'QTN-610402',
+          invoiceNumber: 'INV-910402',
+          lineItems: [
+            { description: 'Runway Show Production & Logistics', qty: 1, price: 7800 }
+          ]
+        }
+      ],
+      orgProfiles: [
+        {
+          id: 'org-b1',
+          name: 'Banzir Hazra — Business Management System',
+          taxId: 'TRN-100492817400003',
+          email: 'banzir.hazra@gmail.com',
+          address: 'Dubai Design District (d3), Building 7, Dubai, UAE',
+          bankName: 'First Abu Dhabi Bank (FAB)',
+          accountHolder: 'Banzir Hazra',
+          iban: 'AE45 0351 0110 0294 8172 001',
+          swift: 'NBADAEAA'
+        }
+      ],
+      selectedOrgProfileId: 'org-b1',
+      usedDocNumbers: [],
+      billingDraft: {
+        docType: 'Invoice',
+        docNumber: 'INV-910401',
+        nextInvoiceNumber: 'INV-910401',
+        nextQuotationNumber: 'QTN-610401',
+        issueDate: '2026-11-14',
+        selectedClientId: 'cli-b101',
+        clientCompany: 'Crescent Royal Exhibitions',
+        clientContact: 'Farhan Siddiqui',
+        clientEmail: 'f.siddiqui@crescentroyal.ae',
+        clientAddress: 'DIFC Gate Village, Building 4, Dubai, UAE',
+        paymentTerms: 'Payment is due within 14 days of invoice date via bank transfer. Please quote the document reference number on your remittance. Late payments may incur a 2% monthly administrative fee.',
+        lineItems: [
+          { description: 'Exhibition Production & Creative Direction', qty: 1, price: 9500 },
+          { description: 'Bespoke Pavilion & Lighting Setup', qty: 1, price: 12400 }
+        ]
+      },
+      meetings: [
+        {
+          id: 'mtg-b401',
+          title: 'Crescent Expo Floorplan Sign-off',
+          date: '2026-11-19',
+          projectId: 'prj-b301',
+          startTime: '11:00',
+          endTime: '12:00',
+          attendeeEmail: 'f.siddiqui@crescentroyal.ae',
+          location: 'Google Meet',
+          notes: 'Review VIP lounge entrance layout and lighting rig.'
+        }
+      ]
+    };
+
+    function getDefaultStateForProfile(profileId) {
+      return profileId === 'banzir' ? defaultBanzirWorkspaceState : defaultZubairWorkspaceState;
+    }
+
+    let studioState = loadStudioState('zubair');
+
+    function loadStudioState(profileId = activeProfileId) {
+      const profile = STUDIO_PROFILES[profileId] || STUDIO_PROFILES.zubair;
+      const baseDefault = getDefaultStateForProfile(profile.id);
+      try {
+        let raw = localStorage.getItem(profile.storageKey);
+        if (!raw && profile.id === 'zubair') {
+          const legacyRaw = localStorage.getItem(STORAGE_KEY_LEGACY);
+          if (legacyRaw) {
+            raw = legacyRaw;
+            localStorage.setItem(profile.storageKey, legacyRaw);
+          }
+        }
+        if (!raw) {
+          localStorage.setItem(profile.storageKey, JSON.stringify(baseDefault));
+          return JSON.parse(JSON.stringify(baseDefault));
+        }
+        const parsed = JSON.parse(raw);
+        const merged = Object.assign({}, JSON.parse(JSON.stringify(baseDefault)), parsed);
+        merged.billingDraft = Object.assign({}, JSON.parse(JSON.stringify(baseDefault.billingDraft)), (parsed && parsed.billingDraft) || {});
+        if (!Array.isArray(merged.orgProfiles) || merged.orgProfiles.length === 0) {
+          merged.orgProfiles = JSON.parse(JSON.stringify(baseDefault.orgProfiles));
+        }
+        if (profile.id === 'banzir') {
+          let updatedBanzirOrg = false;
+          merged.orgProfiles.forEach(org => {
+            if (org.name === 'Banzir Hazra — Event Management Studio') {
+              org.name = 'Banzir Hazra — Business Management System';
+              updatedBanzirOrg = true;
+            }
+          });
+          if (updatedBanzirOrg) {
+            localStorage.setItem(profile.storageKey, JSON.stringify(merged));
+          }
+        }
+        return merged;
       } catch (e) {
-        return JSON.parse(JSON.stringify(defaultWorkspaceState));
+        return JSON.parse(JSON.stringify(baseDefault));
       }
     }
 
@@ -1612,7 +1819,8 @@
 
     function saveStudioState() {
       try {
-        localStorage.setItem(STORAGE_KEY_STATE, JSON.stringify(studioState));
+        const profile = getActiveProfile();
+        localStorage.setItem(profile.storageKey, JSON.stringify(studioState));
         markAllViewsDirty();
         if (uiRenderRafId) cancelAnimationFrame(uiRenderRafId);
         uiRenderRafId = requestAnimationFrame(() => {
@@ -1664,6 +1872,36 @@
       applyThemeMode(isDark ? 'light' : 'dark');
     }
 
+    function applyProfileBranding(profile) {
+      if (!profile) return;
+      const labels = profile.labels || STUDIO_PROFILES.zubair.labels;
+      const setText = (id, val) => {
+        const el = document.getElementById(id);
+        if (el && val !== undefined) el.textContent = val;
+      };
+      const setPlaceholder = (id, val) => {
+        const el = document.getElementById(id);
+        if (el && val !== undefined) el.placeholder = val;
+      };
+
+      setText('sidebarStudioTitle', profile.name);
+      setText('sidebarStudioSubtitle', profile.subtitle);
+      document.title = `${profile.name} — ${profile.subtitle}`;
+
+      setText('sidebarProjectsSectionLabel', labels.projectsSection);
+      setText('metricPendingLabel', labels.pendingCard);
+      setText('metricConfirmedLabel', labels.confirmedCard);
+      setText('calendarBookedLegendLabel', labels.bookedLegend);
+      setText('addProjectBtnLabel', labels.addProjectBtn);
+      setText('projNameFieldLabel', labels.projNameField);
+      setPlaceholder('projNameInput', labels.projNamePlaceholder);
+      setText('projDateFieldLabel', labels.projDateField);
+      setText('clientTypeFieldLabel', labels.clientTypeField);
+      setText('clientsTableTypeHeader', labels.clientTypeField);
+      setPlaceholder('clientEventTypeInput', labels.clientTypePlaceholder);
+      setText('calendarBookedHeading', labels.calendarBookedHeading);
+    }
+
     /* AUTH */
     function handlePasscodeSubmit(event) {
       event.preventDefault();
@@ -1671,14 +1909,32 @@
       const card = document.getElementById('authLockCard');
       const errorBanner = document.getElementById('authErrorBanner');
       const entered = (input.value || '').trim();
-      const validPasscode = studioState.passcode || DEFAULT_PASSCODE;
 
-      if (entered === validPasscode) {
+      const matchedProfile = Object.values(STUDIO_PROFILES).find(p => p.code === entered);
+
+      if (matchedProfile) {
         errorBanner.classList.add('hidden');
         const lockScreen = document.getElementById('authLockScreen');
         lockScreen.classList.add('opacity-0', 'pointer-events-none');
         setTimeout(() => lockScreen.classList.add('hidden'), 260);
         input.value = '';
+
+        try {
+          activeProfileId = matchedProfile.id;
+          localStorage.setItem(STORAGE_KEY_ACTIVE_PROFILE, activeProfileId);
+          studioState = loadStudioState(activeProfileId);
+
+          applyProfileBranding(matchedProfile);
+
+          if (typeof closeProjectWorkspace === 'function') closeProjectWorkspace();
+          if (typeof clearOcrScanner === 'function') clearOcrScanner();
+          refreshAllUI();
+          initBillingModuleUI();
+          refreshVaultTableUI();
+          showToast(`Unlocked ${matchedProfile.name} profile.`);
+        } catch (err) {
+          console.error('Profile switch UI error:', err);
+        }
       } else {
         errorBanner.classList.remove('hidden');
         card.classList.remove('shake-anim');
@@ -1766,6 +2022,7 @@
         const tx = dbInstance.transaction([IDB_STORE], 'readwrite');
         const record = {
           id: 'vault-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+          profileId: activeProfileId,
           filename,
           folder,
           mimeType,
@@ -1783,7 +2040,10 @@
       return new Promise(resolve => {
         if (!dbInstance) return resolve([]);
         const req = dbInstance.transaction([IDB_STORE], 'readonly').objectStore(IDB_STORE).getAll();
-        req.onsuccess = () => resolve(req.result || []);
+        req.onsuccess = () => {
+          const allRecords = req.result || [];
+          resolve(allRecords.filter(r => (r.profileId || 'zubair') === activeProfileId));
+        };
         req.onerror = () => resolve([]);
       });
     }
@@ -2096,7 +2356,7 @@
       document.getElementById('badgeInvoiceRef').textContent = inv;
       document.getElementById('projectRefHeaderBadges').classList.remove('hidden');
 
-      currentProjectLineItems = [{ description: 'Event Management Services', qty: 1, price: 3500 }];
+      currentProjectLineItems = [{ description: getActiveProfile().labels.defaultServiceDesc, qty: 1, price: 3500 }];
       renderProjectLineItemRows();
       container.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
@@ -2127,7 +2387,7 @@
       document.getElementById('projectRefHeaderBadges').classList.remove('hidden');
 
       currentProjectLineItems = JSON.parse(JSON.stringify(proj.lineItems || []));
-      if (currentProjectLineItems.length === 0) currentProjectLineItems.push({ description: 'Event Management Services', qty: 1, price: 2500 });
+      if (currentProjectLineItems.length === 0) currentProjectLineItems.push({ description: getActiveProfile().labels.defaultServiceDesc, qty: 1, price: 2500 });
       renderProjectLineItemRows();
       container.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
@@ -2588,7 +2848,7 @@
       studioState.billingDraft.template = tpl;
       updateTemplateSelectorUI(tpl);
       renderLiveBillingPreview();
-      localStorage.setItem(STORAGE_KEY_STATE, JSON.stringify(studioState));
+      localStorage.setItem(getActiveProfile().storageKey, JSON.stringify(studioState));
     }
 
     function updateTemplateSelectorUI(activeTpl) {
@@ -3210,9 +3470,10 @@
       const cleanDate = (item.date || '2026-11-18').replace(/-/g, '');
       const s = (item.startTime || '09:00').replace(':', '') + '00';
       const e = (item.endTime || '10:00').replace(':', '') + '00';
+      const profile = getActiveProfile();
       const params = new URLSearchParams({
         action: 'TEMPLATE',
-        text: `Zubair Freelance: ${item.title || 'Event'}`,
+        text: `${profile.name}: ${item.title || 'Schedule'}`,
         dates: `${cleanDate}T${s}/${cleanDate}T${e}`,
         details: item.details || '',
         location: item.location || ''
@@ -3286,8 +3547,10 @@
     }
 
     function exportWorkspaceJsonBackup() {
-      const blob = new Blob([JSON.stringify({ studio: 'Zubair Freelance', state: studioState }, null, 2)], { type: 'application/json' });
-      triggerBrowserBlobDownload(blob, `Zubair-Freelance-Backup-${new Date().toISOString().split('T')[0]}.json`);
+      const profile = getActiveProfile();
+      const slug = profile.name.replace(/\s+/g, '-');
+      const blob = new Blob([JSON.stringify({ studio: profile.name, profileId: activeProfileId, state: studioState }, null, 2)], { type: 'application/json' });
+      triggerBrowserBlobDownload(blob, `${slug}-Backup-${new Date().toISOString().split('T')[0]}.json`);
       showToast('Exported JSON backup.');
     }
 
@@ -3300,7 +3563,7 @@
           const parsed = JSON.parse(e.target.result);
           const restored = parsed.state || parsed;
           if (restored && Array.isArray(restored.projects)) {
-            studioState = Object.assign({}, defaultWorkspaceState, restored);
+            studioState = Object.assign({}, getDefaultStateForProfile(activeProfileId), restored);
             saveStudioState();
             showToast('Workspace restored.');
           }
