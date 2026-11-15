@@ -53,7 +53,12 @@
         inset 0 1px 0 var(--card-inner-highlight);
     }
 
+    html {
+      color-scheme: light;
+    }
+
     html.dark {
+      color-scheme: dark;
       --mac-blue: #0A84FF;
       --mac-blue-hover: #3399FF;
       --mac-blue-glow: rgba(10, 132, 255, 0.32);
@@ -92,7 +97,7 @@
       font-feature-settings: "cv02", "cv03", "cv04", "cv11";
       letter-spacing: -0.011em;
       color: var(--text-primary);
-      transition: background 0.35s ease, color 0.2s ease;
+      transition: color 0.45s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.45s cubic-bezier(0.22, 1, 0.36, 1);
       background-color: #E6EDF7;
       background-image:
         radial-gradient(circle at 12% 16%, rgba(0, 122, 255, 0.16) 0px, transparent 48%),
@@ -103,7 +108,14 @@
       background-attachment: fixed;
     }
 
-    html.dark body {
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.48s cubic-bezier(0.22, 1, 0.36, 1);
       background-color: #090B10;
       background-image:
         radial-gradient(circle at 12% 16%, rgba(10, 132, 255, 0.19) 0px, transparent 50%),
@@ -111,6 +123,23 @@
         radial-gradient(circle at 75% 88%, rgba(16, 185, 129, 0.09) 0px, transparent 52%),
         radial-gradient(circle at 20% 85%, rgba(56, 189, 248, 0.08) 0px, transparent 45%),
         linear-gradient(145deg, #07090E 0%, #0E131F 100%);
+    }
+
+    html.dark body::before {
+      opacity: 1;
+    }
+
+    html.theme-transitioning,
+    html.theme-transitioning *:not(#ocrProgressBar) {
+      transition-property: background-color, border-color, color, fill, stroke, box-shadow !important;
+      transition-duration: 0.45s !important;
+      transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1) !important;
+    }
+
+    html.theme-transitioning body::before {
+      transition-property: opacity !important;
+      transition-duration: 0.48s !important;
+      transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1) !important;
     }
 
     h1, h2, h3, h4 {
@@ -2475,8 +2504,15 @@
     }
 
     function toggleAppearanceTheme() {
-      const isDark = document.documentElement.classList.contains('dark');
+      const htmlEl = document.documentElement;
+      const isDark = htmlEl.classList.contains('dark');
+      htmlEl.classList.add('theme-transitioning');
+      void htmlEl.offsetWidth;
       applyThemeMode(isDark ? 'light' : 'dark');
+      clearTimeout(window.__themeTransitionTimer);
+      window.__themeTransitionTimer = setTimeout(() => {
+        htmlEl.classList.remove('theme-transitioning');
+      }, 500);
     }
 
     function applyProfileBranding(profile) {
