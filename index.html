@@ -361,18 +361,13 @@
         </div>
 
         <div class="flex items-center justify-end gap-2 sm:gap-3 min-w-0 max-w-full lg:flex-1">
-          <select id="headerCurrencySelect" onchange="setStudioCurrency(this.value)" aria-label="Select Currency" class="helios-input px-2.5 py-1.5 text-xs font-mono font-medium shrink-0 cursor-pointer" title="Active Studio Currency">
+          <select id="headerCurrencySelect" onchange="setStudioCurrency(this.value)" aria-label="Select Currency" class="text-xs font-mono font-medium shrink-0 cursor-pointer" title="Active Studio Currency">
             <option value="USD">USD ($)</option>
-            <option value="AED">AED</option>
+            <option value="AED">AED (DH)</option>
             <option value="EUR">EUR (€)</option>
             <option value="GBP">GBP (£)</option>
             <option value="BDT">BDT (৳)</option>
           </select>
-
-          <button id="verticalModeToggleBtn" type="button" onclick="toggleVerticalMobileMode()" class="btn-mac-secondary px-2.5 sm:px-3 py-1.5 text-xs shrink-0 flex items-center gap-1.5" title="Switch between Vertical Mobile and Desktop layout">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
-            <span id="verticalModeToggleLabel">Mobile View</span>
-          </button>
 
           <button type="button" onclick="downloadOrganizedZipArchive()" class="btn-mac-secondary px-3 sm:px-3.5 py-1.5 text-xs shrink-0">
             <span class="hidden sm:inline">Export .ZIP</span>
@@ -2117,7 +2112,6 @@
     };
 
     let isMobileSidebarOpen = false;
-    let manualVerticalModeOverride = null; // null = auto, true = force vertical mobile, false = force desktop/wide
 
     function toggleMobileSidebar(forceState) {
       const sidebar = document.getElementById('studioSidebar');
@@ -2178,25 +2172,6 @@
       triggerBtn.setAttribute('aria-expanded', String(willOpen));
     }
 
-    function updateVerticalToggleBtnUI(isVerticalActive) {
-      const label = document.getElementById('verticalModeToggleLabel');
-      const btn = document.getElementById('verticalModeToggleBtn');
-      if (label) {
-        label.textContent = isVerticalActive ? 'Desktop View' : 'Vertical Mobile';
-      }
-      if (btn) {
-        btn.classList.toggle('border-[#007AFF]', isVerticalActive);
-        btn.classList.toggle('text-[#007AFF]', isVerticalActive);
-      }
-    }
-
-    function toggleVerticalMobileMode() {
-      const currentlyVertical = document.documentElement.getAttribute('data-vertical-mobile') === 'true';
-      manualVerticalModeOverride = !currentlyVertical;
-      syncMobileViewportOrientation();
-      showToast(manualVerticalModeOverride ? 'Switched to Vertical Mobile layout.' : 'Switched to Full Wide layout.');
-    }
-
     function syncMobileViewportOrientation() {
       const width = window.innerWidth || document.documentElement.clientWidth || 1024;
       const height = window.innerHeight || document.documentElement.clientHeight || 768;
@@ -2205,14 +2180,11 @@
       const isPortrait = height >= width;
       const isMobile = width < 1024 || isMobileUA || (isCoarsePointer && height <= 560);
 
-      const autoVertical = (isMobile && isPortrait) || width < 680;
-      const isVerticalActive = manualVerticalModeOverride !== null ? manualVerticalModeOverride : autoVertical;
+      const isVerticalActive = (isMobile && isPortrait) || width < 680;
 
       document.documentElement.setAttribute('data-device', (isMobile || isVerticalActive) ? 'mobile' : 'desktop');
       document.documentElement.setAttribute('data-orientation', (isPortrait || isVerticalActive) ? 'portrait' : 'landscape');
       document.documentElement.setAttribute('data-vertical-mobile', isVerticalActive ? 'true' : 'false');
-
-      updateVerticalToggleBtnUI(isVerticalActive);
 
       if (!isMobile && !isVerticalActive && isMobileSidebarOpen) {
         toggleMobileSidebar(false);
