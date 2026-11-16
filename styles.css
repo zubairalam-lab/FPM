@@ -1219,10 +1219,12 @@ html[data-vertical-mobile="true"] #studioHeader {
   border-bottom: 1px solid var(--card-border);
 }
 
+html[data-vertical-mobile="true"] #studioHeader .header-desktop-label,
 html[data-vertical-mobile="true"] #studioHeader .sm\:inline {
   display: none !important;
 }
 
+html[data-vertical-mobile="true"] #studioHeader .header-mobile-label,
 html[data-vertical-mobile="true"] #studioHeader .sm\:hidden {
   display: inline !important;
 }
@@ -1339,3 +1341,4 @@ html[data-vertical-mobile="true"] #studioToast.toast-visible {
     box-shadow: none !important;
   }
 }
+
