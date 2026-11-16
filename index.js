@@ -1,41 +1,5774 @@
-const { app, BrowserWindow, shell } = require('electron');
-const path = require('path');
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Zubair Freelance — Event Management Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
-function createWindow() {
-  const win = new BrowserWindow({
-    width: 1440,
-    height: 920,
-    minWidth: 1024,
-    minHeight: 700,
-    title: 'Zubair Freelance — Event Management Studio',
-    autoHideMenuBar: true,
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Text"', 'Inter', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          }
+        }
+      }
+    };
+  </script>
+
+  <link rel="stylesheet" href="styles.css?v=6" />
+</head>
+<body class="m-0 p-0 w-full h-screen overflow-hidden select-none">
+
+  <!-- =================================================================== -->
+  <!-- 1. MINIMAL AUTHENTICATION LOCK SCREEN                               -->
+  <!-- =================================================================== -->
+  <div id="authLockScreen" class="lock-screen-bg fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-300 overflow-hidden">
+    <canvas id="lockBgCanvas" aria-hidden="true"></canvas>
+    <div id="authLockCard" class="helios-lock-card relative z-10 w-full max-w-sm p-8">
+      <div class="flex items-center justify-end mb-6">
+        <button id="lockThemeToggleBtn" type="button" onclick="toggleAppearanceTheme()" class="btn-mac-secondary px-3 py-1.5 text-xs">
+          <span id="lockThemeLabel">Dark Mode</span>
+        </button>
+      </div>
+
+      <div class="text-center mb-7">
+        <div id="lockBrandBadge" class="w-14 h-14 mx-auto mb-4 rounded-2xl bg-[#007AFF] dark:bg-[#0A84FF] flex items-center justify-center text-white font-semibold text-lg tracking-tight shadow-sm">
+          SM
+        </div>
+        <h1 id="lockBrandHeading" class="text-lg font-semibold tracking-tight">Studio Workspace</h1>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Enter profile access code</p>
+      </div>
+
+      <form id="authPasscodeForm" onsubmit="handlePasscodeSubmit(event)" class="space-y-4">
+        <div>
+          <input
+            id="passcodeInput"
+            type="password"
+            inputmode="numeric"
+            maxlength="20"
+            placeholder="••••"
+            autocomplete="off"
+            class="helios-input w-full px-4 py-3 text-center font-mono text-base tracking-[0.25em]"
+            required
+          />
+        </div>
+
+        <button type="submit" class="btn-mac-primary w-full py-2.5 text-sm">
+          Unlock Studio
+        </button>
+
+        <div id="authErrorBanner" class="hidden rounded-xl bg-rose-500/10 border border-rose-500/25 px-3 py-2 text-center text-xs text-rose-600 dark:text-rose-400 font-medium">
+          Invalid access code.
+        </div>
+      </form>
+
+      <p class="mt-6 text-center text-[11px] text-slate-400">
+        All data is stored locally on your device.
+      </p>
+    </div>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- 2. MAIN MACOS DESKTOP & ADAPTIVE MOBILE SHELL                       -->
+  <!-- =================================================================== -->
+  <div id="mainStudioShell" class="helios-outer-shell w-full h-screen flex overflow-hidden relative">
+
+    <!-- MOBILE DRAWER BACKDROP -->
+    <div id="mobileSidebarBackdrop" onclick="toggleMobileSidebar(false)" class="fixed inset-0 z-30 bg-slate-900/40 backdrop-blur-xs hidden lg:hidden transition-opacity duration-200"></div>
+
+    <!-- LEFT SIDEBAR (Desktop collapsible rail / Mobile slide-over drawer) -->
+    <aside id="studioSidebar" class="helios-sidebar fixed inset-y-0 left-0 z-40 w-64 -translate-x-full lg:static lg:translate-x-0 shrink-0 flex flex-col justify-between p-5">
+      <!-- Floating Circular Collapse Trigger (Desktop) -->
+      <button
+        id="sidebarCollapseBtn"
+        type="button"
+        onclick="toggleStudioSidebarCollapse()"
+        aria-label="Collapse sidebar"
+        aria-expanded="true"
+        title="Collapse sidebar"
+        class="sidebar-collapse-btn hidden lg:flex"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+      </button>
+
+      <div class="flex flex-col min-h-0 flex-1 space-y-5">
+        <!-- Brand Header -->
+        <div class="px-1 pt-0.5 flex items-center justify-between gap-2">
+          <div class="sb-brand-wrap flex items-center gap-3 min-w-0 flex-1">
+            <span class="sb-brand-mark" aria-hidden="true">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3L4 7.5v9L12 21l8-4.5v-9L12 3z"></path>
+                <path d="M12 12l8-4.5"></path>
+                <path d="M12 12v9"></path>
+                <path d="M12 12L4 7.5"></path>
+              </svg>
+            </span>
+            <div class="sb-brand-text">
+              <div id="sidebarStudioTitle" class="text-sm font-semibold tracking-tight truncate">Zubair Alam</div>
+              <div id="sidebarStudioSubtitle" class="text-xs text-slate-500 dark:text-slate-400 truncate">Event Management Studio</div>
+            </div>
+          </div>
+          <button id="mobileSidebarCloseBtn" type="button" onclick="toggleMobileSidebar(false)" aria-label="Close navigation" class="lg:hidden btn-mac-secondary px-2 py-1 text-xs shrink-0">&times;</button>
+        </div>
+
+        <!-- Categorized Collapsible Navigation -->
+        <nav class="flex-1 overflow-y-auto overflow-x-hidden pr-0.5" aria-label="Workspace Navigation">
+          <ul class="space-y-1.5 list-none m-0 p-0">
+            <!-- Dashboard -->
+            <li class="sb-group">
+              <button type="button" onclick="switchView('dashboard')" data-sidebar-nav="dashboard" class="sidebar-nav-btn active" title="Dashboard">
+                <span class="sb-nav-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="7" height="9" rx="2"></rect>
+                    <rect x="14" y="3" width="7" height="5" rx="2"></rect>
+                    <rect x="14" y="12" width="7" height="9" rx="2"></rect>
+                    <rect x="3" y="16" width="7" height="5" rx="2"></rect>
+                  </svg>
+                </span>
+                <span class="sb-nav-label">Dashboard</span>
+              </button>
+            </li>
+
+            <!-- Events (Accordion + Quick-Add + Badge) -->
+            <li class="sb-group sb-has-submenu is-open">
+              <div class="sb-nav-row">
+                <button type="button" onclick="toggleSidebarGroup(this)" class="sidebar-nav-btn" aria-expanded="true" title="Events">
+                  <span class="sb-nav-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"></path>
+                    </svg>
+                  </span>
+                  <span id="sidebarProjectsSectionLabel" class="sb-nav-label">Events</span>
+                  <span class="sb-nav-meta">
+                    <span class="sb-badge sb-badge-indigo">2</span>
+                    <span class="sb-chevron" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                      </svg>
+                    </span>
+                  </span>
+                </button>
+                <button type="button" onclick="openNewProjectFromDashboard()" class="sb-quick-add" aria-label="New Project" title="New Project">
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                </button>
+              </div>
+              <div class="sb-submenu-wrap">
+              <ul class="sb-submenu">
+                <li class="sb-submenu-li">
+                  <button type="button" onclick="switchView('projects')" data-sidebar-nav="projects" class="sb-submenu-btn">
+                    <span class="truncate">Projects</span>
+                    <span class="sb-sub-chevron" aria-hidden="true">
+                      <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    </span>
+                  </button>
+                </li>
+                <li class="sb-submenu-li">
+                  <button type="button" onclick="switchView('calendar')" data-sidebar-nav="calendar" class="sb-submenu-btn">
+                    <span class="truncate">Calendar</span>
+                    <span class="sb-sub-chevron" aria-hidden="true">
+                      <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    </span>
+                  </button>
+                </li>
+              </ul>
+              </div>
+            </li>
+
+            <!-- Directory (Accordion) -->
+            <li class="sb-group sb-has-submenu is-open">
+              <div class="sb-nav-row">
+                <button type="button" onclick="toggleSidebarGroup(this)" class="sidebar-nav-btn" aria-expanded="true" title="Directory">
+                  <span class="sb-nav-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="9" cy="7" r="4"></circle>
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                  </span>
+                  <span class="sb-nav-label">Directory</span>
+                  <span class="sb-nav-meta">
+                    <span class="sb-chevron" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                      </svg>
+                    </span>
+                  </span>
+                </button>
+              </div>
+              <div class="sb-submenu-wrap">
+              <ul class="sb-submenu">
+                <li class="sb-submenu-li">
+                  <button type="button" onclick="switchView('clients')" data-sidebar-nav="clients" class="sb-submenu-btn">
+                    <span class="truncate">Clients</span>
+                    <span class="sb-sub-chevron" aria-hidden="true">
+                      <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    </span>
+                  </button>
+                </li>
+                <li class="sb-submenu-li">
+                  <button type="button" onclick="switchView('suppliers')" data-sidebar-nav="suppliers" class="sb-submenu-btn">
+                    <span class="truncate">Suppliers</span>
+                    <span class="sb-sub-chevron" aria-hidden="true">
+                      <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    </span>
+                  </button>
+                </li>
+              </ul>
+              </div>
+            </li>
+
+            <!-- Billing & Invoices -->
+            <li class="sb-group">
+              <button type="button" onclick="switchView('billing')" data-sidebar-nav="billing" class="sidebar-nav-btn" title="Billing &amp; Invoices">
+                <span class="sb-nav-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="5" width="20" height="14" rx="3"></rect>
+                    <line x1="2" y1="10" x2="22" y2="10"></line>
+                  </svg>
+                </span>
+                <span class="sb-nav-label">Billing &amp; Invoices</span>
+                <span class="sb-nav-meta">
+                  <span class="sb-badge sb-badge-emerald">PDF</span>
+                </span>
+              </button>
+            </li>
+
+            <!-- Tools (Accordion) -->
+            <li class="sb-group sb-has-submenu">
+              <div class="sb-nav-row">
+                <button type="button" onclick="toggleSidebarGroup(this)" class="sidebar-nav-btn" aria-expanded="false" title="Tools">
+                  <span class="sb-nav-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+                    </svg>
+                  </span>
+                  <span class="sb-nav-label">Tools</span>
+                  <span class="sb-nav-meta">
+                    <span class="sb-badge sb-badge-rose">3</span>
+                    <span class="sb-chevron" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                      </svg>
+                    </span>
+                  </span>
+                </button>
+              </div>
+              <div class="sb-submenu-wrap">
+              <ul class="sb-submenu">
+                <li class="sb-submenu-li">
+                  <button type="button" onclick="switchView('converter')" data-sidebar-nav="converter" class="sb-submenu-btn">
+                    <span class="truncate">File Converter</span>
+                    <span class="sb-sub-chevron" aria-hidden="true">
+                      <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    </span>
+                  </button>
+                </li>
+                <li class="sb-submenu-li">
+                  <button type="button" onclick="switchView('ocr')" data-sidebar-nav="ocr" class="sb-submenu-btn">
+                    <span class="truncate">Image to Text</span>
+                    <span class="sb-sub-chevron" aria-hidden="true">
+                      <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    </span>
+                  </button>
+                </li>
+                <li class="sb-submenu-li">
+                  <button type="button" onclick="switchView('archive')" data-sidebar-nav="archive" class="sb-submenu-btn">
+                    <span class="truncate">Local Archive</span>
+                    <span class="sb-sub-chevron" aria-hidden="true">
+                      <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    </span>
+                  </button>
+                </li>
+              </ul>
+              </div>
+            </li>
+          </ul>
+        </nav>
+      </div>
+
+      <!-- Bottom Status & Controls -->
+      <div class="space-y-4 pt-4 border-t border-slate-200/70 dark:border-white/10">
+        <div class="sb-footer-status space-y-2 text-xs px-1">
+          <div class="flex items-center justify-between">
+            <span class="text-slate-500 dark:text-slate-400">Google Calendar</span>
+            <span id="sidebarGoogleStatusPill" class="inline-flex items-center gap-1.5 font-medium text-emerald-600 dark:text-emerald-400">
+              <span id="sidebarGoogleStatusDot" class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              <span id="sidebarGoogleStatusText">Linked</span>
+            </span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-slate-500 dark:text-slate-400">Local DB Archive</span>
+            <span class="inline-flex items-center gap-1.5 font-medium text-[#007AFF] dark:text-[#0A84FF]">
+              <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
+              <span>Ready</span>
+            </span>
+          </div>
+        </div>
+
+        <div class="sb-footer-actions grid grid-cols-2 gap-2">
+          <button type="button" onclick="toggleAppearanceTheme()" class="sb-footer-btn btn-mac-secondary py-2 px-2 text-xs flex items-center justify-center gap-1.5" title="Toggle Dark/Light Mode">
+            <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+            <span id="sidebarThemeBtnText" class="sb-footer-btn-label truncate">Dark Mode</span>
+          </button>
+          <button type="button" onclick="lockWorkspace()" class="sb-footer-btn btn-mac-secondary py-2 px-2 text-xs text-rose-600 dark:text-rose-400 flex items-center justify-center gap-1.5" title="Lock Studio">
+            <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            <span class="sb-footer-btn-label">Lock</span>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN WORKSPACE -->
+    <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+
+      <!-- TOP HEADER WITH SEGMENTED CONTROL BAR -->
+      <header id="studioHeader" class="px-4 py-3 lg:px-7 lg:py-4 flex flex-wrap items-center justify-between gap-3 shrink-0">
+        <div class="flex items-center gap-2.5 min-w-0 lg:flex-1">
+          <button id="mobileMenuBtn" type="button" onclick="toggleMobileSidebar()" aria-label="Open menu" class="lg:hidden btn-mac-secondary px-2.5 py-1.5 text-xs flex items-center gap-1.5 shrink-0">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+            <span class="hidden sm:inline">Menu</span>
+          </button>
+          <h2 id="currentViewTitle" class="text-base sm:text-lg font-semibold tracking-tight truncate">Dashboard</h2>
+        </div>
+
+        <div id="headerSegmentWrap" class="mac-segmented-bar overflow-x-auto no-scrollbar max-w-full order-last lg:order-none mx-auto" role="tablist" aria-label="Primary Views">
+          <button type="button" onclick="switchView('dashboard')" data-top-segment="dashboard" class="mac-segment-btn active">Dashboard</button>
+          <button type="button" onclick="switchView('projects')" data-top-segment="projects" class="mac-segment-btn">Projects</button>
+          <button type="button" onclick="switchView('billing')" data-top-segment="billing" class="mac-segment-btn">Billing</button>
+          <button type="button" onclick="switchView('converter')" data-top-segment="converter" class="mac-segment-btn">Converter</button>
+          <button type="button" onclick="switchView('calendar')" data-top-segment="calendar" class="mac-segment-btn">Calendar</button>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 sm:gap-3 min-w-0 max-w-full lg:flex-1">
+          <select id="headerCurrencySelect" onchange="setStudioCurrency(this.value)" aria-label="Select Currency" class="text-xs font-mono font-medium shrink-0 cursor-pointer" title="Active Studio Currency">
+            <option value="USD">USD ($)</option>
+            <option value="AED">AED (DH)</option>
+            <option value="EUR">EUR (€)</option>
+            <option value="GBP">GBP (£)</option>
+            <option value="BDT">BDT (৳)</option>
+          </select>
+
+          <button type="button" onclick="downloadOrganizedZipArchive()" class="btn-mac-secondary px-3 sm:px-3.5 py-1.5 text-xs shrink-0">
+            <span class="hidden sm:inline">Export .ZIP</span>
+            <span class="sm:hidden">.ZIP</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- SCROLLABLE CONTENT -->
+      <main id="studioMainViewport" class="flex-1 overflow-y-auto scroll-smooth p-4 sm:p-6 lg:p-7 space-y-5 lg:space-y-6">
+
+        <!-- =============================================================== -->
+        <!-- VIEW A: DASHBOARD                                               -->
+        <!-- =============================================================== -->
+        <section id="view-dashboard" class="tab-view active-view space-y-6">
+
+          <!-- 3 Clean Metric Cards (No revenue or profit figures) -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5 mobile-landscape-3col">
+            <div class="helios-card p-5">
+              <div id="metricPendingLabel" class="text-xs font-medium text-slate-500 dark:text-slate-400">Pending Events</div>
+              <div id="metricPendingEvents" class="text-3xl font-semibold tracking-tight mt-2">0</div>
+              <div class="text-xs text-slate-400 mt-1">Planning or Quoted</div>
+            </div>
+
+            <div class="helios-card p-5">
+              <div id="metricConfirmedLabel" class="text-xs font-medium text-slate-500 dark:text-slate-400">Confirmed Events</div>
+              <div id="metricConfirmedEvents" class="text-3xl font-semibold tracking-tight mt-2">0</div>
+              <div class="text-xs text-slate-400 mt-1">Confirmed, Invoiced or Completed</div>
+            </div>
+
+            <div class="helios-card p-5">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-medium text-slate-500 dark:text-slate-400">Client Contacts</span>
+                <span id="metricSupplierBadge" class="text-[11px] font-medium px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                  0 Verified Suppliers
+                </span>
+              </div>
+              <div id="metricTotalClients" class="text-3xl font-semibold tracking-tight mt-2">0</div>
+              <div class="text-xs text-slate-400 mt-1">Active client accounts</div>
+            </div>
+          </div>
+
+          <!-- Recent Projects + Quick Client Contacts -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div class="helios-card p-6 lg:col-span-7">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-sm font-semibold">Recent Projects</h3>
+                <button type="button" onclick="openNewProjectFromDashboard()" class="btn-mac-primary px-3 py-1.5 text-xs">
+                  + New Project
+                </button>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                  <thead>
+                    <tr class="border-b border-slate-200/70 dark:border-white/10 text-xs text-slate-400 font-medium">
+                      <th class="py-2.5 pr-3">Project Name</th>
+                      <th class="py-2.5 px-3">Date</th>
+                      <th class="py-2.5 px-3">Role</th>
+                      <th class="py-2.5 pl-3 text-right">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dashboardRecentProjectsBody" class="divide-y divide-slate-100 dark:divide-white/5 text-sm"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="helios-card p-6 lg:col-span-5 flex flex-col justify-between space-y-5">
+              <div>
+                <div class="flex items-center justify-between mb-4">
+                  <h3 class="text-sm font-semibold">Quick Client Contacts</h3>
+                  <button type="button" onclick="switchView('clients')" class="text-xs font-medium text-[#007AFF] dark:text-[#0A84FF] hover:underline">
+                    View All
+                  </button>
+                </div>
+                <div id="dashboardQuickClientsList" class="space-y-2.5 max-h-56 overflow-y-auto"></div>
+              </div>
+
+              <div class="pt-4 border-t border-slate-200/60 dark:border-white/10 grid grid-cols-3 gap-2">
+                <button type="button" onclick="switchView('billing')" class="btn-mac-secondary py-2 text-xs">Billing</button>
+                <button type="button" onclick="switchView('converter')" class="btn-mac-secondary py-2 text-xs">Converter</button>
+                <button type="button" onclick="switchView('suppliers')" class="btn-mac-secondary py-2 text-xs">Suppliers</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Booked Days Calendar + Upcoming Schedule -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div class="helios-card p-6 lg:col-span-5">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-sm font-semibold">Booked Days</h3>
+                <div class="flex items-center gap-1.5">
+                  <button type="button" onclick="changeCalendarMonth(-1)" class="btn-mac-secondary px-2.5 py-1 text-xs">&lt;</button>
+                  <span id="calendarMonthLabel" class="text-xs font-medium px-2 min-w-[110px] text-center">November 2026</span>
+                  <button type="button" onclick="changeCalendarMonth(1)" class="btn-mac-secondary px-2.5 py-1 text-xs">&gt;</button>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-4 mb-3 text-xs text-slate-500 dark:text-slate-400">
+                <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-indigo-500"></span> <span id="calendarBookedLegendLabel">Booked Event</span></span>
+                <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Meeting</span>
+              </div>
+
+              <div class="grid grid-cols-7 gap-1 text-center text-[11px] font-medium text-slate-400 mb-1.5">
+                <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+              </div>
+              <div id="dashboardCalendarGrid" class="grid grid-cols-7 gap-1 text-xs"></div>
+            </div>
+
+            <div class="helios-card p-6 lg:col-span-7 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between gap-2 mb-4">
+                  <div class="flex items-center gap-2">
+                    <h3 class="text-sm font-semibold">Upcoming Meetings &amp; Booked Schedule</h3>
+                    <span id="scheduleActiveDateBadge" class="hidden text-xs font-mono px-2 py-0.5 rounded bg-blue-500/10 text-[#007AFF] dark:text-[#0A84FF]"></span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <button id="clearScheduleFilterBtn" type="button" onclick="clearCalendarDateFilter()" class="hidden btn-mac-secondary px-2.5 py-1 text-xs">
+                      Clear Filter
+                    </button>
+                    <button type="button" onclick="switchView('calendar')" class="btn-mac-primary px-3 py-1.5 text-xs">
+                      + Schedule
+                    </button>
+                  </div>
+                </div>
+                <div id="dashboardScheduleList" class="space-y-2.5 max-h-60 overflow-y-auto"></div>
+              </div>
+              <div class="mt-4 pt-3 border-t border-slate-200/60 dark:border-white/10 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                <span id="dashboardScheduleCountLabel">All upcoming items</span>
+                <button type="button" onclick="exportFullCalendarICS()" class="text-[#007AFF] dark:text-[#0A84FF] font-medium hover:underline">
+                  Export .ICS
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- =============================================================== -->
+        <!-- VIEW B: EVENTS & PROJECTS                                       -->
+        <!-- =============================================================== -->
+        <section id="view-projects" class="tab-view space-y-6">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <input id="projectSearchInput" type="search" placeholder="Search projects..." oninput="renderProjectsModule()" class="helios-input px-3.5 py-2 text-xs w-full sm:w-64" />
+            <div class="flex flex-wrap items-center gap-2">
+              <label class="btn-mac-secondary px-3.5 py-2 text-xs cursor-pointer" title="Add and merge multiple JSON files without altering existing records">
+                + Add JSON Files
+                <input type="file" accept=".json,application/json" multiple onchange="addMultipleJsonFilesNonDestructive(event)" class="hidden" />
+              </label>
+              <button id="addProjectBtnLabel" type="button" onclick="openProjectWorkspaceForNew()" class="btn-mac-primary px-4 py-2 text-xs">
+                + Add Event / Project
+              </button>
+            </div>
+          </div>
+
+          <!-- Collapsible Project Workspace (Hidden by default) -->
+          <div id="projectWorkspaceContainer" class="hidden helios-card p-6 space-y-6">
+            <div class="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-200/70 dark:border-white/10">
+              <div class="flex flex-wrap items-center gap-3">
+                <h4 id="projectWorkspaceHeading" class="text-base font-semibold">Project Workspace</h4>
+                <div id="projectRefHeaderBadges" class="hidden flex items-center gap-2 text-xs font-mono">
+                  <span class="px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400" id="badgeQuotationRef">QTN-000000</span>
+                  <span class="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" id="badgeInvoiceRef">INV-000000</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <button id="btnSwitchToEditProject" type="button" onclick="enableProjectEditMode()" class="hidden btn-mac-primary px-3.5 py-1.5 text-xs">
+                  Edit Information
+                </button>
+                <button id="btnSwitchToViewProject" type="button" onclick="showProjectOverviewMode()" class="hidden btn-mac-secondary px-3.5 py-1.5 text-xs">
+                  View Information
+                </button>
+                <button type="button" onclick="closeProjectWorkspace()" class="btn-mac-secondary px-3 py-1.5 text-xs">
+                  Close
+                </button>
+              </div>
+            </div>
+
+            <!-- 1. READ-ONLY PROJECT INFORMATION VIEW & SPECIFIC FILE DOWNLOADS -->
+            <div id="projectInfoOverviewPanel" class="hidden space-y-6">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="p-4 rounded-xl bg-slate-500/5 border border-slate-200/60 dark:border-white/10 space-y-1">
+                  <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Client &amp; Contact</div>
+                  <div id="viewProjClientCompany" class="text-sm font-semibold">—</div>
+                  <div id="viewProjClientMeta" class="text-xs text-slate-500 dark:text-slate-400">—</div>
+                  <div id="viewProjClientBank" class="text-xs font-mono text-slate-500 dark:text-slate-400 pt-0.5"></div>
+                </div>
+
+                <div class="p-4 rounded-xl bg-slate-500/5 border border-slate-200/60 dark:border-white/10 space-y-1">
+                  <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Schedule &amp; Role</div>
+                  <div class="flex items-center justify-between gap-2">
+                    <span id="viewProjDate" class="text-sm font-mono font-semibold">—</span>
+                    <span id="viewProjStatusPill"></span>
+                  </div>
+                  <div id="viewProjRole" class="text-xs text-slate-500 dark:text-slate-400 pt-0.5">—</div>
+                </div>
+
+                <div class="p-4 rounded-xl bg-slate-500/5 border border-slate-200/60 dark:border-white/10 space-y-1">
+                  <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Financial Summary</div>
+                  <div class="flex items-baseline justify-between gap-2">
+                    <span class="text-xs text-slate-500 dark:text-slate-400">Project Total:</span>
+                    <span id="viewProjTotalAmount" class="text-sm font-mono font-semibold text-[#007AFF] dark:text-[#0A84FF]">$0.00</span>
+                  </div>
+                  <div class="flex items-baseline justify-between gap-2">
+                    <span class="text-xs text-slate-500 dark:text-slate-400">Supplier Costs:</span>
+                    <span id="viewProjSupplierCost" class="text-xs font-mono">$0.00</span>
+                  </div>
+                  <div class="flex items-baseline justify-between gap-2 pt-0.5">
+                    <span class="text-xs text-slate-500 dark:text-slate-400">Currency:</span>
+                    <span id="viewProjCurrencyBadge" class="text-xs font-mono font-medium">USD</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="p-4 rounded-xl bg-slate-500/5 border border-slate-200/60 dark:border-white/10 space-y-1.5">
+                  <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Job Description &amp; Scope of Work</div>
+                  <p id="viewProjScope" class="text-xs leading-relaxed text-slate-700 dark:text-slate-300 whitespace-pre-line">—</p>
+                </div>
+                <div class="p-4 rounded-xl bg-slate-500/5 border border-slate-200/60 dark:border-white/10 space-y-1.5">
+                  <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Internal Cost &amp; Supplier Notes</div>
+                  <p id="viewProjInternalNotes" class="text-xs leading-relaxed text-slate-700 dark:text-slate-300 whitespace-pre-line">—</p>
+                </div>
+              </div>
+
+              <!-- Read-only Line Items Breakdown -->
+              <div class="p-4 rounded-xl bg-slate-500/5 border border-slate-200/60 dark:border-white/10 space-y-3">
+                <div class="flex items-center justify-between">
+                  <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Project Line Items</span>
+                  <span id="viewProjLineItemsSubtotal" class="text-xs font-mono font-semibold">$0.00</span>
+                </div>
+                <div class="overflow-x-auto">
+                  <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr class="border-b border-slate-200/70 dark:border-white/10 text-slate-400">
+                        <th class="py-2 pr-3">Description</th>
+                        <th class="py-2 px-3 text-right">Qty</th>
+                        <th class="py-2 px-3 text-right">Unit Price</th>
+                        <th class="py-2 pl-3 text-right">Line Total</th>
+                      </tr>
+                    </thead>
+                    <tbody id="viewProjLineItemsTableBody" class="divide-y divide-slate-200/40 dark:divide-white/5"></tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Specific Project Files Download & Attachment Hub -->
+              <div class="p-4 rounded-xl bg-slate-500/5 border border-slate-200/60 dark:border-white/10 space-y-4">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <div class="text-xs font-semibold">Download Specific Project Files</div>
+                    <div class="text-[11px] text-slate-500 dark:text-slate-400">Download individual documents or attach project-specific files</div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <label class="btn-mac-secondary px-3 py-1.5 text-xs cursor-pointer" title="Attach multiple files or JSON files to this project without altering existing files">
+                      + Attach Project Files
+                      <input id="projAttachFileInput" type="file" multiple class="hidden" onchange="handleAttachFileToCurrentProject(event)" />
+                    </label>
+                    <button type="button" onclick="enableProjectEditMode()" class="btn-mac-primary px-3.5 py-1.5 text-xs">
+                      Edit Existing Information
+                    </button>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                  <button type="button" onclick="downloadProjectSpecificFile('QuotationPDF')" class="btn-mac-secondary p-3 text-left flex items-center justify-between gap-2">
+                    <div class="min-w-0">
+                      <div class="text-xs font-semibold truncate">Quotation PDF</div>
+                      <div id="dlCardQuotationRef" class="text-[11px] font-mono text-slate-500 dark:text-slate-400 truncate">QTN-000000.pdf</div>
+                    </div>
+                    <span class="text-xs font-medium text-[#007AFF] dark:text-[#0A84FF] shrink-0">Download</span>
+                  </button>
+
+                  <button type="button" onclick="downloadProjectSpecificFile('InvoicePDF')" class="btn-mac-secondary p-3 text-left flex items-center justify-between gap-2">
+                    <div class="min-w-0">
+                      <div class="text-xs font-semibold truncate">Invoice PDF</div>
+                      <div id="dlCardInvoiceRef" class="text-[11px] font-mono text-slate-500 dark:text-slate-400 truncate">INV-000000.pdf</div>
+                    </div>
+                    <span class="text-xs font-medium text-[#007AFF] dark:text-[#0A84FF] shrink-0">Download</span>
+                  </button>
+
+                  <button type="button" onclick="downloadProjectSpecificFile('BriefTXT')" class="btn-mac-secondary p-3 text-left flex items-center justify-between gap-2">
+                    <div class="min-w-0">
+                      <div class="text-xs font-semibold truncate">Project Brief (.TXT)</div>
+                      <div class="text-[11px] text-slate-500 dark:text-slate-400 truncate">Full info &amp; scope summary</div>
+                    </div>
+                    <span class="text-xs font-medium text-[#007AFF] dark:text-[#0A84FF] shrink-0">Download</span>
+                  </button>
+
+                  <button type="button" onclick="downloadProjectSpecificFile('LineItemsCSV')" class="btn-mac-secondary p-3 text-left flex items-center justify-between gap-2">
+                    <div class="min-w-0">
+                      <div class="text-xs font-semibold truncate">Cost Breakdown (.CSV)</div>
+                      <div class="text-[11px] text-slate-500 dark:text-slate-400 truncate">Spreadsheet line items</div>
+                    </div>
+                    <span class="text-xs font-medium text-[#007AFF] dark:text-[#0A84FF] shrink-0">Download</span>
+                  </button>
+                </div>
+
+                <div class="pt-2 border-t border-slate-200/50 dark:border-white/5 space-y-2">
+                  <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Saved &amp; Attached Files for This Project</div>
+                  <div id="viewProjLinkedFilesList" class="space-y-1.5 text-xs"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 2. EDIT PROJECT INFORMATION FORM -->
+            <form id="projectWorkspaceForm" onsubmit="saveProjectFromWorkspace(event)" class="space-y-5">
+              <input type="hidden" id="projIdInput" />
+
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label id="projNameFieldLabel" class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Event / Project Name *</label>
+                  <input id="projNameInput" type="text" required placeholder="e.g., Global FinTech Summit" class="helios-input w-full px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Client *</label>
+                  <select id="projClientSelect" required class="helios-input w-full px-3 py-2 text-sm"></select>
+                </div>
+                <div>
+                  <label id="projDateFieldLabel" class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Event Date *</label>
+                  <input id="projDateInput" type="date" required class="helios-input w-full px-3 py-2 text-sm font-mono" />
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Project Status *</label>
+                  <select id="projStatusSelect" required class="helios-input w-full px-3 py-2 text-sm">
+                    <option value="Planning">Planning</option>
+                    <option value="Quoted">Quoted</option>
+                    <option value="Confirmed">Confirmed</option>
+                    <option value="Invoiced">Invoiced</option>
+                    <option value="Completed">Completed</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Your Role in Project *</label>
+                  <input id="projRoleInput" type="text" required placeholder="e.g., Lead Producer" class="helios-input w-full px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label id="projSupplierCostLabel" class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Supplier &amp; Operational Costs (USD)</label>
+                  <input id="projSupplierCostInput" type="number" step="0.01" min="0" value="0" class="helios-input w-full px-3 py-2 text-sm font-mono" />
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Currency</label>
+                  <select id="projCurrencySelect" onchange="setStudioCurrency(this.value)" class="helios-input w-full px-3 py-2 text-sm font-mono">
+                    <option value="USD">USD ($)</option>
+                    <option value="AED">AED (Dirham)</option>
+                    <option value="EUR">EUR (€)</option>
+                    <option value="GBP">GBP (£)</option>
+                    <option value="BDT">BDT (৳)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Assigned Quotation Number</label>
+                  <input id="projQuotationNumInput" type="text" placeholder="QTN-XXXXXX" class="helios-input w-full px-3 py-2 text-sm font-mono" />
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Assigned Invoice Number</label>
+                  <input id="projInvoiceNumInput" type="text" placeholder="INV-XXXXXX" class="helios-input w-full px-3 py-2 text-sm font-mono" />
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Job Description &amp; Scope of Work</label>
+                  <textarea id="projScopeInput" rows="3" placeholder="Deliverables and scope..." class="helios-input w-full px-3 py-2 text-sm"></textarea>
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Internal Cost &amp; Supplier Notes</label>
+                  <textarea id="projInternalNotesInput" rows="3" placeholder="Internal notes..." class="helios-input w-full px-3 py-2 text-sm"></textarea>
+                </div>
+              </div>
+
+              <!-- Project-Specific Line Items Builder -->
+              <div class="pt-4 border-t border-slate-200/60 dark:border-white/10 space-y-3">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Line Items</span>
+                  <button type="button" onclick="addProjectLineItemRow()" class="btn-mac-secondary px-3 py-1 text-xs">+ Add Line Item</button>
+                </div>
+                <div class="grid grid-cols-12 gap-2 text-xs text-slate-400">
+                  <div class="col-span-6">Line Item Description</div>
+                  <div class="col-span-2">Quantity (Qty)</div>
+                  <div id="projUnitPriceHeader" class="col-span-3">Unit Price (USD)</div>
+                  <div class="col-span-1 text-right"></div>
+                </div>
+                <div id="projectLineItemsRows" class="space-y-2"></div>
+                <div class="flex justify-end items-center gap-3 pt-2 text-sm">
+                  <span class="text-slate-500 dark:text-slate-400">Total:</span>
+                  <span id="projectLineItemsTotalDisplay" class="font-semibold font-mono">$0.00</span>
+                </div>
+              </div>
+
+              <div class="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-200/70 dark:border-white/10">
+                <div class="flex items-center gap-2">
+                  <button type="submit" class="btn-mac-primary px-5 py-2 text-xs">Save Project</button>
+                  <button type="button" onclick="closeProjectWorkspace()" class="btn-mac-secondary px-4 py-2 text-xs">Cancel</button>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button type="button" onclick="generateProjectDirectPDF('Quotation')" class="btn-mac-secondary px-3.5 py-2 text-xs">
+                    Save &amp; Download Quotation PDF
+                  </button>
+                  <button type="button" onclick="generateProjectDirectPDF('Invoice')" class="btn-mac-secondary px-3.5 py-2 text-xs">
+                    Save &amp; Download Invoice PDF
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+
+          <!-- Streamlined Project List Table (Project Name, Date Created, Status, Actions ONLY) -->
+          <div class="helios-card p-6">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="border-b border-slate-200/70 dark:border-white/10 text-xs text-slate-400 font-medium">
+                    <th class="py-3 pr-4">Project Name</th>
+                    <th class="py-3 px-4">Date Created</th>
+                    <th class="py-3 px-4">Status</th>
+                    <th class="py-3 pl-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="projectsStreamlinedTableBody" class="divide-y divide-slate-100 dark:divide-white/5 text-sm"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- =============================================================== -->
+        <!-- VIEW C: CLIENT CONTACTS                                         -->
+        <!-- =============================================================== -->
+        <section id="view-clients" class="tab-view space-y-6">
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div class="helios-card p-6 lg:col-span-4 h-fit">
+              <h3 class="text-sm font-semibold mb-4">Add Client Contact</h3>
+              <form id="clientDirectoryForm" onsubmit="handleSaveClient(event)" class="space-y-3">
+                <div>
+                  <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Company / Client Name *</label>
+                  <input id="clientCompanyInput" type="text" required class="helios-input w-full px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Contact Person *</label>
+                  <input id="clientPersonInput" type="text" required class="helios-input w-full px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Email Address *</label>
+                  <input id="clientEmailInput" type="email" required class="helios-input w-full px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Phone Number *</label>
+                  <input id="clientPhoneInput" type="text" required class="helios-input w-full px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label id="clientTypeFieldLabel" class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Event Type</label>
+                  <input id="clientEventTypeInput" type="text" placeholder="Corporate Gala / Summit" class="helios-input w-full px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Default Billing Address *</label>
+                  <textarea id="clientAddressInput" rows="2" required class="helios-input w-full px-3 py-2 text-sm"></textarea>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 border-t border-slate-200/60 dark:border-white/10">
+                  <div>
+                    <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Client Bank Name</label>
+                    <input id="clientBankNameInput" type="text" placeholder="Bank Name" class="helios-input w-full px-3 py-2 text-sm" />
+                  </div>
+                  <div>
+                    <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Client Account No.</label>
+                    <input id="clientAccountNumberInput" type="text" placeholder="Account Number" class="helios-input w-full px-3 py-2 text-sm font-mono" />
+                  </div>
+                </div>
+                <button type="submit" class="btn-mac-primary w-full py-2.5 text-xs">Save Client</button>
+              </form>
+            </div>
+
+            <div class="helios-card p-6 lg:col-span-8">
+              <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <div class="flex items-center gap-2.5">
+                  <h3 class="text-sm font-semibold">Saved Clients</h3>
+                  <span id="clientsDirectoryCountBadge" class="text-xs text-slate-400">0 Clients</span>
+                </div>
+                <input id="clientSearchInput" type="search" placeholder="Search clients..." oninput="renderClientsDirectory()" class="helios-input px-3 py-1.5 text-xs w-full sm:w-48" />
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                  <thead>
+                    <tr class="border-b border-slate-200/70 dark:border-white/10 text-xs text-slate-400 font-medium">
+                      <th class="py-2.5 pr-3">Company / Contact</th>
+                      <th class="py-2.5 px-3">Email &amp; Phone</th>
+                      <th id="clientsTableTypeHeader" class="py-2.5 px-3">Event Type</th>
+                      <th class="py-2.5 px-3">Billing Address</th>
+                      <th class="py-2.5 pl-3 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="clientsDirectoryTableBody" class="divide-y divide-slate-100 dark:divide-white/5 text-sm"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- =============================================================== -->
+        <!-- VIEW D: SUPPLIER DIRECTORY                                      -->
+        <!-- =============================================================== -->
+        <section id="view-suppliers" class="tab-view space-y-6">
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div class="helios-card p-6 lg:col-span-4 h-fit">
+              <h3 class="text-sm font-semibold mb-4">Add Verified Supplier</h3>
+              <form id="supplierDirectoryForm" onsubmit="handleSaveSupplier(event)" class="space-y-3">
+                <div>
+                  <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Supplier Name *</label>
+                  <input id="supplierNameInput" type="text" required class="helios-input w-full px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Category *</label>
+                  <select id="supplierCategorySelect" required class="helios-input w-full px-3 py-2 text-sm">
+                    <option value="Catering">Catering</option>
+                    <option value="AV & Lighting">AV &amp; Lighting</option>
+                    <option value="Venue">Venue</option>
+                    <option value="Decor & Floral">Decor &amp; Floral</option>
+                    <option value="Entertainment">Entertainment</option>
+                    <option value="Logistics">Logistics</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Contact Person *</label>
+                  <input id="supplierPersonInput" type="text" required class="helios-input w-full px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Email Address *</label>
+                  <input id="supplierEmailInput" type="email" required class="helios-input w-full px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Phone Number *</label>
+                  <input id="supplierPhoneInput" type="text" required class="helios-input w-full px-3 py-2 text-sm" />
+                </div>
+                <button type="submit" class="btn-mac-primary w-full py-2.5 text-xs">Add Supplier</button>
+              </form>
+            </div>
+
+            <div class="helios-card p-6 lg:col-span-8">
+              <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <div class="flex items-center gap-2.5">
+                  <h3 class="text-sm font-semibold">Verified Suppliers</h3>
+                  <span id="suppliersDirectoryCountBadge" class="text-xs text-slate-400">0 Suppliers</span>
+                </div>
+                <input id="supplierSearchInput" type="search" placeholder="Search suppliers..." oninput="renderSuppliersDirectory()" class="helios-input px-3 py-1.5 text-xs w-full sm:w-48" />
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                  <thead>
+                    <tr class="border-b border-slate-200/70 dark:border-white/10 text-xs text-slate-400 font-medium">
+                      <th class="py-2.5 pr-3">Supplier Name</th>
+                      <th class="py-2.5 px-3">Category</th>
+                      <th class="py-2.5 px-3">Contact Person</th>
+                      <th class="py-2.5 px-3">Email &amp; Phone</th>
+                      <th class="py-2.5 pl-3 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="suppliersDirectoryTableBody" class="divide-y divide-slate-100 dark:divide-white/5 text-sm"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- =============================================================== -->
+        <!-- VIEW E: FILE CONVERTER                                          -->
+        <!-- =============================================================== -->
+        <section id="view-converter" class="tab-view space-y-6">
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div class="helios-card p-6 lg:col-span-6 space-y-5">
+              <h3 class="text-sm font-semibold">Convert File in Browser</h3>
+
+              <div
+                id="converterDropZone"
+                onclick="document.getElementById('converterFileInput').click()"
+                ondragover="handleConverterDragOver(event)"
+                ondragleave="handleConverterDragLeave(event)"
+                ondrop="handleConverterDrop(event)"
+                class="border-2 border-dashed border-slate-300 dark:border-white/15 hover:border-[#007AFF] rounded-2xl p-10 text-center cursor-pointer transition-colors"
+              >
+                <input
+                  id="converterFileInput"
+                  type="file"
+                  accept=".txt,.csv,.json,.md,.html,.png,.jpg,.jpeg"
+                  onchange="handleConverterFileSelect(event)"
+                  class="hidden"
+                />
+                <p id="converterSelectedFileName" class="text-sm font-medium">Drop a file here, or click to select</p>
+                <p id="converterSelectedFileMeta" class="text-xs text-slate-400 mt-1">TXT, CSV, JSON, MD, HTML, PNG, JPG</p>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1.5">Convert To</label>
+                  <select id="converterTargetFormat" class="helios-input w-full px-3 py-2 text-sm">
+                    <option value="pdf">PDF (.pdf)</option>
+                    <option value="csv">CSV (.csv)</option>
+                    <option value="json">JSON (.json)</option>
+                    <option value="txt">Plain Text (.txt)</option>
+                    <option value="html">HTML (.html)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1.5">Output Name (Optional)</label>
+                  <input id="converterCustomName" type="text" placeholder="converted-file" class="helios-input w-full px-3 py-2 text-sm" />
+                </div>
+              </div>
+
+              <button type="button" onclick="executeRealFileConversion()" class="btn-mac-primary w-full py-2.5 text-sm">
+                Convert &amp; Download
+              </button>
+
+              <div id="converterStatusBanner" class="hidden rounded-xl p-3 text-xs font-medium border"></div>
+            </div>
+
+            <div class="helios-card p-6 lg:col-span-6 flex flex-col justify-between space-y-4">
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <h3 class="text-sm font-semibold">File Preview</h3>
+                  <span id="converterInspectorBadge" class="text-xs text-slate-400">No file selected</span>
+                </div>
+                <div id="converterSourcePreview" class="helios-input p-4 h-52 overflow-auto font-mono text-xs whitespace-pre-wrap text-slate-600 dark:text-slate-300">Select a file on the left to preview its content before converting.</div>
+              </div>
+
+              <div class="pt-4 border-t border-slate-200/60 dark:border-white/10">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-xs font-semibold">Recent Converted Files</span>
+                  <button type="button" onclick="switchView('archive')" class="text-xs text-[#007AFF] dark:text-[#0A84FF] hover:underline">
+                    View Archive
+                  </button>
+                </div>
+                <div id="converterRecentVaultList" class="space-y-2 max-h-36 overflow-y-auto"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- =============================================================== -->
+        <!-- VIEW F: QUOTATION & INVOICE GENERATOR                           -->
+        <!-- =============================================================== -->
+        <section id="view-billing" class="tab-view space-y-6">
+          <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+
+            <div class="xl:col-span-6 space-y-6">
+              <!-- Organization Billing Profile (From) -->
+              <div class="helios-card p-6 space-y-4">
+                <div class="flex items-center justify-between">
+                  <h3 class="text-sm font-semibold">From (Organization Profile)</h3>
+                  <div class="flex items-center gap-2">
+                    <button type="button" onclick="saveCurrentOrgBillingProfile()" class="btn-mac-secondary px-3 py-1 text-xs">Save</button>
+                    <button type="button" onclick="deleteCurrentOrgBillingProfile()" class="btn-mac-secondary px-3 py-1 text-xs text-rose-500">Remove</button>
+                  </div>
+                </div>
+
+                <select id="billingOrgProfileSelect" onchange="handleSelectOrgProfile()" class="helios-input w-full px-3 py-2 text-sm"></select>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <input id="billingOrgName" type="text" placeholder="Organization Name" oninput="renderLiveBillingPreview()" class="helios-input px-3 py-2 text-sm" />
+                  <input id="billingOrgTaxId" type="text" placeholder="Tax ID" oninput="renderLiveBillingPreview()" class="helios-input px-3 py-2 text-sm font-mono" />
+                  <input id="billingOrgEmail" type="email" placeholder="Email" oninput="renderLiveBillingPreview()" class="helios-input px-3 py-2 text-sm" />
+                  <input id="billingOrgAddress" type="text" placeholder="Street Address" oninput="renderLiveBillingPreview()" class="helios-input px-3 py-2 text-sm" />
+                </div>
+
+                <div class="pt-2 border-t border-slate-200/60 dark:border-white/10 space-y-2.5">
+                  <div class="text-xs font-medium text-slate-500 dark:text-slate-400">Sender Bank Details</div>
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <input id="billingOrgBankName" type="text" placeholder="Bank Name" oninput="renderLiveBillingPreview()" class="helios-input px-3 py-2 text-sm" />
+                    <input id="billingOrgAccountHolder" type="text" placeholder="Account Holder Name" oninput="renderLiveBillingPreview()" class="helios-input px-3 py-2 text-sm" />
+                    <input id="billingOrgAccountNumber" type="text" placeholder="Account Number" oninput="renderLiveBillingPreview()" class="helios-input px-3 py-2 text-sm font-mono" />
+                    <input id="billingOrgIban" type="text" placeholder="IBAN" oninput="renderLiveBillingPreview()" class="helios-input px-3 py-2 text-sm font-mono" />
+                    <input id="billingOrgSwift" type="text" placeholder="SWIFT / Routing Code" oninput="renderLiveBillingPreview()" class="helios-input px-3 py-2 text-sm font-mono sm:col-span-2" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Client Billing Profile (Billed To) -->
+              <div class="helios-card p-6 space-y-4">
+                <div class="flex items-center justify-between">
+                  <h3 class="text-sm font-semibold">Billed To (Client Profile)</h3>
+                  <button type="button" onclick="saveClientBillingProfileFromBilling()" class="btn-mac-secondary px-3 py-1 text-xs">Save Client</button>
+                </div>
+
+                <select id="billingClientProfileSelect" onchange="handleSelectBillingClientProfile()" class="helios-input w-full px-3 py-2 text-sm"></select>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <input id="billingClientCompany" type="text" placeholder="Client Company" oninput="renderLiveBillingPreview()" class="helios-input px-3 py-2 text-sm" />
+                  <input id="billingClientContact" type="text" placeholder="Contact Person" oninput="renderLiveBillingPreview()" class="helios-input px-3 py-2 text-sm" />
+                  <input id="billingClientEmail" type="email" placeholder="Client Email" oninput="renderLiveBillingPreview()" class="helios-input px-3 py-2 text-sm" />
+                  <input id="billingClientAddress" type="text" placeholder="Billing Address" oninput="renderLiveBillingPreview()" class="helios-input px-3 py-2 text-sm" />
+                </div>
+
+                <div class="pt-2 border-t border-slate-200/60 dark:border-white/10 space-y-2.5">
+                  <div class="text-xs font-medium text-slate-500 dark:text-slate-400">Billed To Bank Details</div>
+                  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <input id="billingClientBankName" type="text" placeholder="Client Bank Name" oninput="renderLiveBillingPreview()" class="helios-input px-3 py-2 text-sm" />
+                    <input id="billingClientAccountNumber" type="text" placeholder="Account Number" oninput="renderLiveBillingPreview()" class="helios-input px-3 py-2 text-sm font-mono" />
+                    <input id="billingClientIban" type="text" placeholder="IBAN / Routing" oninput="renderLiveBillingPreview()" class="helios-input px-3 py-2 text-sm font-mono" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Document Controls & Line Items -->
+              <div class="helios-card p-6 space-y-4">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                  <h3 class="text-sm font-semibold">Document Details</h3>
+                  <div class="mac-segmented-bar">
+                    <button type="button" id="docTypeBtnQuotation" onclick="setBillingDocType('Quotation')" class="mac-segment-btn">Quotation</button>
+                    <button type="button" id="docTypeBtnInvoice" onclick="setBillingDocType('Invoice')" class="mac-segment-btn active">Invoice</button>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Number</label>
+                    <input id="billingDocNumberInput" type="text" value="INV-849201" oninput="renderLiveBillingPreview()" class="helios-input w-full px-3 py-2 text-sm font-mono" />
+                  </div>
+                  <div>
+                    <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Issue Date</label>
+                    <input id="billingIssueDateInput" type="date" oninput="renderLiveBillingPreview()" class="helios-input w-full px-3 py-2 text-sm font-mono" />
+                  </div>
+                  <div>
+                    <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Currency</label>
+                    <select id="billingCurrencySelect" onchange="setStudioCurrency(this.value)" class="helios-input w-full px-3 py-2 text-sm font-mono">
+                      <option value="USD">USD ($)</option>
+                      <option value="AED">AED (Dirham)</option>
+                      <option value="EUR">EUR (€)</option>
+                      <option value="GBP">GBP (£)</option>
+                      <option value="BDT">BDT (৳)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Load Project</label>
+                    <select id="billingLoadProjectSelect" onchange="loadProjectIntoBillingGenerator()" class="helios-input w-full px-3 py-2 text-sm">
+                      <option value="">Standalone</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Aesthetic Template Selector -->
+                <div class="pt-1">
+                  <label class="block text-xs text-slate-500 dark:text-slate-400 mb-2">Document Template</label>
+                  <div class="grid grid-cols-2 sm:grid-cols-4 gap-2" id="billingTemplateSelector">
+                    <button type="button" onclick="setBillingTemplate('minimal')" data-tpl-btn="minimal" class="btn-mac-secondary py-2 px-2.5 text-xs flex items-center justify-center gap-1.5 border-[#007AFF] ring-1 ring-[#007AFF]">
+                      <span class="w-2.5 h-2.5 rounded-full bg-[#007AFF]"></span>
+                      <span>Minimal</span>
+                    </button>
+                    <button type="button" onclick="setBillingTemplate('executive')" data-tpl-btn="executive" class="btn-mac-secondary py-2 px-2.5 text-xs flex items-center justify-center gap-1.5">
+                      <span class="w-2.5 h-2.5 rounded-full bg-slate-900 dark:bg-amber-400"></span>
+                      <span>Executive</span>
+                    </button>
+                    <button type="button" onclick="setBillingTemplate('editorial')" data-tpl-btn="editorial" class="btn-mac-secondary py-2 px-2.5 text-xs flex items-center justify-center gap-1.5">
+                      <span class="w-2.5 h-2.5 rounded-full bg-stone-500"></span>
+                      <span>Editorial</span>
+                    </button>
+                    <button type="button" onclick="setBillingTemplate('studio')" data-tpl-btn="studio" class="btn-mac-secondary py-2 px-2.5 text-xs flex items-center justify-center gap-1.5">
+                      <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+                      <span>Indigo Studio</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="pt-2 space-y-2">
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-medium text-slate-500 dark:text-slate-400">Line Items</span>
+                    <button type="button" onclick="addBillingLineItemRow()" class="btn-mac-secondary px-3 py-1 text-xs">+ Add Item</button>
+                  </div>
+                  <div class="grid grid-cols-12 gap-2 text-xs text-slate-400">
+                    <div class="col-span-6">Line Item Description</div>
+                    <div class="col-span-2">Quantity (Qty)</div>
+                    <div id="billingUnitPriceHeader" class="col-span-3">Unit Price (USD)</div>
+                    <div class="col-span-1"></div>
+                  </div>
+                  <div id="billingLineItemsContainer" class="space-y-2"></div>
+                </div>
+
+                <div class="pt-2 space-y-1.5">
+                  <label class="block text-xs font-medium text-slate-500 dark:text-slate-400">Terms of Payment (Small Footer)</label>
+                  <textarea id="billingPaymentTermsInput" rows="2" placeholder="Payment terms and conditions..." oninput="renderLiveBillingPreview()" class="helios-input w-full px-3 py-2 text-xs leading-relaxed"></textarea>
+                </div>
+
+                <div class="flex items-center justify-between pt-4 border-t border-slate-200/70 dark:border-white/10">
+                  <button type="button" onclick="window.print()" class="btn-mac-secondary px-4 py-2 text-xs">Print</button>
+                  <button type="button" onclick="downloadAndArchiveBillingPDF()" class="btn-mac-primary px-5 py-2.5 text-xs">
+                    Download &amp; Archive PDF
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Live Document Preview -->
+            <div class="xl:col-span-6">
+              <div class="helios-card p-6 space-y-4">
+                <div class="flex items-center justify-between">
+                  <h3 class="text-sm font-semibold">Document Preview</h3>
+                  <span id="pdfFilenamePreviewLabel" class="text-xs font-mono text-slate-500 dark:text-slate-400">
+                    Zubair Freelance - INV-849201.pdf
+                  </span>
+                </div>
+
+                <div id="invoicePreviewPrintArea" class="bg-white text-slate-900 rounded-xl overflow-hidden border border-slate-200 transition-all">
+                  <div id="previewTopAccentBar" class="h-2 bg-[#007AFF]"></div>
+                  <div id="previewInnerBody" class="p-4 sm:p-8 space-y-5 sm:space-y-6">
+                    <div id="previewHeaderBlock" class="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 pb-5 sm:pb-6">
+                      <div>
+                        <h2 id="previewSenderTitle" class="text-lg font-bold text-slate-900">Zubair Freelance</h2>
+                        <p id="previewSenderAddress" class="text-xs text-slate-600 mt-1"></p>
+                        <p id="previewSenderMeta" class="text-xs text-slate-500 font-mono mt-0.5"></p>
+                      </div>
+                      <div class="text-right">
+                        <div id="previewDocTypeHeading" class="text-xl font-bold uppercase text-[#007AFF]">INVOICE</div>
+                        <div class="text-xs font-mono text-slate-700 mt-1" id="previewDocNumberText">INV-849201</div>
+                        <div class="text-xs font-mono text-slate-500 mt-0.5" id="previewDocDateText">2026-11-14</div>
+                      </div>
+                    </div>
+
+                    <div class="text-xs">
+                      <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Billed To</div>
+                      <div id="previewClientCompanyText" class="font-semibold text-slate-900 text-sm"></div>
+                      <div id="previewClientContactText" class="text-slate-600"></div>
+                      <div id="previewClientAddressText" class="text-slate-600 mt-0.5"></div>
+                      <div id="previewClientEmailText" class="text-slate-500 font-mono mt-0.5"></div>
+                      <div id="previewClientBankBlock" class="hidden mt-1.5 pt-1.5 border-t border-slate-200/70 text-[10.5px] font-mono text-slate-600 space-y-0.5">
+                        <div id="previewClientBankNameText"></div>
+                        <div id="previewClientAccountNumText"></div>
+                        <div id="previewClientIbanText"></div>
+                      </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                      <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr id="previewTableHeadRow" class="border-b border-slate-200 text-slate-500">
+                            <th class="py-2 pr-3 pl-2">Description</th>
+                            <th class="py-2 px-3 text-right">Qty</th>
+                            <th id="previewUnitPriceHeader" class="py-2 px-3 text-right">Unit Price (USD)</th>
+                            <th class="py-2 pl-3 pr-2 text-right">Total</th>
+                          </tr>
+                        </thead>
+                        <tbody id="previewLineItemsBody" class="divide-y divide-slate-100 text-slate-800"></tbody>
+                      </table>
+                    </div>
+
+                    <div id="previewSummaryDivider" class="pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-start justify-between gap-4">
+                      <div id="previewBankDetailsBlock" class="text-[11px] text-slate-600 space-y-0.5 max-w-xs">
+                        <div class="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Sender Bank Details</div>
+                        <div id="previewBankNameText" class="font-medium text-slate-800"></div>
+                        <div id="previewBankHolderText"></div>
+                        <div id="previewBankAccountNumText" class="font-mono text-[10.5px] text-slate-700"></div>
+                        <div id="previewBankIbanText" class="font-mono text-[10.5px] text-slate-700 break-all"></div>
+                        <div id="previewBankSwiftText" class="font-mono text-[10.5px] text-slate-500"></div>
+                      </div>
+
+                      <div id="previewSummaryBox" class="w-full sm:w-60 space-y-2 text-xs p-3 rounded-lg shrink-0 self-end sm:self-auto">
+                        <div class="flex justify-between text-slate-600">
+                          <span>Subtotal</span>
+                          <span id="previewSubtotalText" class="font-mono">$0.00</span>
+                        </div>
+                        <div class="flex justify-between text-sm font-bold text-slate-900 pt-2 border-t border-slate-200">
+                          <span>Total Due</span>
+                          <span id="previewTotalDueText" class="font-mono text-[#007AFF]">$0.00</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div id="previewPaymentTermsSection" class="pt-3 border-t border-slate-200/80 text-[10px] leading-relaxed text-slate-500">
+                      <div class="font-semibold uppercase tracking-wider text-slate-400 text-[9px] mb-0.5">Terms of Payment</div>
+                      <p id="previewPaymentTermsText" class="whitespace-pre-line"></p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- =============================================================== -->
+        <!-- VIEW G: GOOGLE ACCOUNT & CALENDAR SCHEDULER                     -->
+        <!-- =============================================================== -->
+        <section id="view-calendar" class="tab-view space-y-6">
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div class="helios-card p-6 lg:col-span-5 h-fit">
+              <h3 class="text-sm font-semibold mb-4">Schedule Meeting</h3>
+              <form id="meetingSchedulerForm" onsubmit="handleSaveMeeting(event)" class="space-y-3">
+                <div>
+                  <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Meeting Title *</label>
+                  <input id="meetingTitleInput" type="text" required class="helios-input w-full px-3 py-2 text-sm" />
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Date *</label>
+                    <input id="meetingDateInput" type="date" required class="helios-input w-full px-3 py-2 text-sm font-mono" />
+                  </div>
+                  <div>
+                    <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Related Project</label>
+                    <select id="meetingProjectSelect" class="helios-input w-full px-3 py-2 text-sm"></select>
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Start Time *</label>
+                    <input id="meetingStartTimeInput" type="time" required value="10:00" class="helios-input w-full px-3 py-2 text-sm font-mono" />
+                  </div>
+                  <div>
+                    <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">End Time *</label>
+                    <input id="meetingEndTimeInput" type="time" required value="11:00" class="helios-input w-full px-3 py-2 text-sm font-mono" />
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Attendee Email *</label>
+                  <input id="meetingAttendeeInput" type="email" required class="helios-input w-full px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Agenda Notes</label>
+                  <textarea id="meetingNotesInput" rows="2" class="helios-input w-full px-3 py-2 text-sm"></textarea>
+                </div>
+                <button type="submit" class="btn-mac-primary w-full py-2.5 text-xs">Save Meeting</button>
+              </form>
+            </div>
+
+            <div class="helios-card p-6 lg:col-span-7 space-y-6">
+              <div>
+                <div class="flex items-center justify-between mb-3">
+                  <h3 class="text-sm font-semibold">Scheduled Meetings</h3>
+                  <button type="button" onclick="exportFullCalendarICS()" class="btn-mac-secondary px-3 py-1.5 text-xs">Export .ICS</button>
+                </div>
+                <div id="calendarMeetingsList" class="space-y-2.5"></div>
+              </div>
+              <div class="pt-4 border-t border-slate-200/70 dark:border-white/10">
+                <h3 id="calendarBookedHeading" class="text-sm font-semibold mb-3">Booked Event Projects</h3>
+                <div id="calendarBookedEventsList" class="space-y-2.5"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- =============================================================== -->
+        <!-- VIEW H: LOCAL DEVICE STORAGE & ARCHIVE                          -->
+        <!-- =============================================================== -->
+        <section id="view-archive" class="tab-view space-y-6">
+          <div class="helios-card p-6 space-y-5">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h3 class="text-sm font-semibold">Local Device Archive</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Stored in IndexedDB (ZubairFreelanceLocalVaultDB) and localStorage.</p>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <label class="btn-mac-secondary px-3.5 py-2 text-xs cursor-pointer text-[#007AFF] dark:text-[#0A84FF] font-semibold" title="Add and merge multiple JSON files without overwriting existing records or files">
+                  + Add Multiple JSON Files
+                  <input type="file" accept=".json,application/json" multiple onchange="addMultipleJsonFilesNonDestructive(event)" class="hidden" />
+                </label>
+                <button type="button" onclick="exportWorkspaceJsonBackup()" class="btn-mac-secondary px-3.5 py-2 text-xs">Export JSON</button>
+                <label class="btn-mac-secondary px-3.5 py-2 text-xs cursor-pointer">
+                  Restore / Merge JSON
+                  <input type="file" accept=".json,application/json" multiple onchange="restoreWorkspaceJsonBackup(event)" class="hidden" />
+                </label>
+                <button type="button" onclick="downloadOrganizedZipArchive()" class="btn-mac-primary px-4 py-2 text-xs">
+                  Download Organized Folder (.ZIP)
+                </button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+              <div class="p-4 rounded-xl bg-slate-500/5 border border-slate-500/10">
+                <div class="font-mono font-medium text-[#007AFF] dark:text-[#0A84FF]">/01_Event_Projects/</div>
+                <div id="vaultFolderCount01" class="text-base font-semibold mt-1">0 records</div>
+              </div>
+              <div class="p-4 rounded-xl bg-slate-500/5 border border-slate-500/10">
+                <div class="font-mono font-medium text-indigo-500">/02_Clients_And_Suppliers/</div>
+                <div id="vaultFolderCount02" class="text-base font-semibold mt-1">0 records</div>
+              </div>
+              <div class="p-4 rounded-xl bg-slate-500/5 border border-slate-500/10">
+                <div class="font-mono font-medium text-emerald-500">/03_Invoices_And_Quotations/</div>
+                <div id="vaultFolderCount03" class="text-base font-semibold mt-1">0 files</div>
+              </div>
+              <div class="p-4 rounded-xl bg-slate-500/5 border border-slate-500/10">
+                <div class="font-mono font-medium text-amber-500">/04_Converted_Files/</div>
+                <div id="vaultFolderCount04" class="text-base font-semibold mt-1">0 files</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="helios-card p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-sm font-semibold">Saved Files</h3>
+              <span id="vaultTotalBlobsBadge" class="text-xs text-slate-400">0 Files</span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="border-b border-slate-200/70 dark:border-white/10 text-xs text-slate-400 font-medium">
+                    <th class="py-2.5 pr-3">File Name</th>
+                    <th class="py-2.5 px-3">Folder</th>
+                    <th class="py-2.5 px-3">Size</th>
+                    <th class="py-2.5 px-3">Saved</th>
+                    <th class="py-2.5 pl-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="localVaultTableBody" class="divide-y divide-slate-100 dark:divide-white/5 text-sm"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- =============================================================== -->
+        <!-- VIEW I: IMAGE TO TEXT SCANNER (OCR)                             -->
+        <!-- =============================================================== -->
+        <section id="view-ocr" class="tab-view space-y-6">
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- Left: Image Upload & Scan Controls -->
+            <div class="helios-card p-6 lg:col-span-6 space-y-5">
+              <div class="flex items-center justify-between">
+                <h3 class="text-sm font-semibold">Image to Text Scanner</h3>
+                <span id="ocrFileBadge" class="text-xs text-slate-400">PNG, JPG, WEBP</span>
+              </div>
+
+              <div
+                id="ocrDropZone"
+                onclick="document.getElementById('ocrFileInput').click()"
+                ondragover="handleOcrDragOver(event)"
+                ondrop="handleOcrDrop(event)"
+                class="border-2 border-dashed border-slate-300 dark:border-white/15 hover:border-[#007AFF] rounded-2xl p-8 text-center cursor-pointer transition-colors"
+              >
+                <input
+                  id="ocrFileInput"
+                  type="file"
+                  accept="image/*"
+                  onchange="handleOcrFileSelect(event)"
+                  class="hidden"
+                />
+                <div id="ocrImagePreviewWrapper" class="hidden mb-3">
+                  <img id="ocrImagePreview" alt="Image to scan" class="max-h-56 mx-auto rounded-xl object-contain" />
+                </div>
+                <p id="ocrDropPrompt" class="text-sm font-medium">Drop an image, click to browse, or paste (Cmd+V)</p>
+                <p class="text-xs text-slate-400 mt-1">Extracts printed text directly in your browser</p>
+              </div>
+
+              <div class="flex items-center justify-between gap-3">
+                <span class="text-xs text-slate-500 dark:text-slate-400">English OCR</span>
+                <button id="ocrScanBtn" type="button" onclick="runOcrScan()" class="btn-mac-primary flex-1 py-2.5 px-4 text-sm">
+                  Scan Image Text
+                </button>
+              </div>
+
+              <!-- Progress Bar -->
+              <div id="ocrProgressContainer" class="hidden space-y-1.5">
+                <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                  <span id="ocrProgressStatus">Initializing scanner...</span>
+                  <span id="ocrProgressPercent" class="font-mono">0%</span>
+                </div>
+                <div class="w-full h-2 rounded-full bg-slate-200 dark:bg-white/10 overflow-hidden">
+                  <div id="ocrProgressBar" class="h-full bg-[#007AFF] dark:bg-[#0A84FF] transition-all duration-150" style="width: 0%"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Smart Organized & Raw Text Output -->
+            <div class="helios-card p-6 lg:col-span-6 flex flex-col justify-between space-y-4">
+              <div class="space-y-3 flex-1 flex flex-col">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div class="flex items-center gap-2">
+                    <h3 class="text-sm font-semibold">Scanned Output</h3>
+                    <span id="ocrDetectedTypeBadge" class="hidden text-[11px] font-medium px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                      Notes
+                    </span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <div class="mac-segmented-bar">
+                      <button type="button" id="ocrModeBtnOrganized" onclick="setOcrOutputMode('organized')" class="mac-segment-btn active">Organized</button>
+                      <button type="button" id="ocrModeBtnRaw" onclick="setOcrOutputMode('raw')" class="mac-segment-btn">Raw Text</button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Organized View -->
+                <div id="ocrOrganizedPanel" class="flex-1 overflow-y-auto max-h-[340px] space-y-3 pr-1">
+                  <div class="p-6 rounded-xl bg-slate-500/5 text-center text-xs text-slate-400">
+                    Scan an image (invoice, receipt, business card, event flyer, or notes) and it will automatically be understood and organized here.
+                  </div>
+                </div>
+
+                <!-- Raw Editable Text View -->
+                <textarea
+                  id="ocrResultTextarea"
+                  rows="12"
+                  oninput="handleOcrRawTextEdit()"
+                  placeholder="Scanned text will appear here..."
+                  class="hidden helios-input w-full flex-1 p-4 text-sm font-mono resize-none leading-relaxed"
+                ></textarea>
+              </div>
+
+              <div class="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-200/60 dark:border-white/10">
+                <div class="flex items-center gap-2">
+                  <button type="button" onclick="clearOcrScanner()" class="btn-mac-secondary px-3 py-2 text-xs text-rose-500">
+                    Clear
+                  </button>
+                  <span id="ocrTextStats" class="text-xs font-mono text-slate-400">0 chars</span>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <div id="ocrSmartActionSlot" class="flex items-center gap-2"></div>
+                  <button type="button" onclick="copyOcrText()" class="btn-mac-secondary px-3.5 py-2 text-xs">
+                    Copy
+                  </button>
+                  <button type="button" onclick="downloadOcrText()" class="btn-mac-primary px-3.5 py-2 text-xs">
+                    Save .TXT
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </main>
+
+      <!-- MOBILE PORTRAIT BOTTOM TAB BAR (Hidden on Desktop and Mobile Landscape) -->
+      <nav id="mobileBottomNav" aria-label="Mobile Quick Navigation" class="lg:hidden grid grid-cols-5 gap-1 px-2 pt-1.5 mobile-bottom-nav shrink-0">
+        <button type="button" onclick="switchView('dashboard')" data-mobile-nav="dashboard" class="mobile-bottom-btn active flex flex-col items-center justify-center py-1.5 rounded-xl text-[10px] font-medium">
+          <svg class="w-4 h-4 mb-0.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4"/></svg>
+          <span>Home</span>
+        </button>
+        <button type="button" onclick="switchView('projects')" data-mobile-nav="projects" class="mobile-bottom-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-[10px] font-medium">
+          <svg class="w-4 h-4 mb-0.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+          <span>Projects</span>
+        </button>
+        <button type="button" onclick="switchView('billing')" data-mobile-nav="billing" class="mobile-bottom-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-[10px] font-medium">
+          <svg class="w-4 h-4 mb-0.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/></svg>
+          <span>Billing</span>
+        </button>
+        <button type="button" onclick="switchView('ocr')" data-mobile-nav="ocr" class="mobile-bottom-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-[10px] font-medium">
+          <svg class="w-4 h-4 mb-0.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          <span>Scan</span>
+        </button>
+        <button type="button" onclick="switchView('calendar')" data-mobile-nav="calendar" class="mobile-bottom-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-[10px] font-medium">
+          <svg class="w-4 h-4 mb-0.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          <span>Calendar</span>
+        </button>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Minimal Toast -->
+  <div id="studioToast" class="fixed bottom-5 right-5 z-50 helios-card px-4 py-2.5 text-xs font-medium shadow-lg flex items-center gap-2">
+    <span class="w-1.5 h-1.5 rounded-full bg-[#007AFF] dark:bg-[#0A84FF]"></span>
+    <span id="studioToastText">Done</span>
+  </div>
+
+  <script>
+    const STORAGE_KEY_LEGACY = 'ZUBAIR_FREELANCE_STUDIO_STATE_V1';
+    const STORAGE_KEY_ACTIVE_PROFILE = 'ZUBAIR_FREELANCE_ACTIVE_PROFILE';
+    const STORAGE_KEY_THEME = 'ZUBAIR_FREELANCE_THEME_MODE';
+
+    const STUDIO_CURRENCIES = {
+      USD: { code: 'USD', symbol: '$', pdfPrefix: '$', label: 'USD ($)' },
+      AED: { code: 'AED', symbol: 'AED ', pdfPrefix: 'AED ', label: 'AED (Dirham)' },
+      EUR: { code: 'EUR', symbol: '€', pdfPrefix: 'EUR ', label: 'EUR (€)' },
+      GBP: { code: 'GBP', symbol: '£', pdfPrefix: 'GBP ', label: 'GBP (£)' },
+      BDT: { code: 'BDT', symbol: '৳', pdfPrefix: 'BDT ', label: 'BDT (৳)' }
+    };
+
+    const STUDIO_PROFILES = {
+      zubair: {
+        id: 'zubair',
+        name: 'Zubair Alam',
+        subtitle: 'Event Management Studio',
+        initials: 'ZA',
+        code: '585475109',
+        storageKey: 'ZUBAIR_FREELANCE_STUDIO_PROFILE_ZUBAIR_V1',
+        labels: {
+          projectsSection: 'Events',
+          pendingCard: 'Pending Events',
+          confirmedCard: 'Confirmed Events',
+          bookedLegend: 'Booked Event',
+          addProjectBtn: '+ Add Event / Project',
+          projNameField: 'Event / Project Name *',
+          projNamePlaceholder: 'e.g., Global FinTech Summit',
+          projDateField: 'Event Date *',
+          clientTypeField: 'Event Type',
+          clientTypePlaceholder: 'Corporate Gala / Summit',
+          calendarBookedHeading: 'Booked Event Projects',
+          defaultServiceDesc: 'Event Management Services'
+        }
+      },
+      banzir: {
+        id: 'banzir',
+        name: 'Banzir Hazra',
+        subtitle: 'Business Management System',
+        initials: 'BH',
+        code: '0509569576',
+        storageKey: 'ZUBAIR_FREELANCE_STUDIO_PROFILE_BANZIR_V1',
+        labels: {
+          projectsSection: 'Operations',
+          pendingCard: 'Pending Projects',
+          confirmedCard: 'Confirmed Projects',
+          bookedLegend: 'Scheduled Project',
+          addProjectBtn: '+ Add Business Project',
+          projNameField: 'Project Name *',
+          projNamePlaceholder: 'e.g., Q4 Operations Expansion',
+          projDateField: 'Target Date *',
+          clientTypeField: 'Industry / Sector',
+          clientTypePlaceholder: 'Consulting / Retail / Operations',
+          calendarBookedHeading: 'Active Business Projects',
+          defaultServiceDesc: 'Business Management Services'
+        }
+      },
+      tester: {
+        id: 'tester',
+        name: 'Tester',
+        subtitle: 'Demo & QA Workspace',
+        initials: 'TS',
+        code: '1234',
+        storageKey: 'ZUBAIR_FREELANCE_STUDIO_PROFILE_TESTER_V1',
+        labels: {
+          projectsSection: 'Events',
+          pendingCard: 'Pending Events',
+          confirmedCard: 'Confirmed Events',
+          bookedLegend: 'Booked Event',
+          addProjectBtn: '+ Add Event / Project',
+          projNameField: 'Event / Project Name *',
+          projNamePlaceholder: 'e.g., Global FinTech Summit',
+          projDateField: 'Event Date *',
+          clientTypeField: 'Event Type',
+          clientTypePlaceholder: 'Corporate Gala / Summit',
+          calendarBookedHeading: 'Booked Event Projects',
+          defaultServiceDesc: 'Event Management Services'
+        }
+      }
+    };
+
+    let activeProfileId = 'zubair';
+
+    function getActiveProfile() {
+      return STUDIO_PROFILES[activeProfileId] || STUDIO_PROFILES.zubair;
     }
-  });
 
-  win.loadFile(path.join(__dirname, 'index.html'));
+    const IDB_NAME = 'ZubairFreelanceLocalVaultDB';
+    const IDB_VERSION = 1;
+    const IDB_STORE = 'vault_files';
 
-  // Open external links (such as Google Calendar) in the user's default browser
-  win.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith('http://') || url.startsWith('https://')) {
-      shell.openExternal(url);
+    let dbInstance = null;
+    let currentSelectedCalendarDate = null;
+    let currentCalendarYear = 2026;
+    let currentCalendarMonth = 10;
+    let converterPendingFile = null;
+    let converterPendingDataUrl = null;
+    let converterPendingText = null;
+    let currentProjectLineItems = [];
+
+    const defaultZubairWorkspaceState = {
+      profileId: 'zubair',
+      googleAccount: { connected: true, email: 'zubair.events@gmail.com' },
+      clients: [
+        {
+          id: 'cli-101',
+          company: 'Aurora Media Group',
+          contactPerson: 'Nadia Al-Mansoor',
+          email: 'nadia@auroramedia.com',
+          phone: '+1 (212) 555-0194',
+          eventType: 'Executive Keynote & Summit',
+          address: '450 Lexington Ave, Suite 1200, New York, NY 10017'
+        },
+        {
+          id: 'cli-102',
+          company: 'Vanguard Biotech Corp',
+          contactPerson: 'Dr. Julian Vance',
+          email: 'j.vance@vanguardbio.io',
+          phone: '+1 (415) 555-0148',
+          eventType: 'Annual Product Launch Gala',
+          address: '880 Mission St, Floor 9, San Francisco, CA 94103'
+        },
+        {
+          id: 'cli-103',
+          company: 'Solstice Luxury Hospitality',
+          contactPerson: 'Elena Rostova',
+          email: 'elena@solsticehotels.com',
+          phone: '+1 (305) 555-0182',
+          eventType: 'VIP Brand Experience',
+          address: '1200 Brickell Bay Dr, Miami, FL 33131'
+        }
+      ],
+      suppliers: [
+        {
+          id: 'sup-201',
+          name: 'Lumina Stage & Sound Systems',
+          category: 'AV & Lighting',
+          contactPerson: 'Marcus Thorne',
+          email: 'production@luminastage.com',
+          phone: '+1 (212) 555-0821'
+        },
+        {
+          id: 'sup-202',
+          name: 'Saffron & Salt Bespoke Culinary',
+          category: 'Catering',
+          contactPerson: 'Chef Tariq Haddad',
+          email: 'events@saffronculinary.com',
+          phone: '+1 (212) 555-0633'
+        },
+        {
+          id: 'sup-203',
+          name: 'The Glasshouse Pavilion',
+          category: 'Venue',
+          contactPerson: 'Claire Bennett',
+          email: 'bookings@glasshouse.nyc',
+          phone: '+1 (212) 555-0911'
+        }
+      ],
+      projects: [
+        {
+          id: 'prj-301',
+          name: 'Global FinTech Leadership Summit 2026',
+          clientId: 'cli-101',
+          dateCreated: '2026-11-18',
+          status: 'Confirmed',
+          role: 'Lead Technical Producer',
+          scope: 'Mainstage AV production, LED wall setup, and live show calling.',
+          supplierCosts: 14500,
+          internalNotes: 'Lumina Stage confirmed for 6:00 AM load-in.',
+          quotationNumber: 'QTN-840112',
+          invoiceNumber: 'INV-849201',
+          lineItems: [
+            { description: 'Technical Event Direction & Production', qty: 1, price: 8500 },
+            { description: 'Mainstage LED Wall & Audio Package', qty: 1, price: 14200 }
+          ]
+        },
+        {
+          id: 'prj-302',
+          name: 'Vanguard Genomics Innovation Gala',
+          clientId: 'cli-102',
+          dateCreated: '2026-11-24',
+          status: 'Quoted',
+          role: 'Senior Event Director',
+          scope: 'Evening gala production for 350 guests and projection mapping.',
+          supplierCosts: 9800,
+          internalNotes: 'Awaiting final floral sign-off.',
+          quotationNumber: 'QTN-739204',
+          invoiceNumber: 'INV-739204',
+          lineItems: [
+            { description: 'Gala Creative Direction & Venue Setup', qty: 1, price: 7200 },
+            { description: 'Architectural Lighting Package', qty: 1, price: 9600 }
+          ]
+        },
+        {
+          id: 'prj-303',
+          name: 'Solstice Winter VIP Showcase',
+          clientId: 'cli-103',
+          dateCreated: '2026-11-28',
+          status: 'Planning',
+          role: 'Production Consultant',
+          scope: 'Private pavilion showcase and VIP guest logistics.',
+          supplierCosts: 5200,
+          internalNotes: 'Initial site inspection scheduled.',
+          quotationNumber: 'QTN-612098',
+          invoiceNumber: 'INV-612098',
+          lineItems: [
+            { description: 'Production Consulting & Logistics', qty: 1, price: 4800 }
+          ]
+        }
+      ],
+      orgProfiles: [
+        {
+          id: 'org-1',
+          name: 'Zubair Alam — Event Management Studio',
+          taxId: 'EIN-92-4810294',
+          email: 'zubair.events@gmail.com',
+          address: '350 Fifth Avenue, Suite 4100, New York, NY 10118',
+          bankName: 'Emirates NBD / Chase Business',
+          accountHolder: 'Zubair Alam',
+          accountNumber: '1015284920101',
+          iban: 'AE07 0260 0010 1528 4920 101',
+          swift: 'EBILAEAD'
+        }
+      ],
+      selectedOrgProfileId: 'org-1',
+      usedDocNumbers: [],
+      billingDraft: {
+        docType: 'Invoice',
+        docNumber: 'INV-849201',
+        nextInvoiceNumber: 'INV-849201',
+        nextQuotationNumber: 'QTN-510201',
+        issueDate: '2026-11-14',
+        selectedClientId: 'cli-101',
+        clientCompany: 'Aurora Media Group',
+        clientContact: 'Nadia Al-Mansoor',
+        clientEmail: 'nadia@auroramedia.com',
+        clientAddress: '450 Lexington Ave, Suite 1200, New York, NY 10017',
+        paymentTerms: 'Payment is due within 14 days of invoice date via bank transfer. Please quote the document reference number on your remittance. Late payments may incur a 2% monthly administrative fee.',
+        lineItems: [
+          { description: 'Technical Event Direction & Production', qty: 1, price: 8500 },
+          { description: 'Mainstage LED Wall & Audio Package', qty: 1, price: 14200 }
+        ]
+      },
+      meetings: [
+        {
+          id: 'mtg-401',
+          title: 'Mainstage Rigging & Runthrough',
+          date: '2026-11-16',
+          projectId: 'prj-301',
+          startTime: '10:00',
+          endTime: '11:30',
+          attendeeEmail: 'nadia@auroramedia.com',
+          location: 'https://meet.google.com/zf-summit-av',
+          notes: 'Confirm LED wall pixel pitch and speaker monitors.'
+        },
+        {
+          id: 'mtg-402',
+          title: 'Vanguard Gala Lighting Review',
+          date: '2026-11-21',
+          projectId: 'prj-302',
+          startTime: '14:00',
+          endTime: '15:00',
+          attendeeEmail: 'j.vance@vanguardbio.io',
+          location: 'https://meet.google.com/zf-gala-sync',
+          notes: 'Finalize dining table pin-spots.'
+        }
+      ]
+    };
+
+    const defaultBanzirWorkspaceState = {
+      profileId: 'banzir',
+      googleAccount: { connected: false, email: 'banzir.hazra@gmail.com' },
+      clients: [
+        {
+          id: 'cli-b101',
+          company: 'Crescent Royal Exhibitions',
+          contactPerson: 'Farhan Siddiqui',
+          email: 'f.siddiqui@crescentroyal.ae',
+          phone: '+971 50 492 8170',
+          eventType: 'Luxury Exhibition & Brand Activation',
+          address: 'DIFC Gate Village, Building 4, Dubai, UAE'
+        },
+        {
+          id: 'cli-b102',
+          company: 'Meridian Lifestyle & Media',
+          contactPerson: 'Hannah Sterling',
+          email: 'hannah@meridianmedia.co',
+          phone: '+971 52 819 3044',
+          eventType: 'Fashion Runway & Press Gala',
+          address: 'Dubai Design District (d3), Building 7, Dubai, UAE'
+        }
+      ],
+      suppliers: [
+        {
+          id: 'sup-b201',
+          name: 'Apex Staging & Rigging Solutions',
+          category: 'Staging & Truss',
+          contactPerson: 'Rashed Al-Nuaimi',
+          email: 'ops@apexstaging.ae',
+          phone: '+971 4 388 9200'
+        },
+        {
+          id: 'sup-b202',
+          name: 'Velvet Floral & Event Decor',
+          category: 'Floral & Styling',
+          contactPerson: 'Maya Khoury',
+          email: 'studio@velvetdecor.ae',
+          phone: '+971 4 512 7490'
+        }
+      ],
+      projects: [
+        {
+          id: 'prj-b301',
+          name: 'Crescent Luxury Watch Expo 2026',
+          clientId: 'cli-b101',
+          dateCreated: '2026-11-20',
+          status: 'Confirmed',
+          role: 'Executive Event Producer',
+          scope: 'Bespoke exhibition booths, VIP lounge hospitality, and stage lighting.',
+          supplierCosts: 11200,
+          internalNotes: 'VIP security and valet confirmed with venue.',
+          quotationNumber: 'QTN-610401',
+          invoiceNumber: 'INV-910401',
+          lineItems: [
+            { description: 'Exhibition Production & Creative Direction', qty: 1, price: 9500 },
+            { description: 'Bespoke Pavilion & Lighting Setup', qty: 1, price: 12400 }
+          ]
+        },
+        {
+          id: 'prj-b302',
+          name: 'Meridian Autumn Runway Showcase',
+          clientId: 'cli-b102',
+          dateCreated: '2026-11-26',
+          status: 'Planning',
+          role: 'Event Operations Lead',
+          scope: 'Runway lighting choreography, backstage logistics, and press seating.',
+          supplierCosts: 6400,
+          internalNotes: 'Soundcheck scheduled for 2:00 PM.',
+          quotationNumber: 'QTN-610402',
+          invoiceNumber: 'INV-910402',
+          lineItems: [
+            { description: 'Runway Show Production & Logistics', qty: 1, price: 7800 }
+          ]
+        }
+      ],
+      orgProfiles: [
+        {
+          id: 'org-b1',
+          name: 'Banzir Hazra — Business Management System',
+          taxId: 'TRN-100492817400003',
+          email: 'banzir.hazra@gmail.com',
+          address: 'Dubai Design District (d3), Building 7, Dubai, UAE',
+          bankName: 'First Abu Dhabi Bank (FAB)',
+          accountHolder: 'Banzir Hazra',
+          accountNumber: '011002948172001',
+          iban: 'AE45 0351 0110 0294 8172 001',
+          swift: 'NBADAEAA'
+        }
+      ],
+      selectedOrgProfileId: 'org-b1',
+      usedDocNumbers: [],
+      billingDraft: {
+        docType: 'Invoice',
+        docNumber: 'INV-910401',
+        nextInvoiceNumber: 'INV-910401',
+        nextQuotationNumber: 'QTN-610401',
+        issueDate: '2026-11-14',
+        selectedClientId: 'cli-b101',
+        clientCompany: 'Crescent Royal Exhibitions',
+        clientContact: 'Farhan Siddiqui',
+        clientEmail: 'f.siddiqui@crescentroyal.ae',
+        clientAddress: 'DIFC Gate Village, Building 4, Dubai, UAE',
+        paymentTerms: 'Payment is due within 14 days of invoice date via bank transfer. Please quote the document reference number on your remittance. Late payments may incur a 2% monthly administrative fee.',
+        lineItems: [
+          { description: 'Exhibition Production & Creative Direction', qty: 1, price: 9500 },
+          { description: 'Bespoke Pavilion & Lighting Setup', qty: 1, price: 12400 }
+        ]
+      },
+      meetings: [
+        {
+          id: 'mtg-b401',
+          title: 'Crescent Expo Floorplan Sign-off',
+          date: '2026-11-19',
+          projectId: 'prj-b301',
+          startTime: '11:00',
+          endTime: '12:00',
+          attendeeEmail: 'f.siddiqui@crescentroyal.ae',
+          location: 'Google Meet',
+          notes: 'Review VIP lounge entrance layout and lighting rig.'
+        }
+      ]
+    };
+
+    function getDefaultStateForProfile(profileId) {
+      if (profileId === 'banzir') return defaultBanzirWorkspaceState;
+      if (profileId === 'tester') {
+        return Object.assign({}, JSON.parse(JSON.stringify(defaultZubairWorkspaceState)), { profileId: 'tester' });
+      }
+      return defaultZubairWorkspaceState;
     }
-    return { action: 'deny' };
-  });
-}
 
-app.whenReady().then(createWindow);
+    let studioState = loadStudioState('zubair');
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
-});
+    function loadStudioState(profileId = activeProfileId) {
+      const profile = STUDIO_PROFILES[profileId] || STUDIO_PROFILES.zubair;
+      const baseDefault = getDefaultStateForProfile(profile.id);
+      try {
+        let raw = localStorage.getItem(profile.storageKey);
+        if (!raw && profile.id === 'zubair') {
+          const legacyRaw = localStorage.getItem(STORAGE_KEY_LEGACY);
+          if (legacyRaw) {
+            raw = legacyRaw;
+            localStorage.setItem(profile.storageKey, legacyRaw);
+          }
+        }
+        if (!raw) {
+          localStorage.setItem(profile.storageKey, JSON.stringify(baseDefault));
+          return JSON.parse(JSON.stringify(baseDefault));
+        }
+        const parsed = JSON.parse(raw);
+        const merged = Object.assign({}, JSON.parse(JSON.stringify(baseDefault)), parsed);
+        merged.billingDraft = Object.assign({}, JSON.parse(JSON.stringify(baseDefault.billingDraft)), (parsed && parsed.billingDraft) || {});
+        if (!Array.isArray(merged.orgProfiles) || merged.orgProfiles.length === 0) {
+          merged.orgProfiles = JSON.parse(JSON.stringify(baseDefault.orgProfiles));
+        }
+        if (profile.id === 'banzir') {
+          let updatedBanzirOrg = false;
+          merged.orgProfiles.forEach(org => {
+            if (org.name === 'Banzir Hazra — Event Management Studio') {
+              org.name = 'Banzir Hazra — Business Management System';
+              updatedBanzirOrg = true;
+            }
+          });
+          if (updatedBanzirOrg) {
+            localStorage.setItem(profile.storageKey, JSON.stringify(merged));
+          }
+        }
+        return merged;
+      } catch (e) {
+        return JSON.parse(JSON.stringify(baseDefault));
+      }
+    }
 
-app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
-  }
-});
+    let currentActiveView = 'dashboard';
+    const dirtyViews = {
+      dashboard: true, projects: true, clients: true, suppliers: true,
+      billing: true, converter: true, calendar: true, archive: true
+    };
+    let uiRenderRafId = null;
+
+    function markAllViewsDirty() {
+      Object.keys(dirtyViews).forEach(k => { dirtyViews[k] = true; });
+    }
+
+    function renderViewIfNeeded(viewKey, force) {
+      if (!force && !dirtyViews[viewKey]) return;
+      dirtyViews[viewKey] = false;
+      if (viewKey === 'dashboard') renderDashboard();
+      else if (viewKey === 'projects') renderProjectsModule();
+      else if (viewKey === 'clients') renderClientsDirectory();
+      else if (viewKey === 'suppliers') renderSuppliersDirectory();
+      else if (viewKey === 'billing') initBillingModuleUI();
+      else if (viewKey === 'calendar') renderGoogleAndCalendarModule();
+      else if (viewKey === 'archive' || viewKey === 'converter') refreshVaultTableUI();
+    }
+
+    function saveStudioState() {
+      try {
+        const profile = getActiveProfile();
+        localStorage.setItem(profile.storageKey, JSON.stringify(studioState));
+        markAllViewsDirty();
+        if (uiRenderRafId) cancelAnimationFrame(uiRenderRafId);
+        uiRenderRafId = requestAnimationFrame(() => {
+          uiRenderRafId = null;
+          renderViewIfNeeded(currentActiveView, true);
+          if (currentActiveView !== 'dashboard') {
+            renderGoogleAndCalendarModule();
+          }
+        });
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById('studioToast');
+      const text = document.getElementById('studioToastText');
+      if (!toast || !text) return;
+      text.textContent = message;
+      toast.classList.add('toast-visible');
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => toast.classList.remove('toast-visible'), 2800);
+    }
+
+    /* THEME */
+    function initAppearanceTheme() {
+      const savedTheme = localStorage.getItem(STORAGE_KEY_THEME) || 'light';
+      applyThemeMode(savedTheme);
+    }
+
+    function applyThemeMode(mode) {
+      const htmlEl = document.documentElement;
+      const lockLabel = document.getElementById('lockThemeLabel');
+      const sidebarLabel = document.getElementById('sidebarThemeBtnText');
+      if (mode === 'light') {
+        htmlEl.classList.remove('dark');
+        if (lockLabel) lockLabel.textContent = 'Dark Mode';
+        if (sidebarLabel) sidebarLabel.textContent = 'Dark Mode';
+      } else {
+        htmlEl.classList.add('dark');
+        if (lockLabel) lockLabel.textContent = 'Light Mode';
+        if (sidebarLabel) sidebarLabel.textContent = 'Light Mode';
+      }
+      localStorage.setItem(STORAGE_KEY_THEME, mode);
+    }
+
+    function toggleAppearanceTheme() {
+      const isDark = document.documentElement.classList.contains('dark');
+      applyThemeMode(isDark ? 'light' : 'dark');
+    }
+
+    function applyProfileBranding(profile) {
+      if (!profile) return;
+      const labels = profile.labels || STUDIO_PROFILES.zubair.labels;
+      const setText = (id, val) => {
+        const el = document.getElementById(id);
+        if (el && val !== undefined) el.textContent = val;
+      };
+      const setPlaceholder = (id, val) => {
+        const el = document.getElementById(id);
+        if (el && val !== undefined) el.placeholder = val;
+      };
+
+      setText('sidebarStudioTitle', profile.name);
+      setText('sidebarStudioSubtitle', profile.subtitle);
+      document.title = `${profile.name} — ${profile.subtitle}`;
+
+      setText('sidebarProjectsSectionLabel', labels.projectsSection);
+      setText('metricPendingLabel', labels.pendingCard);
+      setText('metricConfirmedLabel', labels.confirmedCard);
+      setText('calendarBookedLegendLabel', labels.bookedLegend);
+      setText('addProjectBtnLabel', labels.addProjectBtn);
+      setText('projNameFieldLabel', labels.projNameField);
+      setPlaceholder('projNameInput', labels.projNamePlaceholder);
+      setText('projDateFieldLabel', labels.projDateField);
+      setText('clientTypeFieldLabel', labels.clientTypeField);
+      setText('clientsTableTypeHeader', labels.clientTypeField);
+      setPlaceholder('clientEventTypeInput', labels.clientTypePlaceholder);
+      setText('calendarBookedHeading', labels.calendarBookedHeading);
+    }
+
+    /* AUTH */
+    function handlePasscodeSubmit(event) {
+      event.preventDefault();
+      const input = document.getElementById('passcodeInput');
+      const card = document.getElementById('authLockCard');
+      const errorBanner = document.getElementById('authErrorBanner');
+      const entered = (input.value || '').trim();
+
+      const matchedProfile = Object.values(STUDIO_PROFILES).find(p => p.code === entered);
+
+      if (matchedProfile) {
+        errorBanner.classList.add('hidden');
+        const lockScreen = document.getElementById('authLockScreen');
+        lockScreen.classList.add('opacity-0', 'pointer-events-none');
+        setTimeout(() => {
+          lockScreen.classList.add('hidden');
+          if (typeof stopLockBgAnimation === 'function') stopLockBgAnimation();
+        }, 260);
+        input.value = '';
+
+        try {
+          activeProfileId = matchedProfile.id;
+          localStorage.setItem(STORAGE_KEY_ACTIVE_PROFILE, activeProfileId);
+          studioState = loadStudioState(activeProfileId);
+
+          applyProfileBranding(matchedProfile);
+
+          if (typeof closeProjectWorkspace === 'function') closeProjectWorkspace();
+          if (typeof clearOcrScanner === 'function') clearOcrScanner();
+          refreshAllUI();
+          initBillingModuleUI();
+          refreshVaultTableUI();
+          showToast(`Unlocked ${matchedProfile.name} profile.`);
+        } catch (err) {
+          console.error('Profile switch UI error:', err);
+        }
+      } else {
+        errorBanner.classList.remove('hidden');
+        card.classList.remove('shake-anim');
+        void card.offsetWidth;
+        card.classList.add('shake-anim');
+        input.value = '';
+      }
+    }
+
+    function lockWorkspace() {
+      const lockScreen = document.getElementById('authLockScreen');
+      const input = document.getElementById('passcodeInput');
+      const errorBanner = document.getElementById('authErrorBanner');
+      if (errorBanner) errorBanner.classList.add('hidden');
+      if (input) input.value = '';
+      lockScreen.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
+      if (typeof startLockBgAnimation === 'function') startLockBgAnimation();
+      if (input) input.focus();
+    }
+
+    function toggleMaximizeWindowShell() {
+      document.getElementById('mainStudioShell').classList.toggle('window-maximized');
+    }
+
+    function minimizeWindowShell() {
+      document.getElementById('mainStudioShell').classList.remove('window-maximized');
+    }
+
+    /* NAVIGATION */
+    const VIEW_TITLES = {
+      dashboard: 'Dashboard',
+      projects: 'Projects',
+      clients: 'Clients',
+      suppliers: 'Suppliers',
+      billing: 'Billing & Invoices',
+      converter: 'File Converter',
+      ocr: 'Image to Text',
+      calendar: 'Calendar',
+      archive: 'Local Archive'
+    };
+
+    let isMobileSidebarOpen = false;
+
+    function toggleMobileSidebar(forceState) {
+      const sidebar = document.getElementById('studioSidebar');
+      const backdrop = document.getElementById('mobileSidebarBackdrop');
+      if (!sidebar || !backdrop) return;
+      isMobileSidebarOpen = typeof forceState === 'boolean' ? forceState : !isMobileSidebarOpen;
+      if (isMobileSidebarOpen) {
+        sidebar.classList.remove('-translate-x-full');
+        sidebar.classList.add('vertical-drawer-open');
+        backdrop.classList.remove('hidden');
+        backdrop.classList.add('vertical-backdrop-open');
+      } else {
+        sidebar.classList.add('-translate-x-full');
+        sidebar.classList.remove('vertical-drawer-open');
+        backdrop.classList.add('hidden');
+        backdrop.classList.remove('vertical-backdrop-open');
+      }
+    }
+
+    function closeAllSidebarDropdowns() {
+      document.querySelectorAll('#studioSidebar .sb-group.sb-has-submenu.is-open').forEach(group => {
+        group.classList.remove('is-open');
+        const trigger = group.querySelector('.sidebar-nav-btn');
+        if (trigger) trigger.setAttribute('aria-expanded', 'false');
+      });
+    }
+
+    function toggleStudioSidebarCollapse(forceCollapsed) {
+      const sidebar = document.getElementById('studioSidebar');
+      const btn = document.getElementById('sidebarCollapseBtn');
+      if (!sidebar) return;
+      const willCollapse = typeof forceCollapsed === 'boolean'
+        ? forceCollapsed
+        : !sidebar.classList.contains('is-collapsed');
+      sidebar.classList.toggle('is-collapsed', willCollapse);
+      if (btn) {
+        btn.setAttribute('aria-expanded', String(!willCollapse));
+        btn.setAttribute('aria-label', willCollapse ? 'Expand sidebar' : 'Collapse sidebar');
+        btn.setAttribute('title', willCollapse ? 'Expand sidebar' : 'Collapse sidebar');
+      }
+      if (willCollapse) {
+        closeAllSidebarDropdowns();
+      }
+    }
+
+    function toggleSidebarGroup(triggerBtn) {
+      const sidebar = document.getElementById('studioSidebar');
+      const group = triggerBtn && triggerBtn.closest('.sb-group.sb-has-submenu');
+      if (!group) return;
+      if (sidebar && sidebar.classList.contains('is-collapsed')) {
+        toggleStudioSidebarCollapse(false);
+        group.classList.add('is-open');
+        triggerBtn.setAttribute('aria-expanded', 'true');
+        return;
+      }
+      const willOpen = !group.classList.contains('is-open');
+      group.classList.toggle('is-open', willOpen);
+      triggerBtn.setAttribute('aria-expanded', String(willOpen));
+    }
+
+    function syncMobileViewportOrientation() {
+      const width = window.innerWidth || document.documentElement.clientWidth || 1024;
+      const height = window.innerHeight || document.documentElement.clientHeight || 768;
+      const isCoarsePointer = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+      const isMobileUA = /Android|iPhone|iPad|iPod|Mobile/i.test((navigator && navigator.userAgent) || '');
+      const isPortrait = height >= width;
+      const isMobile = width < 1024 || isMobileUA || (isCoarsePointer && height <= 560);
+
+      const isVerticalActive = (isMobile && isPortrait) || width < 680;
+
+      document.documentElement.setAttribute('data-device', (isMobile || isVerticalActive) ? 'mobile' : 'desktop');
+      document.documentElement.setAttribute('data-orientation', (isPortrait || isVerticalActive) ? 'portrait' : 'landscape');
+      document.documentElement.setAttribute('data-vertical-mobile', isVerticalActive ? 'true' : 'false');
+
+      if (!isMobile && !isVerticalActive && isMobileSidebarOpen) {
+        toggleMobileSidebar(false);
+      }
+    }
+
+    function switchView(viewKey) {
+      currentActiveView = viewKey;
+      renderViewIfNeeded(viewKey, false);
+
+      document.querySelectorAll('.tab-view').forEach(s => s.classList.remove('active-view'));
+      const target = document.getElementById(`view-${viewKey}`);
+      if (target) target.classList.add('active-view');
+
+      document.querySelectorAll('[data-sidebar-nav]').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-sidebar-nav') === viewKey);
+      });
+
+      document.querySelectorAll('[data-top-segment]').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-top-segment') === viewKey);
+      });
+
+      document.querySelectorAll('[data-mobile-nav]').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-mobile-nav') === viewKey);
+      });
+
+      document.getElementById('currentViewTitle').textContent = VIEW_TITLES[viewKey] || 'Dashboard';
+
+      if (isMobileSidebarOpen) {
+        toggleMobileSidebar(false);
+      }
+
+      const viewport = document.getElementById('studioMainViewport');
+      if (viewport) viewport.scrollTop = 0;
+    }
+
+    /* INDEXEDDB */
+    function initIndexedDBVault() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(IDB_NAME, IDB_VERSION);
+        req.onupgradeneeded = e => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains(IDB_STORE)) {
+            db.createObjectStore(IDB_STORE, { keyPath: 'id' });
+          }
+        };
+        req.onsuccess = e => {
+          dbInstance = e.target.result;
+          refreshVaultTableUI();
+          resolve(dbInstance);
+        };
+        req.onerror = e => reject(e.target.error);
+      });
+    }
+
+    function saveFileToIndexedDBVault(filename, folder, mimeType, blob) {
+      return new Promise((resolve, reject) => {
+        if (!dbInstance) return resolve(null);
+        const tx = dbInstance.transaction([IDB_STORE], 'readwrite');
+        const record = {
+          id: 'vault-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+          profileId: activeProfileId,
+          filename,
+          folder,
+          mimeType,
+          size: blob.size || 0,
+          createdAt: new Date().toISOString(),
+          blob
+        };
+        const req = tx.objectStore(IDB_STORE).put(record);
+        req.onsuccess = () => { refreshVaultTableUI(); resolve(record); };
+        req.onerror = err => reject(err);
+      });
+    }
+
+    function getAllVaultFiles() {
+      return new Promise(resolve => {
+        if (!dbInstance) return resolve([]);
+        const req = dbInstance.transaction([IDB_STORE], 'readonly').objectStore(IDB_STORE).getAll();
+        req.onsuccess = () => {
+          const allRecords = req.result || [];
+          resolve(allRecords.filter(r => (r.profileId || 'zubair') === activeProfileId));
+        };
+        req.onerror = () => resolve([]);
+      });
+    }
+
+    function downloadVaultFileById(id) {
+      if (!dbInstance) return;
+      const req = dbInstance.transaction([IDB_STORE], 'readonly').objectStore(IDB_STORE).get(id);
+      req.onsuccess = () => {
+        const rec = req.result;
+        if (rec && rec.blob) {
+          triggerBrowserBlobDownload(rec.blob, rec.filename);
+          showToast(`Downloaded ${rec.filename}`);
+        }
+      };
+    }
+
+    function deleteVaultFileById(id) {
+      if (!dbInstance) return;
+      const req = dbInstance.transaction([IDB_STORE], 'readwrite').objectStore(IDB_STORE).delete(id);
+      req.onsuccess = () => { refreshVaultTableUI(); showToast('File deleted.'); };
+    }
+
+    function triggerBrowserBlobDownload(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 250);
+    }
+
+    /* DASHBOARD */
+    function getStatusPillHTML(status) {
+      const styles = {
+        'Planning': 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+        'Quoted': 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400',
+        'Confirmed': 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+        'Invoiced': 'bg-blue-500/10 text-[#007AFF] dark:text-[#0A84FF]',
+        'Completed': 'bg-teal-500/10 text-teal-600 dark:text-teal-400'
+      };
+      const cls = styles[status] || styles['Planning'];
+      return `<span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${cls}">${escapeHtml(status)}</span>`;
+    }
+
+    function renderDashboard() {
+      const projects = studioState.projects || [];
+      const clients = studioState.clients || [];
+      const suppliers = studioState.suppliers || [];
+
+      const pendingCount = projects.filter(p => p.status === 'Planning' || p.status === 'Quoted').length;
+      const confirmedCount = projects.filter(p => p.status === 'Confirmed' || p.status === 'Invoiced' || p.status === 'Completed').length;
+
+      document.getElementById('metricPendingEvents').textContent = pendingCount;
+      document.getElementById('metricConfirmedEvents').textContent = confirmedCount;
+      document.getElementById('metricTotalClients').textContent = clients.length;
+      document.getElementById('metricSupplierBadge').textContent = `${suppliers.length} Verified Suppliers`;
+
+      const recentTbody = document.getElementById('dashboardRecentProjectsBody');
+      if (projects.length === 0) {
+        recentTbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-slate-400">No projects yet.</td></tr>`;
+      } else {
+        const sorted = [...projects].sort((a, b) => (b.dateCreated || '').localeCompare(a.dateCreated || '')).slice(0, 5);
+        recentTbody.innerHTML = sorted.map(proj => `
+          <tr onclick="openProjectFromDashboard('${proj.id}')" class="hover:bg-slate-500/5 cursor-pointer transition-colors">
+            <td class="py-3 pr-3 font-medium">${escapeHtml(proj.name)}</td>
+            <td class="py-3 px-3 font-mono text-xs text-slate-500 dark:text-slate-400">${escapeHtml(proj.dateCreated)}</td>
+            <td class="py-3 px-3 text-xs text-slate-500 dark:text-slate-400">${escapeHtml(proj.role || '')}</td>
+            <td class="py-3 pl-3 text-right">${getStatusPillHTML(proj.status)}</td>
+          </tr>
+        `).join('');
+      }
+
+      const quickClientsEl = document.getElementById('dashboardQuickClientsList');
+      if (clients.length === 0) {
+        quickClientsEl.innerHTML = `<div class="text-xs text-slate-400 py-4 text-center">No clients saved.</div>`;
+      } else {
+        quickClientsEl.innerHTML = clients.map(c => `
+          <div class="py-2 flex items-center justify-between gap-3 border-b border-slate-100 dark:border-white/5 last:border-0">
+            <div class="min-w-0">
+              <div class="font-medium text-sm truncate">${escapeHtml(c.company)}</div>
+              <div class="text-xs text-slate-500 dark:text-slate-400 truncate">${escapeHtml(c.contactPerson)} &bull; ${escapeHtml(c.email)}</div>
+            </div>
+            <div class="text-xs font-mono text-slate-400 shrink-0">${escapeHtml(c.phone)}</div>
+          </div>
+        `).join('');
+      }
+
+      renderDashboardCalendarWidget();
+      renderDashboardSchedulePanel();
+    }
+
+    function changeCalendarMonth(delta) {
+      currentCalendarMonth += delta;
+      if (currentCalendarMonth < 0) { currentCalendarMonth = 11; currentCalendarYear--; }
+      else if (currentCalendarMonth > 11) { currentCalendarMonth = 0; currentCalendarYear++; }
+      renderDashboardCalendarWidget();
+    }
+
+    function toggleCalendarDateFilter(dateStr) {
+      currentSelectedCalendarDate = currentSelectedCalendarDate === dateStr ? null : dateStr;
+      renderDashboardCalendarWidget();
+      renderDashboardSchedulePanel();
+    }
+
+    function clearCalendarDateFilter() {
+      currentSelectedCalendarDate = null;
+      renderDashboardCalendarWidget();
+      renderDashboardSchedulePanel();
+    }
+
+    function renderDashboardCalendarWidget() {
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      document.getElementById('calendarMonthLabel').textContent = `${monthNames[currentCalendarMonth]} ${currentCalendarYear}`;
+
+      const firstDay = new Date(currentCalendarYear, currentCalendarMonth, 1).getDay();
+      const daysInMonth = new Date(currentCalendarYear, currentCalendarMonth + 1, 0).getDate();
+      const eventDates = new Set((studioState.projects || []).map(p => p.dateCreated));
+      const meetingDates = new Set((studioState.meetings || []).map(m => m.date));
+
+      let html = '';
+      for (let i = 0; i < firstDay; i++) html += `<div class="h-9"></div>`;
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const mm = String(currentCalendarMonth + 1).padStart(2, '0');
+        const dd = String(day).padStart(2, '0');
+        const dateStr = `${currentCalendarYear}-${mm}-${dd}`;
+        const hasEvent = eventDates.has(dateStr);
+        const hasMeeting = meetingDates.has(dateStr);
+        const isSelected = currentSelectedCalendarDate === dateStr;
+
+        let cls = 'h-9 rounded-lg flex flex-col items-center justify-center cursor-pointer text-xs transition-colors ';
+        if (isSelected) cls += 'ring-2 ring-[#007AFF] dark:ring-[#0A84FF] font-semibold ';
+        if (hasEvent) cls += 'bg-indigo-500/12 text-indigo-600 dark:text-indigo-300 font-medium ';
+        else if (hasMeeting) cls += 'bg-emerald-500/12 text-emerald-600 dark:text-emerald-300 font-medium ';
+        else cls += 'hover:bg-slate-500/10 text-slate-600 dark:text-slate-300 ';
+
+        html += `
+          <button type="button" onclick="toggleCalendarDateFilter('${dateStr}')" class="${cls}">
+            <span>${day}</span>
+            <span class="flex gap-0.5 mt-0.5">
+              ${hasEvent ? '<span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>' : ''}
+              ${hasMeeting ? '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>' : ''}
+            </span>
+          </button>
+        `;
+      }
+      document.getElementById('dashboardCalendarGrid').innerHTML = html;
+    }
+
+    function renderDashboardSchedulePanel() {
+      const badge = document.getElementById('scheduleActiveDateBadge');
+      const clearBtn = document.getElementById('clearScheduleFilterBtn');
+      const countLabel = document.getElementById('dashboardScheduleCountLabel');
+      const listEl = document.getElementById('dashboardScheduleList');
+
+      const items = [];
+      (studioState.meetings || []).forEach(m => {
+        items.push({
+          type: 'Meeting',
+          date: m.date,
+          title: m.title,
+          subtitle: `${m.startTime} - ${m.endTime} • ${m.attendeeEmail}`,
+          dotColor: 'bg-emerald-500'
+        });
+      });
+      (studioState.projects || []).forEach(p => {
+        items.push({
+          type: 'Event',
+          date: p.dateCreated,
+          title: p.name,
+          subtitle: `${p.role} • ${p.status}`,
+          dotColor: 'bg-indigo-500'
+        });
+      });
+      items.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+
+      const filtered = currentSelectedCalendarDate ? items.filter(i => i.date === currentSelectedCalendarDate) : items;
+
+      if (currentSelectedCalendarDate) {
+        badge.textContent = currentSelectedCalendarDate;
+        badge.classList.remove('hidden');
+        clearBtn.classList.remove('hidden');
+        countLabel.textContent = `${filtered.length} item(s) on ${currentSelectedCalendarDate}`;
+      } else {
+        badge.classList.add('hidden');
+        clearBtn.classList.add('hidden');
+        countLabel.textContent = `${filtered.length} upcoming items`;
+      }
+
+      if (filtered.length === 0) {
+        listEl.innerHTML = `<div class="py-8 text-center text-xs text-slate-400">No events or meetings on this date.</div>`;
+      } else {
+        listEl.innerHTML = filtered.map(item => `
+          <div class="p-3 rounded-xl bg-slate-500/5 flex items-center justify-between gap-3">
+            <div class="min-w-0">
+              <div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                <span class="w-2 h-2 rounded-full ${item.dotColor}"></span>
+                <span>${item.type}</span>
+                <span>&bull;</span>
+                <span class="font-mono">${escapeHtml(item.date)}</span>
+              </div>
+              <div class="text-sm font-medium mt-0.5 truncate">${escapeHtml(item.title)}</div>
+              <div class="text-xs text-slate-500 dark:text-slate-400 truncate">${escapeHtml(item.subtitle)}</div>
+            </div>
+            <button type="button" onclick='openGoogleCalendarTemplate(${JSON.stringify({ title: item.title, date: item.date, details: item.subtitle }).replace(/'/g, "&#39;")})' class="btn-mac-secondary px-3 py-1.5 text-xs shrink-0">
+              Add to Google
+            </button>
+          </div>
+        `).join('');
+      }
+    }
+
+    function openProjectFromDashboard(projectId) {
+      switchView('projects');
+      openProjectWorkspaceForEdit(projectId);
+    }
+
+    function openNewProjectFromDashboard() {
+      switchView('projects');
+      openProjectWorkspaceForNew();
+    }
+
+    /* PROJECTS */
+    function generateRandomRef(prefix) {
+      return `${prefix}-${Math.floor(100000 + Math.random() * 900000)}`;
+    }
+
+    function incrementDocReference(currentRef, prefix) {
+      const clean = (currentRef || '').trim();
+      const match = clean.match(/^(.*?)(\d+)(\D*)$/);
+      if (match) {
+        const head = match[1] || `${prefix}-`;
+        const numStr = match[2];
+        const tail = match[3] || '';
+        const nextNum = String(parseInt(numStr, 10) + 1).padStart(numStr.length, '0');
+        return `${head}${nextNum}${tail}`;
+      }
+      return generateRandomRef(prefix);
+    }
+
+    function getNextUniqueDocReference(currentRef, prefix) {
+      if (!Array.isArray(studioState.usedDocNumbers)) {
+        studioState.usedDocNumbers = [];
+      }
+      const used = new Set(studioState.usedDocNumbers.map(s => String(s).toUpperCase()));
+      let candidate = incrementDocReference(currentRef, prefix);
+      while (used.has(candidate.toUpperCase())) {
+        candidate = incrementDocReference(candidate, prefix);
+      }
+      return candidate;
+    }
+
+    function renderProjectsModule() {
+      const clientSelect = document.getElementById('projClientSelect');
+      clientSelect.innerHTML = (studioState.clients || []).map(c =>
+        `<option value="${c.id}">${escapeHtml(c.company)}</option>`
+      ).join('');
+
+      const query = ((document.getElementById('projectSearchInput') || {}).value || '').trim().toLowerCase();
+      const tbody = document.getElementById('projectsStreamlinedTableBody');
+      const allProjects = studioState.projects || [];
+      const projects = query
+        ? allProjects.filter(p =>
+            (p.name || '').toLowerCase().includes(query) ||
+            (p.status || '').toLowerCase().includes(query) ||
+            (p.dateCreated || '').includes(query)
+          )
+        : allProjects;
+
+      if (projects.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-slate-400">${query ? 'No matching projects found.' : 'No projects yet.'}</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = projects.map(p => `
+        <tr class="hover:bg-slate-500/5 transition-colors">
+          <td class="py-3.5 pr-4 font-medium">${escapeHtml(p.name)}</td>
+          <td class="py-3.5 px-4 font-mono text-xs text-slate-500 dark:text-slate-400">${escapeHtml(p.dateCreated)}</td>
+          <td class="py-3.5 px-4">${getStatusPillHTML(p.status)}</td>
+          <td class="py-3.5 pl-4 text-right space-x-2">
+            <button type="button" onclick="openProjectWorkspaceForEdit('${p.id}')" class="btn-mac-secondary px-3 py-1.5 text-xs text-[#007AFF] dark:text-[#0A84FF]">Open Project</button>
+            <button type="button" onclick="removeProjectById('${p.id}')" class="btn-mac-secondary px-3 py-1.5 text-xs text-rose-500">Remove</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function openProjectWorkspaceForNew() {
+      const container = document.getElementById('projectWorkspaceContainer');
+      container.classList.remove('hidden');
+      document.getElementById('projectInfoOverviewPanel').classList.add('hidden');
+      document.getElementById('projectWorkspaceForm').classList.remove('hidden');
+      document.getElementById('btnSwitchToEditProject').classList.add('hidden');
+      document.getElementById('btnSwitchToViewProject').classList.add('hidden');
+
+      document.getElementById('projectWorkspaceHeading').textContent = 'New Project';
+      document.getElementById('projIdInput').value = '';
+      document.getElementById('projNameInput').value = '';
+      document.getElementById('projDateInput').value = new Date().toISOString().split('T')[0];
+      document.getElementById('projStatusSelect').value = 'Planning';
+      document.getElementById('projRoleInput').value = '';
+      document.getElementById('projSupplierCostInput').value = '0';
+      document.getElementById('projScopeInput').value = '';
+      document.getElementById('projInternalNotesInput').value = '';
+
+      const qtn = generateRandomRef('QTN');
+      const inv = generateRandomRef('INV');
+      document.getElementById('projQuotationNumInput').value = qtn;
+      document.getElementById('projInvoiceNumInput').value = inv;
+      document.getElementById('badgeQuotationRef').textContent = qtn;
+      document.getElementById('badgeInvoiceRef').textContent = inv;
+      document.getElementById('projectRefHeaderBadges').classList.remove('hidden');
+
+      const projCurSelect = document.getElementById('projCurrencySelect');
+      if (projCurSelect) projCurSelect.value = getActiveCurrencyCode();
+      syncCurrencyLabelsUI();
+
+      currentProjectLineItems = [{ description: getActiveProfile().labels.defaultServiceDesc, qty: 1, price: 3500 }];
+      renderProjectLineItemRows();
+      container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function enableProjectEditMode() {
+      document.getElementById('projectInfoOverviewPanel').classList.add('hidden');
+      document.getElementById('projectWorkspaceForm').classList.remove('hidden');
+      document.getElementById('btnSwitchToEditProject').classList.add('hidden');
+      if (document.getElementById('projIdInput').value) {
+        document.getElementById('btnSwitchToViewProject').classList.remove('hidden');
+      }
+    }
+
+    function showProjectOverviewMode() {
+      const projId = document.getElementById('projIdInput').value;
+      const proj = (studioState.projects || []).find(p => p.id === projId);
+      if (proj) {
+        renderProjectInfoOverview(proj);
+      }
+      document.getElementById('projectWorkspaceForm').classList.add('hidden');
+      document.getElementById('projectInfoOverviewPanel').classList.remove('hidden');
+      document.getElementById('btnSwitchToEditProject').classList.remove('hidden');
+      document.getElementById('btnSwitchToViewProject').classList.add('hidden');
+    }
+
+    async function renderProjectInfoOverview(proj) {
+      if (!proj) return;
+      const curCode = proj.currency || getActiveCurrencyCode();
+      const client = (studioState.clients || []).find(c => c.id === proj.clientId);
+
+      document.getElementById('viewProjClientCompany').textContent = client ? client.company : 'Unassigned Client';
+      document.getElementById('viewProjClientMeta').textContent = client
+        ? [client.contactPerson, client.email, client.phone].filter(Boolean).join(' • ')
+        : '—';
+      const clientBankParts = [];
+      if (client && client.bankName) clientBankParts.push(`Bank: ${client.bankName}`);
+      if (client && client.accountNumber) clientBankParts.push(`Acct: ${client.accountNumber}`);
+      if (client && client.iban) clientBankParts.push(`IBAN: ${client.iban}`);
+      document.getElementById('viewProjClientBank').textContent = clientBankParts.join(' • ');
+
+      document.getElementById('viewProjDate').textContent = proj.dateCreated || '—';
+      document.getElementById('viewProjStatusPill').innerHTML = getStatusPillHTML(proj.status || 'Planning');
+      document.getElementById('viewProjRole').textContent = proj.role ? `Role: ${proj.role}` : '—';
+
+      let total = 0;
+      const items = proj.lineItems || [];
+      const tbody = document.getElementById('viewProjLineItemsTableBody');
+      if (items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="py-4 text-center text-slate-400">No line items.</td></tr>`;
+      } else {
+        tbody.innerHTML = items.map(item => {
+          const qty = Number(item.qty) || 0;
+          const price = Number(item.price) || 0;
+          const lineTotal = qty * price;
+          total += lineTotal;
+          return `
+            <tr>
+              <td class="py-2 pr-3 font-medium">${escapeHtml(item.description || 'Service')}</td>
+              <td class="py-2 px-3 text-right font-mono">${qty}</td>
+              <td class="py-2 px-3 text-right font-mono">${formatCurrency(price, curCode)}</td>
+              <td class="py-2 pl-3 text-right font-mono font-semibold">${formatCurrency(lineTotal, curCode)}</td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      document.getElementById('viewProjTotalAmount').textContent = formatCurrency(total, curCode);
+      document.getElementById('viewProjLineItemsSubtotal').textContent = formatCurrency(total, curCode);
+      document.getElementById('viewProjSupplierCost').textContent = formatCurrency(proj.supplierCosts || 0, curCode);
+      document.getElementById('viewProjCurrencyBadge').textContent = curCode;
+
+      document.getElementById('viewProjScope').textContent = proj.scope || 'No job description or scope provided.';
+      document.getElementById('viewProjInternalNotes').textContent = proj.internalNotes || 'No internal notes recorded.';
+
+      const qtn = proj.quotationNumber || 'QTN-000000';
+      const inv = proj.invoiceNumber || 'INV-000000';
+      document.getElementById('dlCardQuotationRef').textContent = `${qtn}.pdf`;
+      document.getElementById('dlCardInvoiceRef').textContent = `${inv}.pdf`;
+
+      await refreshProjectLinkedFilesList(proj);
+    }
+
+    async function refreshProjectLinkedFilesList(proj) {
+      const listEl = document.getElementById('viewProjLinkedFilesList');
+      if (!listEl || !proj) return;
+      const allFiles = await getAllVaultFiles();
+      const qtn = (proj.quotationNumber || '').toLowerCase();
+      const inv = (proj.invoiceNumber || '').toLowerCase();
+      const pName = (proj.name || '').toLowerCase();
+      const matched = allFiles.filter(f => {
+        if (f.projectId && f.projectId === proj.id) return true;
+        const fn = (f.filename || '').toLowerCase();
+        return (qtn && fn.includes(qtn)) || (inv && fn.includes(inv)) || (pName && pName.length > 3 && fn.includes(pName));
+      });
+
+      if (matched.length === 0) {
+        listEl.innerHTML = `<div class="py-2 text-slate-400">No archived or attached files for this project yet. Use the download buttons above or click "+ Attach Project File".</div>`;
+        return;
+      }
+
+      listEl.innerHTML = matched.map(f => `
+        <div class="flex items-center justify-between gap-3 py-1.5 px-3 rounded-lg bg-slate-500/5 border border-slate-200/50 dark:border-white/5">
+          <div class="min-w-0">
+            <div class="font-medium truncate">${escapeHtml(f.filename)}</div>
+            <div class="text-[11px] font-mono text-slate-400">${escapeHtml(f.folder || '/01_Event_Projects/')} • ${formatBytes(f.size)}</div>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <button type="button" onclick="downloadVaultFileById('${f.id}')" class="btn-mac-secondary px-2.5 py-1 text-xs text-[#007AFF] dark:text-[#0A84FF]">Download</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function handleAttachFileToCurrentProject(event) {
+      const files = Array.from((event.target && event.target.files) || []);
+      if (files.length === 0) return;
+      const projId = document.getElementById('projIdInput').value;
+      const proj = (studioState.projects || []).find(p => p.id === projId);
+      if (!proj) return;
+
+      const existingVaultFiles = await getAllVaultFiles();
+      const usedNames = new Set(existingVaultFiles.map(f => (f.filename || '').toLowerCase()));
+
+      for (const file of files) {
+        let safeFilename = file.name;
+        if (usedNames.has(safeFilename.toLowerCase())) {
+          const dotIdx = safeFilename.lastIndexOf('.');
+          const base = dotIdx > 0 ? safeFilename.slice(0, dotIdx) : safeFilename;
+          const ext = dotIdx > 0 ? safeFilename.slice(dotIdx) : '';
+          let counter = 2;
+          while (usedNames.has(`${base}-${counter}${ext}`.toLowerCase())) counter++;
+          safeFilename = `${base}-${counter}${ext}`;
+        }
+        usedNames.add(safeFilename.toLowerCase());
+
+        const record = await saveFileToIndexedDBVault(safeFilename, '/01_Event_Projects/', file.type || 'application/octet-stream', file);
+        if (record && dbInstance) {
+          record.projectId = proj.id;
+          const tx = dbInstance.transaction([IDB_STORE], 'readwrite');
+          tx.objectStore(IDB_STORE).put(record);
+        }
+      }
+
+      event.target.value = '';
+      await refreshProjectLinkedFilesList(proj);
+      showToast(`Attached ${files.length} file${files.length > 1 ? 's' : ''} to ${proj.name}`);
+    }
+
+    async function downloadProjectSpecificFile(kind) {
+      const projId = document.getElementById('projIdInput').value;
+      const proj = (studioState.projects || []).find(p => p.id === projId);
+      if (!proj) return;
+      const curCode = proj.currency || getActiveCurrencyCode();
+      const client = (studioState.clients || []).find(c => c.id === proj.clientId) || {};
+      const safeSlug = (proj.name || 'Project').replace(/[^a-zA-Z0-9_-]+/g, '-');
+
+      if (kind === 'QuotationPDF') {
+        await generateProjectDirectPDF('Quotation');
+        await renderProjectInfoOverview(proj);
+      } else if (kind === 'InvoicePDF') {
+        await generateProjectDirectPDF('Invoice');
+        await renderProjectInfoOverview(proj);
+      } else if (kind === 'BriefTXT') {
+        let total = 0;
+        const itemLines = (proj.lineItems || []).map((it, i) => {
+          const lt = (Number(it.qty) || 0) * (Number(it.price) || 0);
+          total += lt;
+          return `${i + 1}. ${it.description || 'Service'} — Qty: ${it.qty} × ${formatCurrency(it.price, curCode)} = ${formatCurrency(lt, curCode)}`;
+        });
+        const content = [
+          `PROJECT BRIEF — ${proj.name}`,
+          `====================================================`,
+          `Date: ${proj.dateCreated || '—'}`,
+          `Status: ${proj.status || '—'}`,
+          `Role: ${proj.role || '—'}`,
+          `Currency: ${curCode}`,
+          `Quotation Ref: ${proj.quotationNumber || '—'}`,
+          `Invoice Ref: ${proj.invoiceNumber || '—'}`,
+          ``,
+          `CLIENT INFORMATION`,
+          `----------------------------------------------------`,
+          `Company: ${client.company || '—'}`,
+          `Contact: ${client.contactPerson || '—'}`,
+          `Email: ${client.email || '—'}`,
+          `Phone: ${client.phone || '—'}`,
+          `Address: ${client.address || '—'}`,
+          client.bankName ? `Bank Name: ${client.bankName}` : '',
+          client.accountNumber ? `Account No: ${client.accountNumber}` : '',
+          ``,
+          `JOB DESCRIPTION & SCOPE OF WORK`,
+          `----------------------------------------------------`,
+          proj.scope || '—',
+          ``,
+          `INTERNAL NOTES & SUPPLIER COSTS`,
+          `----------------------------------------------------`,
+          `Supplier & Operational Costs: ${formatCurrency(proj.supplierCosts || 0, curCode)}`,
+          `Notes: ${proj.internalNotes || '—'}`,
+          ``,
+          `LINE ITEMS`,
+          `----------------------------------------------------`,
+          ...itemLines,
+          ``,
+          `TOTAL: ${formatCurrency(total, curCode)}`
+        ].filter(l => l !== null).join('\n');
+        const filename = `${safeSlug}-Brief.txt`;
+        const blob = new Blob([content], { type: 'text/plain' });
+        triggerBrowserBlobDownload(blob, filename);
+        await saveFileToIndexedDBVault(filename, '/01_Event_Projects/', 'text/plain', blob);
+        await refreshProjectLinkedFilesList(proj);
+        showToast(`Downloaded "${filename}"`);
+      } else if (kind === 'LineItemsCSV') {
+        const rows = [['Description', 'Qty', `Unit Price (${curCode})`, `Line Total (${curCode})`]];
+        (proj.lineItems || []).forEach(it => {
+          const qty = Number(it.qty) || 0;
+          const price = Number(it.price) || 0;
+          rows.push([`"${String(it.description || '').replace(/"/g, '""')}"`, qty, price.toFixed(2), (qty * price).toFixed(2)]);
+        });
+        const csv = rows.map(r => r.join(',')).join('\n');
+        const filename = `${safeSlug}-Costs.csv`;
+        const blob = new Blob([csv], { type: 'text/csv' });
+        triggerBrowserBlobDownload(blob, filename);
+        await saveFileToIndexedDBVault(filename, '/01_Event_Projects/', 'text/csv', blob);
+        await refreshProjectLinkedFilesList(proj);
+        showToast(`Downloaded "${filename}"`);
+      }
+    }
+
+    function openProjectWorkspaceForEdit(projectId) {
+      const proj = (studioState.projects || []).find(p => p.id === projectId);
+      if (!proj) return;
+      const container = document.getElementById('projectWorkspaceContainer');
+      container.classList.remove('hidden');
+
+      if (proj.currency && STUDIO_CURRENCIES[proj.currency]) {
+        studioState.currency = proj.currency;
+        if (studioState.billingDraft) studioState.billingDraft.currency = proj.currency;
+      }
+      const projCurSelect = document.getElementById('projCurrencySelect');
+      if (projCurSelect) projCurSelect.value = getActiveCurrencyCode();
+      syncCurrencyLabelsUI();
+
+      document.getElementById('projectWorkspaceHeading').textContent = proj.name;
+      document.getElementById('projIdInput').value = proj.id;
+      document.getElementById('projNameInput').value = proj.name;
+      document.getElementById('projClientSelect').value = proj.clientId || '';
+      document.getElementById('projDateInput').value = proj.dateCreated || '';
+      document.getElementById('projStatusSelect').value = proj.status || 'Planning';
+      document.getElementById('projRoleInput').value = proj.role || '';
+      document.getElementById('projSupplierCostInput').value = proj.supplierCosts || 0;
+      document.getElementById('projScopeInput').value = proj.scope || '';
+      document.getElementById('projInternalNotesInput').value = proj.internalNotes || '';
+
+      const qtn = proj.quotationNumber || generateRandomRef('QTN');
+      const inv = proj.invoiceNumber || generateRandomRef('INV');
+      proj.quotationNumber = qtn;
+      proj.invoiceNumber = inv;
+      document.getElementById('projQuotationNumInput').value = qtn;
+      document.getElementById('projInvoiceNumInput').value = inv;
+      document.getElementById('badgeQuotationRef').textContent = qtn;
+      document.getElementById('badgeInvoiceRef').textContent = inv;
+      document.getElementById('projectRefHeaderBadges').classList.remove('hidden');
+
+      currentProjectLineItems = JSON.parse(JSON.stringify(proj.lineItems || []));
+      if (currentProjectLineItems.length === 0) currentProjectLineItems.push({ description: getActiveProfile().labels.defaultServiceDesc, qty: 1, price: 2500 });
+      renderProjectLineItemRows();
+
+      // Show Read-Only Project Information View first when opening a project
+      showProjectOverviewMode();
+      container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function closeProjectWorkspace() {
+      document.getElementById('projectWorkspaceContainer').classList.add('hidden');
+    }
+
+    function renderProjectLineItemRows() {
+      const container = document.getElementById('projectLineItemsRows');
+      let total = 0;
+      container.innerHTML = currentProjectLineItems.map((item, idx) => {
+        total += (Number(item.qty) || 0) * (Number(item.price) || 0);
+        return `
+          <div class="grid grid-cols-12 gap-2 items-center">
+            <div class="col-span-6"><input type="text" value="${escapeHtml(item.description)}" placeholder="Description" oninput="updateProjectLineItem(${idx}, 'description', this.value)" class="helios-input w-full px-3 py-1.5 text-sm" /></div>
+            <div class="col-span-2"><input type="number" min="1" value="${Number(item.qty) || 1}" oninput="updateProjectLineItem(${idx}, 'qty', this.value)" class="helios-input w-full px-3 py-1.5 text-sm font-mono" /></div>
+            <div class="col-span-3"><input type="number" min="0" step="0.01" value="${Number(item.price) || 0}" oninput="updateProjectLineItem(${idx}, 'price', this.value)" class="helios-input w-full px-3 py-1.5 text-sm font-mono" /></div>
+            <div class="col-span-1 text-right"><button type="button" onclick="removeProjectLineItemRow(${idx})" class="btn-mac-secondary px-2.5 py-1.5 text-xs text-rose-500">&times;</button></div>
+          </div>
+        `;
+      }).join('');
+      document.getElementById('projectLineItemsTotalDisplay').textContent = formatCurrency(total);
+    }
+
+    function updateProjectLineItem(idx, field, value) {
+      if (!currentProjectLineItems[idx]) return;
+      if (field === 'qty' || field === 'price') {
+        currentProjectLineItems[idx][field] = parseFloat(value) || 0;
+        let total = 0;
+        currentProjectLineItems.forEach(i => total += (Number(i.qty) || 0) * (Number(i.price) || 0));
+        document.getElementById('projectLineItemsTotalDisplay').textContent = formatCurrency(total);
+      } else {
+        currentProjectLineItems[idx][field] = value;
+      }
+    }
+
+    function addProjectLineItemRow() {
+      currentProjectLineItems.push({ description: '', qty: 1, price: 0 });
+      renderProjectLineItemRows();
+    }
+
+    function removeProjectLineItemRow(idx) {
+      if (currentProjectLineItems.length <= 1) currentProjectLineItems[0] = { description: '', qty: 1, price: 0 };
+      else currentProjectLineItems.splice(idx, 1);
+      renderProjectLineItemRows();
+    }
+
+    function saveProjectFromWorkspace(event) {
+      if (event) event.preventDefault();
+      const existingId = document.getElementById('projIdInput').value;
+      const qtn = (document.getElementById('projQuotationNumInput').value || '').trim() || generateRandomRef('QTN');
+      const inv = (document.getElementById('projInvoiceNumInput').value || '').trim() || generateRandomRef('INV');
+      const record = {
+        id: existingId || ('prj-' + Date.now()),
+        name: document.getElementById('projNameInput').value.trim(),
+        clientId: document.getElementById('projClientSelect').value,
+        dateCreated: document.getElementById('projDateInput').value,
+        status: document.getElementById('projStatusSelect').value,
+        role: document.getElementById('projRoleInput').value.trim(),
+        supplierCosts: parseFloat(document.getElementById('projSupplierCostInput').value) || 0,
+        scope: document.getElementById('projScopeInput').value.trim(),
+        internalNotes: document.getElementById('projInternalNotesInput').value.trim(),
+        quotationNumber: qtn,
+        invoiceNumber: inv,
+        currency: (document.getElementById('projCurrencySelect') || {}).value || getActiveCurrencyCode(),
+        lineItems: JSON.parse(JSON.stringify(currentProjectLineItems))
+      };
+
+      if (!record.name) { showToast('Enter a project name.'); return null; }
+
+      const idx = (studioState.projects || []).findIndex(p => p.id === record.id);
+      if (idx >= 0) studioState.projects[idx] = record;
+      else studioState.projects.unshift(record);
+
+      document.getElementById('projIdInput').value = record.id;
+      document.getElementById('projectWorkspaceHeading').textContent = record.name;
+      document.getElementById('badgeQuotationRef').textContent = record.quotationNumber;
+      document.getElementById('badgeInvoiceRef').textContent = record.invoiceNumber;
+      document.getElementById('projectRefHeaderBadges').classList.remove('hidden');
+
+      saveStudioState();
+      if (event) {
+        showProjectOverviewMode();
+      }
+      showToast(`Saved "${record.name}"`);
+      return record;
+    }
+
+    function removeProjectById(projectId) {
+      studioState.projects = (studioState.projects || []).filter(p => p.id !== projectId);
+      if (document.getElementById('projIdInput').value === projectId) closeProjectWorkspace();
+      saveStudioState();
+      showToast('Project removed.');
+    }
+
+    async function generateProjectDirectPDF(docType) {
+      const project = saveProjectFromWorkspace(null);
+      if (!project) return;
+      const client = (studioState.clients || []).find(c => c.id === project.clientId) || {
+        company: 'Client', contactPerson: '', email: '', address: ''
+      };
+      const org = getSelectedOrgProfile();
+      const currentRef = docType === 'Quotation' ? project.quotationNumber : project.invoiceNumber;
+      await buildAndDownloadStyledPDF({
+        docType,
+        docNumber: currentRef,
+        issueDate: project.dateCreated || new Date().toISOString().split('T')[0],
+        orgName: org.name, orgAddress: org.address, orgTaxId: org.taxId, orgEmail: org.email,
+        orgBankName: org.bankName || 'Emirates NBD / Chase Business',
+        orgAccountHolder: org.accountHolder || org.name || 'Zubair Freelance Studio',
+        orgAccountNumber: org.accountNumber || '',
+        orgIban: org.iban || 'AE07 0260 0010 1528 4920 101',
+        orgSwift: org.swift || 'EBILAEAD',
+        paymentTerms: (studioState.billingDraft && studioState.billingDraft.paymentTerms) || 'Payment is due within 14 days of invoice date via bank transfer. Please quote the document reference number on your remittance.',
+        clientCompany: client.company, clientContact: client.contactPerson, clientAddress: client.address, clientEmail: client.email,
+        clientBankName: client.bankName || '', clientAccountNumber: client.accountNumber || '', clientIban: client.iban || '',
+        projectName: project.name, projectRole: project.role, projectScope: project.scope,
+        currency: project.currency || getActiveCurrencyCode(),
+        lineItems: project.lineItems
+      });
+
+      if (!Array.isArray(studioState.usedDocNumbers)) studioState.usedDocNumbers = [];
+      if (!studioState.usedDocNumbers.includes(currentRef)) {
+        studioState.usedDocNumbers.push(currentRef);
+      }
+
+      if (docType === 'Quotation') {
+        const nextQtn = getNextUniqueDocReference(currentRef, 'QTN');
+        project.quotationNumber = nextQtn;
+        document.getElementById('projQuotationNumInput').value = nextQtn;
+        document.getElementById('badgeQuotationRef').textContent = nextQtn;
+      } else {
+        const nextInv = getNextUniqueDocReference(currentRef, 'INV');
+        project.invoiceNumber = nextInv;
+        document.getElementById('projInvoiceNumInput').value = nextInv;
+        document.getElementById('badgeInvoiceRef').textContent = nextInv;
+      }
+      saveStudioState();
+    }
+
+    /* CLIENTS & SUPPLIERS */
+    function handleSaveClient(event) {
+      event.preventDefault();
+      studioState.clients.unshift({
+        id: 'cli-' + Date.now(),
+        company: document.getElementById('clientCompanyInput').value.trim(),
+        contactPerson: document.getElementById('clientPersonInput').value.trim(),
+        email: document.getElementById('clientEmailInput').value.trim(),
+        phone: document.getElementById('clientPhoneInput').value.trim(),
+        eventType: document.getElementById('clientEventTypeInput').value.trim() || 'Corporate Event',
+        address: document.getElementById('clientAddressInput').value.trim(),
+        bankName: (document.getElementById('clientBankNameInput') || {}).value ? document.getElementById('clientBankNameInput').value.trim() : '',
+        accountNumber: (document.getElementById('clientAccountNumberInput') || {}).value ? document.getElementById('clientAccountNumberInput').value.trim() : ''
+      });
+      document.getElementById('clientDirectoryForm').reset();
+      saveStudioState();
+      showToast('Client saved.');
+    }
+
+    function removeClientById(id) {
+      studioState.clients = (studioState.clients || []).filter(c => c.id !== id);
+      saveStudioState();
+      showToast('Client removed.');
+    }
+
+    function renderClientsDirectory() {
+      const allClients = studioState.clients || [];
+      const query = ((document.getElementById('clientSearchInput') || {}).value || '').trim().toLowerCase();
+      const clients = query
+        ? allClients.filter(c =>
+            (c.company || '').toLowerCase().includes(query) ||
+            (c.contactPerson || '').toLowerCase().includes(query) ||
+            (c.email || '').toLowerCase().includes(query) ||
+            (c.eventType || '').toLowerCase().includes(query) ||
+            (c.accountNumber || '').toLowerCase().includes(query)
+          )
+        : allClients;
+
+      document.getElementById('clientsDirectoryCountBadge').textContent = `${allClients.length} Clients`;
+      const tbody = document.getElementById('clientsDirectoryTableBody');
+      if (clients.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-400">${query ? 'No matching clients.' : 'No clients saved.'}</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = clients.map(c => `
+        <tr class="hover:bg-slate-500/5 transition-colors">
+          <td class="py-3 pr-3"><div class="font-medium">${escapeHtml(c.company)}</div><div class="text-xs text-slate-500 dark:text-slate-400">${escapeHtml(c.contactPerson)}</div></td>
+          <td class="py-3 px-3 text-xs"><div class="font-mono">${escapeHtml(c.email)}</div><div class="font-mono text-slate-500 dark:text-slate-400">${escapeHtml(c.phone)}</div></td>
+          <td class="py-3 px-3 text-xs">${escapeHtml(c.eventType || '')}</td>
+          <td class="py-3 px-3 text-xs text-slate-500 dark:text-slate-400 max-w-xs">
+            <div class="truncate">${escapeHtml(c.address)}</div>
+            ${(c.bankName || c.accountNumber) ? `<div class="font-mono text-[11px] text-slate-400 mt-0.5 truncate">${escapeHtml([c.bankName, c.accountNumber ? 'Acct: ' + c.accountNumber : ''].filter(Boolean).join(' • '))}</div>` : ''}
+          </td>
+          <td class="py-3 pl-3 text-right"><button type="button" onclick="removeClientById('${c.id}')" class="btn-mac-secondary px-2.5 py-1 text-xs text-rose-500">Remove</button></td>
+        </tr>
+      `).join('');
+    }
+
+    function handleSaveSupplier(event) {
+      event.preventDefault();
+      studioState.suppliers.unshift({
+        id: 'sup-' + Date.now(),
+        name: document.getElementById('supplierNameInput').value.trim(),
+        category: document.getElementById('supplierCategorySelect').value,
+        contactPerson: document.getElementById('supplierPersonInput').value.trim(),
+        email: document.getElementById('supplierEmailInput').value.trim(),
+        phone: document.getElementById('supplierPhoneInput').value.trim()
+      });
+      document.getElementById('supplierDirectoryForm').reset();
+      saveStudioState();
+      showToast('Supplier added.');
+    }
+
+    function removeSupplierById(id) {
+      studioState.suppliers = (studioState.suppliers || []).filter(s => s.id !== id);
+      saveStudioState();
+      showToast('Supplier removed.');
+    }
+
+    function renderSuppliersDirectory() {
+      const allSuppliers = studioState.suppliers || [];
+      const query = ((document.getElementById('supplierSearchInput') || {}).value || '').trim().toLowerCase();
+      const suppliers = query
+        ? allSuppliers.filter(s =>
+            (s.name || '').toLowerCase().includes(query) ||
+            (s.category || '').toLowerCase().includes(query) ||
+            (s.contactPerson || '').toLowerCase().includes(query)
+          )
+        : allSuppliers;
+
+      document.getElementById('suppliersDirectoryCountBadge').textContent = `${allSuppliers.length} Suppliers`;
+      const tbody = document.getElementById('suppliersDirectoryTableBody');
+      if (suppliers.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-400">${query ? 'No matching suppliers.' : 'No suppliers saved.'}</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = suppliers.map(s => `
+        <tr class="hover:bg-slate-500/5 transition-colors">
+          <td class="py-3 pr-3 font-medium">${escapeHtml(s.name)}</td>
+          <td class="py-3 px-3"><span class="text-xs px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">${escapeHtml(s.category)}</span></td>
+          <td class="py-3 px-3 text-xs">${escapeHtml(s.contactPerson)}</td>
+          <td class="py-3 px-3 font-mono text-xs"><div>${escapeHtml(s.email)}</div><div class="text-slate-500 dark:text-slate-400">${escapeHtml(s.phone)}</div></td>
+          <td class="py-3 pl-3 text-right"><button type="button" onclick="removeSupplierById('${s.id}')" class="btn-mac-secondary px-2.5 py-1 text-xs text-rose-500">Remove</button></td>
+        </tr>
+      `).join('');
+    }
+
+    /* BILLING & PDF */
+    function getSelectedOrgProfile() {
+      const profiles = studioState.orgProfiles || [];
+      return profiles.find(o => o.id === studioState.selectedOrgProfileId) || profiles[0] || {
+        id: 'org-1', name: 'Zubair Freelance — Event Management Studio', taxId: '', email: '', address: ''
+      };
+    }
+
+    function initBillingModuleUI() {
+      const orgSelect = document.getElementById('billingOrgProfileSelect');
+      orgSelect.innerHTML = (studioState.orgProfiles || []).map(o =>
+        `<option value="${o.id}" ${o.id === studioState.selectedOrgProfileId ? 'selected' : ''}>${escapeHtml(o.name)}</option>`
+      ).join('');
+
+      const activeOrg = getSelectedOrgProfile();
+      document.getElementById('billingOrgName').value = activeOrg.name || '';
+      document.getElementById('billingOrgTaxId').value = activeOrg.taxId || '';
+      document.getElementById('billingOrgEmail').value = activeOrg.email || '';
+      document.getElementById('billingOrgAddress').value = activeOrg.address || '';
+      document.getElementById('billingOrgBankName').value = activeOrg.bankName || 'Emirates NBD / Chase Business';
+      document.getElementById('billingOrgAccountHolder').value = activeOrg.accountHolder || activeOrg.name || 'Zubair Freelance Studio';
+      document.getElementById('billingOrgAccountNumber').value = activeOrg.accountNumber || '';
+      document.getElementById('billingOrgIban').value = activeOrg.iban || 'AE07 0260 0010 1528 4920 101';
+      document.getElementById('billingOrgSwift').value = activeOrg.swift || 'EBILAEAD';
+
+      const clientSelect = document.getElementById('billingClientProfileSelect');
+      clientSelect.innerHTML = `<option value="">-- Select Saved Client --</option>` +
+        (studioState.clients || []).map(c => `<option value="${c.id}" ${c.id === studioState.billingDraft.selectedClientId ? 'selected' : ''}>${escapeHtml(c.company)}</option>`).join('');
+
+      const projSelect = document.getElementById('billingLoadProjectSelect');
+      projSelect.innerHTML = `<option value="">Standalone</option>` +
+        (studioState.projects || []).map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+
+      const draft = studioState.billingDraft;
+      if (!draft.nextInvoiceNumber) {
+        draft.nextInvoiceNumber = (draft.docNumber && draft.docNumber.startsWith('INV-')) ? draft.docNumber : 'INV-849201';
+      }
+      if (!draft.nextQuotationNumber) {
+        draft.nextQuotationNumber = (draft.docNumber && draft.docNumber.startsWith('QTN-')) ? draft.docNumber : 'QTN-510201';
+      }
+      if (!draft.paymentTerms) {
+        draft.paymentTerms = 'Payment is due within 14 days of invoice date via bank transfer. Please quote the document reference number on your remittance. Late payments may incur a 2% monthly administrative fee.';
+      }
+      const activeDocType = draft.docType || 'Invoice';
+      const activeNumber = activeDocType === 'Quotation' ? draft.nextQuotationNumber : draft.nextInvoiceNumber;
+      draft.docNumber = activeNumber;
+      document.getElementById('billingDocNumberInput').value = activeNumber;
+      document.getElementById('billingIssueDateInput').value = draft.issueDate || new Date().toISOString().split('T')[0];
+      document.getElementById('billingClientCompany').value = draft.clientCompany || '';
+      document.getElementById('billingClientContact').value = draft.clientContact || '';
+      document.getElementById('billingClientEmail').value = draft.clientEmail || '';
+      document.getElementById('billingClientAddress').value = draft.clientAddress || '';
+      document.getElementById('billingClientBankName').value = draft.clientBankName || '';
+      document.getElementById('billingClientAccountNumber').value = draft.clientAccountNumber || '';
+      document.getElementById('billingClientIban').value = draft.clientIban || '';
+      document.getElementById('billingPaymentTermsInput').value = draft.paymentTerms || '';
+
+      syncCurrencyLabelsUI();
+      updateDocTypeToggleUI(draft.docType || 'Invoice');
+      renderBillingLineItemsRows();
+      renderLiveBillingPreview();
+    }
+
+    function handleSelectOrgProfile() {
+      studioState.selectedOrgProfileId = document.getElementById('billingOrgProfileSelect').value;
+      const org = getSelectedOrgProfile();
+      document.getElementById('billingOrgName').value = org.name || '';
+      document.getElementById('billingOrgTaxId').value = org.taxId || '';
+      document.getElementById('billingOrgEmail').value = org.email || '';
+      document.getElementById('billingOrgAddress').value = org.address || '';
+      document.getElementById('billingOrgBankName').value = org.bankName || '';
+      document.getElementById('billingOrgAccountHolder').value = org.accountHolder || '';
+      document.getElementById('billingOrgAccountNumber').value = org.accountNumber || '';
+      document.getElementById('billingOrgIban').value = org.iban || '';
+      document.getElementById('billingOrgSwift').value = org.swift || '';
+      saveStudioState();
+    }
+
+    function saveCurrentOrgBillingProfile() {
+      const name = document.getElementById('billingOrgName').value.trim();
+      const taxId = document.getElementById('billingOrgTaxId').value.trim();
+      const email = document.getElementById('billingOrgEmail').value.trim();
+      const address = document.getElementById('billingOrgAddress').value.trim();
+      const bankName = document.getElementById('billingOrgBankName').value.trim();
+      const accountHolder = document.getElementById('billingOrgAccountHolder').value.trim();
+      const accountNumber = document.getElementById('billingOrgAccountNumber').value.trim();
+      const iban = document.getElementById('billingOrgIban').value.trim();
+      const swift = document.getElementById('billingOrgSwift').value.trim();
+      if (!name) return;
+
+      const existing = (studioState.orgProfiles || []).find(o => o.name.toLowerCase() === name.toLowerCase());
+      if (existing) {
+        existing.taxId = taxId; existing.email = email; existing.address = address;
+        existing.bankName = bankName; existing.accountHolder = accountHolder; existing.accountNumber = accountNumber; existing.iban = iban; existing.swift = swift;
+        studioState.selectedOrgProfileId = existing.id;
+      } else {
+        const newOrg = { id: 'org-' + Date.now(), name, taxId, email, address, bankName, accountHolder, accountNumber, iban, swift };
+        studioState.orgProfiles.push(newOrg);
+        studioState.selectedOrgProfileId = newOrg.id;
+      }
+      saveStudioState();
+      showToast('Organization profile saved.');
+    }
+
+    function deleteCurrentOrgBillingProfile() {
+      if ((studioState.orgProfiles || []).length <= 1) {
+        showToast('At least one profile is required.');
+        return;
+      }
+      studioState.orgProfiles = studioState.orgProfiles.filter(o => o.id !== studioState.selectedOrgProfileId);
+      studioState.selectedOrgProfileId = studioState.orgProfiles[0].id;
+      saveStudioState();
+      showToast('Profile removed.');
+    }
+
+    function handleSelectBillingClientProfile() {
+      const clientId = document.getElementById('billingClientProfileSelect').value;
+      studioState.billingDraft.selectedClientId = clientId;
+      const client = (studioState.clients || []).find(c => c.id === clientId);
+      if (client) {
+        document.getElementById('billingClientCompany').value = client.company;
+        document.getElementById('billingClientContact').value = client.contactPerson;
+        document.getElementById('billingClientEmail').value = client.email;
+        document.getElementById('billingClientAddress').value = client.address;
+        document.getElementById('billingClientBankName').value = client.bankName || '';
+        document.getElementById('billingClientAccountNumber').value = client.accountNumber || '';
+        document.getElementById('billingClientIban').value = client.iban || '';
+      }
+      renderLiveBillingPreview();
+    }
+
+    function saveClientBillingProfileFromBilling() {
+      const company = document.getElementById('billingClientCompany').value.trim();
+      if (!company) return;
+      const contactPerson = document.getElementById('billingClientContact').value.trim();
+      const email = document.getElementById('billingClientEmail').value.trim();
+      const address = document.getElementById('billingClientAddress').value.trim();
+      const bankName = document.getElementById('billingClientBankName').value.trim();
+      const accountNumber = document.getElementById('billingClientAccountNumber').value.trim();
+      const iban = document.getElementById('billingClientIban').value.trim();
+
+      const existing = (studioState.clients || []).find(c => c.id === studioState.billingDraft.selectedClientId || c.company.toLowerCase() === company.toLowerCase());
+      if (existing) {
+        existing.company = company; existing.contactPerson = contactPerson; existing.email = email; existing.address = address;
+        existing.bankName = bankName; existing.accountNumber = accountNumber; existing.iban = iban;
+        studioState.billingDraft.selectedClientId = existing.id;
+      } else {
+        const newClient = { id: 'cli-' + Date.now(), company, contactPerson, email, phone: '', eventType: 'Event', address, bankName, accountNumber, iban };
+        studioState.clients.unshift(newClient);
+        studioState.billingDraft.selectedClientId = newClient.id;
+      }
+      saveStudioState();
+      showToast('Client profile saved.');
+    }
+
+    function setBillingDocType(type) {
+      const draft = studioState.billingDraft;
+      const prevType = draft.docType || 'Invoice';
+      const numInput = document.getElementById('billingDocNumberInput');
+      const cur = (numInput.value || '').trim();
+      if (cur) {
+        if (prevType === 'Quotation') draft.nextQuotationNumber = cur;
+        else draft.nextInvoiceNumber = cur;
+      }
+      if (!draft.nextInvoiceNumber) draft.nextInvoiceNumber = 'INV-849201';
+      if (!draft.nextQuotationNumber) draft.nextQuotationNumber = 'QTN-510201';
+
+      draft.docType = type;
+      const nextVal = type === 'Quotation' ? draft.nextQuotationNumber : draft.nextInvoiceNumber;
+      numInput.value = nextVal;
+      draft.docNumber = nextVal;
+      updateDocTypeToggleUI(type);
+      renderLiveBillingPreview();
+    }
+
+    function updateDocTypeToggleUI(type) {
+      document.getElementById('docTypeBtnQuotation').classList.toggle('active', type === 'Quotation');
+      document.getElementById('docTypeBtnInvoice').classList.toggle('active', type !== 'Quotation');
+    }
+
+    function loadProjectIntoBillingGenerator() {
+      const projId = document.getElementById('billingLoadProjectSelect').value;
+      if (!projId) return;
+      const proj = (studioState.projects || []).find(p => p.id === projId);
+      if (!proj) return;
+
+      const docType = studioState.billingDraft.docType || 'Invoice';
+      document.getElementById('billingDocNumberInput').value = docType === 'Quotation' ? proj.quotationNumber : proj.invoiceNumber;
+      document.getElementById('billingIssueDateInput').value = proj.dateCreated || new Date().toISOString().split('T')[0];
+
+      const client = (studioState.clients || []).find(c => c.id === proj.clientId);
+      if (client) {
+        studioState.billingDraft.selectedClientId = client.id;
+        document.getElementById('billingClientProfileSelect').value = client.id;
+        document.getElementById('billingClientCompany').value = client.company;
+        document.getElementById('billingClientContact').value = client.contactPerson;
+        document.getElementById('billingClientEmail').value = client.email;
+        document.getElementById('billingClientAddress').value = client.address;
+        document.getElementById('billingClientBankName').value = client.bankName || '';
+        document.getElementById('billingClientAccountNumber').value = client.accountNumber || '';
+        document.getElementById('billingClientIban').value = client.iban || '';
+      }
+      if (proj.currency && STUDIO_CURRENCIES[proj.currency]) {
+        studioState.currency = proj.currency;
+        studioState.billingDraft.currency = proj.currency;
+        syncCurrencyLabelsUI();
+      }
+      studioState.billingDraft.lineItems = JSON.parse(JSON.stringify(proj.lineItems || []));
+      renderBillingLineItemsRows();
+      renderLiveBillingPreview();
+    }
+
+    function renderBillingLineItemsRows() {
+      const container = document.getElementById('billingLineItemsContainer');
+      container.innerHTML = (studioState.billingDraft.lineItems || []).map((item, idx) => `
+        <div class="grid grid-cols-12 gap-2 items-center">
+          <div class="col-span-6"><input type="text" value="${escapeHtml(item.description)}" placeholder="Description" oninput="updateBillingLineItem(${idx}, 'description', this.value)" class="helios-input w-full px-3 py-1.5 text-sm" /></div>
+          <div class="col-span-2"><input type="number" min="1" value="${Number(item.qty) || 1}" oninput="updateBillingLineItem(${idx}, 'qty', this.value)" class="helios-input w-full px-3 py-1.5 text-sm font-mono" /></div>
+          <div class="col-span-3"><input type="number" min="0" step="0.01" value="${Number(item.price) || 0}" oninput="updateBillingLineItem(${idx}, 'price', this.value)" class="helios-input w-full px-3 py-1.5 text-sm font-mono" /></div>
+          <div class="col-span-1 text-right"><button type="button" onclick="removeBillingLineItemRow(${idx})" class="btn-mac-secondary px-2.5 py-1.5 text-xs text-rose-500">&times;</button></div>
+        </div>
+      `).join('');
+    }
+
+    function updateBillingLineItem(idx, field, value) {
+      const items = studioState.billingDraft.lineItems;
+      if (!items[idx]) return;
+      items[idx][field] = (field === 'qty' || field === 'price') ? (parseFloat(value) || 0) : value;
+      renderLiveBillingPreview();
+    }
+
+    function addBillingLineItemRow() {
+      studioState.billingDraft.lineItems.push({ description: '', qty: 1, price: 0 });
+      renderBillingLineItemsRows();
+      renderLiveBillingPreview();
+    }
+
+    function removeBillingLineItemRow(idx) {
+      if (studioState.billingDraft.lineItems.length <= 1) studioState.billingDraft.lineItems[0] = { description: '', qty: 1, price: 0 };
+      else studioState.billingDraft.lineItems.splice(idx, 1);
+      renderBillingLineItemsRows();
+      renderLiveBillingPreview();
+    }
+
+    function setBillingTemplate(tpl) {
+      studioState.billingDraft.template = tpl;
+      updateTemplateSelectorUI(tpl);
+      renderLiveBillingPreview();
+      localStorage.setItem(getActiveProfile().storageKey, JSON.stringify(studioState));
+    }
+
+    function updateTemplateSelectorUI(activeTpl) {
+      const tpl = activeTpl || 'minimal';
+      document.querySelectorAll('[data-tpl-btn]').forEach(btn => {
+        const isSel = btn.getAttribute('data-tpl-btn') === tpl;
+        btn.classList.toggle('border-[#007AFF]', isSel);
+        btn.classList.toggle('ring-1', isSel);
+        btn.classList.toggle('ring-[#007AFF]', isSel);
+      });
+    }
+
+    function applyPreviewTemplateStyling(tpl) {
+      const sheet = document.getElementById('invoicePreviewPrintArea');
+      const topBar = document.getElementById('previewTopAccentBar');
+      const headerBlock = document.getElementById('previewHeaderBlock');
+      const senderTitle = document.getElementById('previewSenderTitle');
+      const senderAddr = document.getElementById('previewSenderAddress');
+      const senderMeta = document.getElementById('previewSenderMeta');
+      const docHeading = document.getElementById('previewDocTypeHeading');
+      const docNum = document.getElementById('previewDocNumberText');
+      const docDate = document.getElementById('previewDocDateText');
+      const tableHeadRow = document.getElementById('previewTableHeadRow');
+      const summaryBox = document.getElementById('previewSummaryBox');
+      const totalDueText = document.getElementById('previewTotalDueText');
+
+      // Reset base classes
+      sheet.className = 'rounded-xl overflow-hidden border transition-all';
+      sheet.style.fontFamily = '';
+      topBar.className = 'h-2';
+      headerBlock.className = 'flex flex-wrap items-start justify-between gap-3 pb-5 sm:pb-6';
+      senderTitle.className = 'text-lg font-bold';
+      senderAddr.className = 'text-xs mt-1';
+      senderMeta.className = 'text-xs font-mono mt-0.5';
+      docHeading.className = 'text-xl font-bold uppercase';
+      docNum.className = 'text-xs font-mono mt-1';
+      docDate.className = 'text-xs font-mono mt-0.5';
+      tableHeadRow.className = 'border-b';
+      summaryBox.className = 'w-full sm:w-60 space-y-2 text-xs p-3 rounded-lg shrink-0 self-end sm:self-auto';
+      totalDueText.className = 'font-mono';
+
+      if (tpl === 'executive') {
+        sheet.classList.add('bg-white', 'text-slate-900', 'border-slate-300');
+        topBar.classList.add('bg-amber-500');
+        headerBlock.classList.add('bg-slate-900', 'text-white', '-mx-4', '-mt-4', 'p-4', 'sm:-mx-8', 'sm:-mt-8', 'sm:p-8', 'mb-2');
+        senderTitle.classList.add('text-white');
+        senderAddr.classList.add('text-slate-300');
+        senderMeta.classList.add('text-slate-400');
+        docHeading.classList.add('text-amber-400');
+        docNum.classList.add('text-white');
+        docDate.classList.add('text-slate-300');
+        tableHeadRow.classList.add('bg-slate-900', 'text-white', 'border-slate-900');
+        summaryBox.classList.add('bg-slate-100');
+        totalDueText.classList.add('text-slate-900');
+      } else if (tpl === 'editorial') {
+        sheet.classList.add('bg-[#FAF8F5]', 'text-stone-900', 'border-stone-300');
+        sheet.style.fontFamily = 'Georgia, Cambria, "Times New Roman", serif';
+        topBar.classList.add('bg-stone-800');
+        headerBlock.classList.add('border-b-2', 'border-double', 'border-stone-400');
+        senderTitle.classList.add('text-stone-900', 'tracking-wide');
+        senderAddr.classList.add('text-stone-600');
+        senderMeta.classList.add('text-stone-500');
+        docHeading.classList.add('text-stone-800', 'tracking-widest');
+        docNum.classList.add('text-stone-800');
+        docDate.classList.add('text-stone-500');
+        tableHeadRow.classList.add('border-stone-400', 'text-stone-600');
+        summaryBox.classList.add('border', 'border-stone-300', 'bg-white/60');
+        totalDueText.classList.add('text-stone-900');
+      } else if (tpl === 'studio') {
+        sheet.classList.add('bg-white', 'text-slate-900', 'border-indigo-200', 'border-l-8', 'border-l-indigo-600');
+        topBar.classList.add('bg-indigo-600', 'hidden');
+        headerBlock.classList.add('border-b', 'border-indigo-100');
+        senderTitle.classList.add('text-indigo-950');
+        senderAddr.classList.add('text-slate-600');
+        senderMeta.classList.add('text-indigo-500');
+        docHeading.classList.add('text-indigo-600');
+        docNum.classList.add('text-indigo-950');
+        docDate.classList.add('text-slate-500');
+        tableHeadRow.classList.add('bg-indigo-50', 'text-indigo-900', 'border-indigo-200');
+        summaryBox.classList.add('bg-indigo-50/70');
+        totalDueText.classList.add('text-indigo-600');
+      } else {
+        // minimal (default)
+        sheet.classList.add('bg-white', 'text-slate-900', 'border-slate-200');
+        topBar.classList.add('bg-[#007AFF]');
+        headerBlock.classList.add('border-b', 'border-slate-200');
+        senderTitle.classList.add('text-slate-900');
+        senderAddr.classList.add('text-slate-600');
+        senderMeta.classList.add('text-slate-500');
+        docHeading.classList.add('text-[#007AFF]');
+        docNum.classList.add('text-slate-700');
+        docDate.classList.add('text-slate-500');
+        tableHeadRow.classList.add('border-slate-200', 'text-slate-500');
+        totalDueText.classList.add('text-[#007AFF]');
+      }
+    }
+
+    function renderLiveBillingPreview() {
+      const tpl = studioState.billingDraft.template || 'minimal';
+      updateTemplateSelectorUI(tpl);
+      applyPreviewTemplateStyling(tpl);
+
+      const docType = studioState.billingDraft.docType || 'Invoice';
+      const defaultNum = docType === 'Quotation'
+        ? (studioState.billingDraft.nextQuotationNumber || 'QTN-510201')
+        : (studioState.billingDraft.nextInvoiceNumber || 'INV-849201');
+      const docNumber = (document.getElementById('billingDocNumberInput').value || defaultNum).trim();
+      if (docType === 'Quotation') studioState.billingDraft.nextQuotationNumber = docNumber;
+      else studioState.billingDraft.nextInvoiceNumber = docNumber;
+      const issueDate = document.getElementById('billingIssueDateInput').value || '2026-11-14';
+      const orgName = document.getElementById('billingOrgName').value || 'Zubair Freelance';
+      const orgTaxId = document.getElementById('billingOrgTaxId').value || '';
+      const orgEmail = document.getElementById('billingOrgEmail').value || '';
+      const orgAddress = document.getElementById('billingOrgAddress').value || '';
+      const orgBankName = document.getElementById('billingOrgBankName').value || '';
+      const orgAccountHolder = document.getElementById('billingOrgAccountHolder').value || '';
+      const orgAccountNumber = document.getElementById('billingOrgAccountNumber').value || '';
+      const orgIban = document.getElementById('billingOrgIban').value || '';
+      const orgSwift = document.getElementById('billingOrgSwift').value || '';
+      const paymentTerms = document.getElementById('billingPaymentTermsInput').value || '';
+
+      const clientCompany = document.getElementById('billingClientCompany').value || 'Client';
+      const clientContact = document.getElementById('billingClientContact').value || '';
+      const clientEmail = document.getElementById('billingClientEmail').value || '';
+      const clientAddress = document.getElementById('billingClientAddress').value || '';
+      const clientBankName = document.getElementById('billingClientBankName').value || '';
+      const clientAccountNumber = document.getElementById('billingClientAccountNumber').value || '';
+      const clientIban = document.getElementById('billingClientIban').value || '';
+
+      Object.assign(studioState.billingDraft, { docNumber, issueDate, clientCompany, clientContact, clientEmail, clientAddress, clientBankName, clientAccountNumber, clientIban, paymentTerms });
+
+      const activeOrg = getSelectedOrgProfile();
+      if (activeOrg) {
+        activeOrg.bankName = orgBankName;
+        activeOrg.accountHolder = orgAccountHolder;
+        activeOrg.accountNumber = orgAccountNumber;
+        activeOrg.iban = orgIban;
+        activeOrg.swift = orgSwift;
+      }
+
+      document.getElementById('pdfFilenamePreviewLabel').textContent = `Zubair Freelance - ${docNumber}.pdf`;
+      document.getElementById('previewDocTypeHeading').textContent = docType.toUpperCase();
+      document.getElementById('previewDocNumberText').textContent = docNumber;
+      document.getElementById('previewDocDateText').textContent = issueDate;
+
+      document.getElementById('previewSenderTitle').textContent = orgName;
+      document.getElementById('previewSenderAddress').textContent = orgAddress;
+      document.getElementById('previewSenderMeta').textContent = `${orgTaxId ? 'Tax ID: ' + orgTaxId + ' • ' : ''}${orgEmail}`;
+
+      document.getElementById('previewClientCompanyText').textContent = clientCompany;
+      document.getElementById('previewClientContactText').textContent = clientContact ? `Attn: ${clientContact}` : '';
+      document.getElementById('previewClientAddressText').textContent = clientAddress;
+      document.getElementById('previewClientEmailText').textContent = clientEmail;
+
+      const hasClientBank = Boolean(clientBankName || clientAccountNumber || clientIban);
+      const clientBankBlockEl = document.getElementById('previewClientBankBlock');
+      if (clientBankBlockEl) {
+        clientBankBlockEl.classList.toggle('hidden', !hasClientBank);
+        document.getElementById('previewClientBankNameText').textContent = clientBankName ? `Bank: ${clientBankName}` : '';
+        document.getElementById('previewClientAccountNumText').textContent = clientAccountNumber ? `Account No: ${clientAccountNumber}` : '';
+        document.getElementById('previewClientIbanText').textContent = clientIban ? `IBAN: ${clientIban}` : '';
+      }
+
+      const hasBank = Boolean(orgBankName || orgAccountHolder || orgAccountNumber || orgIban || orgSwift);
+      document.getElementById('previewBankDetailsBlock').classList.toggle('hidden', !hasBank);
+      document.getElementById('previewBankNameText').textContent = orgBankName ? `Bank: ${orgBankName}` : '';
+      document.getElementById('previewBankHolderText').textContent = orgAccountHolder ? `Account Holder: ${orgAccountHolder}` : '';
+      document.getElementById('previewBankAccountNumText').textContent = orgAccountNumber ? `Account No: ${orgAccountNumber}` : '';
+      document.getElementById('previewBankIbanText').textContent = orgIban ? `IBAN: ${orgIban}` : '';
+      document.getElementById('previewBankSwiftText').textContent = orgSwift ? `SWIFT / BIC: ${orgSwift}` : '';
+
+      document.getElementById('previewPaymentTermsSection').classList.toggle('hidden', !paymentTerms.trim());
+      document.getElementById('previewPaymentTermsText').textContent = paymentTerms;
+
+      let subtotal = 0;
+      document.getElementById('previewLineItemsBody').innerHTML = (studioState.billingDraft.lineItems || []).map(item => {
+        const qty = Number(item.qty) || 0;
+        const price = Number(item.price) || 0;
+        const lineTotal = qty * price;
+        subtotal += lineTotal;
+        return `
+          <tr>
+            <td class="py-2.5 pr-3">${escapeHtml(item.description || 'Service Item')}</td>
+            <td class="py-2.5 px-3 text-right font-mono">${qty}</td>
+            <td class="py-2.5 px-3 text-right font-mono">${formatCurrency(price)}</td>
+            <td class="py-2.5 pl-3 text-right font-mono font-medium">${formatCurrency(lineTotal)}</td>
+          </tr>
+        `;
+      }).join('');
+
+      document.getElementById('previewSubtotalText').textContent = formatCurrency(subtotal);
+      document.getElementById('previewTotalDueText').textContent = formatCurrency(subtotal);
+    }
+
+    async function downloadAndArchiveBillingPDF() {
+      renderLiveBillingPreview();
+      const d = studioState.billingDraft;
+      const docType = d.docType || 'Invoice';
+      const currentDocNumber = (d.docNumber || (docType === 'Quotation' ? 'QTN-510201' : 'INV-849201')).trim();
+
+      await buildAndDownloadStyledPDF({
+        template: d.template || 'minimal',
+        docType,
+        docNumber: currentDocNumber,
+        issueDate: d.issueDate,
+        orgName: document.getElementById('billingOrgName').value,
+        orgAddress: document.getElementById('billingOrgAddress').value,
+        orgTaxId: document.getElementById('billingOrgTaxId').value,
+        orgEmail: document.getElementById('billingOrgEmail').value,
+        orgBankName: document.getElementById('billingOrgBankName').value,
+        orgAccountHolder: document.getElementById('billingOrgAccountHolder').value,
+        orgAccountNumber: document.getElementById('billingOrgAccountNumber').value,
+        orgIban: document.getElementById('billingOrgIban').value,
+        orgSwift: document.getElementById('billingOrgSwift').value,
+        paymentTerms: document.getElementById('billingPaymentTermsInput').value,
+        clientCompany: d.clientCompany,
+        clientContact: d.clientContact,
+        clientAddress: d.clientAddress,
+        clientEmail: d.clientEmail,
+        clientBankName: d.clientBankName || document.getElementById('billingClientBankName').value,
+        clientAccountNumber: d.clientAccountNumber || document.getElementById('billingClientAccountNumber').value,
+        clientIban: d.clientIban || document.getElementById('billingClientIban').value,
+        currency: d.currency || getActiveCurrencyCode(),
+        lineItems: d.lineItems
+      });
+
+      if (!Array.isArray(studioState.usedDocNumbers)) studioState.usedDocNumbers = [];
+      if (!studioState.usedDocNumbers.includes(currentDocNumber)) {
+        studioState.usedDocNumbers.push(currentDocNumber);
+      }
+
+      if (docType === 'Quotation') {
+        const nextQtn = getNextUniqueDocReference(currentDocNumber, 'QTN');
+        d.nextQuotationNumber = nextQtn;
+        d.docNumber = nextQtn;
+        document.getElementById('billingDocNumberInput').value = nextQtn;
+      } else {
+        const nextInv = getNextUniqueDocReference(currentDocNumber, 'INV');
+        d.nextInvoiceNumber = nextInv;
+        d.docNumber = nextInv;
+        document.getElementById('billingDocNumberInput').value = nextInv;
+      }
+
+      renderLiveBillingPreview();
+      saveStudioState();
+    }
+
+    async function buildAndDownloadStyledPDF(payload) {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+      const cleanRef = (payload.docNumber || 'INV-849201').trim();
+      const strictFileName = `Zubair Freelance - ${cleanRef}.pdf`;
+      const tpl = payload.template || studioState.billingDraft.template || 'minimal';
+
+      const themes = {
+        minimal:   { font: 'helvetica', bg: [255, 255, 255], accent: [0, 122, 255], headerBg: null, headerText: [17, 24, 39], tableHeadBg: [243, 244, 246], tableHeadText: [55, 65, 81] },
+        executive: { font: 'helvetica', bg: [255, 255, 255], accent: [245, 158, 11], headerBg: [15, 23, 42], headerText: [255, 255, 255], tableHeadBg: [15, 23, 42], tableHeadText: [255, 255, 255] },
+        editorial: { font: 'times',     bg: [250, 248, 245], accent: [68, 64, 60],  headerBg: null, headerText: [28, 25, 23], tableHeadBg: [231, 229, 228], tableHeadText: [41, 37, 36] },
+        studio:    { font: 'helvetica', bg: [255, 255, 255], accent: [79, 70, 229], headerBg: null, headerText: [30, 27, 75], tableHeadBg: [238, 242, 255], tableHeadText: [49, 46, 129] }
+      };
+      const t = themes[tpl] || themes.minimal;
+
+      // Page background
+      doc.setFillColor(...t.bg);
+      doc.rect(0, 0, 595, 842, 'F');
+
+      // Accent bar or dark executive header
+      if (t.headerBg) {
+        doc.setFillColor(...t.headerBg);
+        doc.rect(0, 0, 595, 108, 'F');
+        doc.setFillColor(...t.accent);
+        doc.rect(0, 0, 595, 6, 'F');
+      } else if (tpl === 'studio') {
+        doc.setFillColor(...t.accent);
+        doc.rect(0, 0, 10, 842, 'F');
+      } else {
+        doc.setFillColor(...t.accent);
+        doc.rect(0, 0, 595, 8, 'F');
+      }
+
+      doc.setFont(t.font, 'bold');
+      doc.setFontSize(15);
+      doc.setTextColor(...t.headerText);
+      doc.text(payload.orgName || 'Zubair Freelance', 40, 48);
+
+      doc.setFont(t.font, 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(t.headerBg ? 203 : 75, t.headerBg ? 213 : 85, t.headerBg ? 225 : 99);
+      doc.text(payload.orgAddress || '', 40, 64);
+      doc.text(`${payload.orgTaxId ? 'Tax ID: ' + payload.orgTaxId + '  |  ' : ''}${payload.orgEmail || ''}`, 40, 77);
+
+      doc.setFont(t.font, 'bold');
+      doc.setFontSize(18);
+      doc.setTextColor(...t.accent);
+      doc.text((payload.docType || 'INVOICE').toUpperCase(), 555, 48, { align: 'right' });
+
+      doc.setFont(t.font, 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(...t.headerText);
+      doc.text(cleanRef, 555, 65, { align: 'right' });
+      doc.setTextColor(t.headerBg ? 203 : 107, t.headerBg ? 213 : 114, t.headerBg ? 225 : 128);
+      doc.text(payload.issueDate || '', 555, 79, { align: 'right' });
+
+      if (!t.headerBg) {
+        doc.setDrawColor(229, 231, 235);
+        doc.line(40, 96, 555, 96);
+      }
+
+      doc.setFont(t.font, 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(107, 114, 128);
+      doc.text('BILLED TO', 40, 126);
+
+      doc.setFontSize(11);
+      doc.setTextColor(17, 24, 39);
+      doc.text(payload.clientCompany || '', 40, 142);
+
+      doc.setFont(t.font, 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(75, 85, 99);
+      let y = 156;
+      if (payload.clientContact) { doc.text(`Attn: ${payload.clientContact}`, 40, y); y += 13; }
+      if (payload.clientAddress) { doc.text(payload.clientAddress, 40, y); y += 13; }
+      if (payload.clientEmail) { doc.text(payload.clientEmail, 40, y); y += 15; }
+      if (payload.clientBankName || payload.clientAccountNumber || payload.clientIban) {
+        doc.setFont(t.font, 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(107, 114, 128);
+        doc.text('BILLED TO BANK DETAILS', 40, y);
+        y += 11;
+        doc.setFont(t.font, 'normal');
+        doc.setFontSize(8.5);
+        doc.setTextColor(55, 65, 81);
+        if (payload.clientBankName) { doc.text(`Bank: ${payload.clientBankName}`, 40, y); y += 11; }
+        if (payload.clientAccountNumber) { doc.text(`Account No: ${payload.clientAccountNumber}`, 40, y); y += 11; }
+        if (payload.clientIban) { doc.text(`IBAN: ${payload.clientIban}`, 40, y); y += 11; }
+        y += 7;
+      }
+
+      if (payload.projectName) {
+        doc.setFont(t.font, 'bold');
+        doc.setTextColor(17, 24, 39);
+        doc.text(`Project: ${payload.projectName} (${payload.projectRole || ''})`, 40, y);
+        y += 18;
+      }
+
+      const curMeta = getActiveCurrencyMeta(payload.currency);
+      doc.setFillColor(...t.tableHeadBg);
+      doc.rect(40, y, 515, 24, 'F');
+      doc.setFont(t.font, 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(...t.tableHeadText);
+      doc.text('Description', 48, y + 15);
+      doc.text('Qty', 370, y + 15, { align: 'right' });
+      doc.text(`Unit Price (${curMeta.code})`, 455, y + 15, { align: 'right' });
+      doc.text(`Total (${curMeta.code})`, 547, y + 15, { align: 'right' });
+      y += 24;
+
+      let subtotal = 0;
+      doc.setFont(t.font, 'normal');
+      doc.setTextColor(17, 24, 39);
+      (payload.lineItems || []).forEach(item => {
+        const qty = Number(item.qty) || 0;
+        const price = Number(item.price) || 0;
+        const lineTotal = qty * price;
+        subtotal += lineTotal;
+        doc.text(String(item.description || 'Service').substring(0, 62), 48, y + 15);
+        doc.text(String(qty), 370, y + 15, { align: 'right' });
+        doc.text(formatCurrency(price, curMeta.code, true), 455, y + 15, { align: 'right' });
+        doc.text(formatCurrency(lineTotal, curMeta.code, true), 547, y + 15, { align: 'right' });
+        y += 24;
+      });
+
+      y += 16;
+      const summaryTopY = y;
+      doc.setDrawColor(203, 213, 225);
+      doc.line(40, summaryTopY, 555, summaryTopY);
+
+      // Sender Bank Details on the left of the summary row
+      let bankY = summaryTopY + 18;
+      if (payload.orgBankName || payload.orgAccountHolder || payload.orgAccountNumber || payload.orgIban || payload.orgSwift) {
+        doc.setFont(t.font, 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(107, 114, 128);
+        doc.text('SENDER BANK DETAILS', 40, bankY);
+        bankY += 12;
+
+        doc.setFont(t.font, 'normal');
+        doc.setFontSize(8.5);
+        doc.setTextColor(31, 41, 55);
+        if (payload.orgBankName) { doc.text(`Bank: ${payload.orgBankName}`, 40, bankY); bankY += 11; }
+        if (payload.orgAccountHolder) { doc.text(`Account Holder: ${payload.orgAccountHolder}`, 40, bankY); bankY += 11; }
+        if (payload.orgAccountNumber) { doc.text(`Account No: ${payload.orgAccountNumber}`, 40, bankY); bankY += 11; }
+        if (payload.orgIban) { doc.text(`IBAN: ${payload.orgIban}`, 40, bankY); bankY += 11; }
+        if (payload.orgSwift) { doc.text(`SWIFT / BIC: ${payload.orgSwift}`, 40, bankY); bankY += 11; }
+      }
+
+      // Total Due on the right
+      const totalY = summaryTopY + 22;
+      doc.setFont(t.font, 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(...t.accent);
+      doc.text('Total Due:', 360, totalY);
+      doc.text(formatCurrency(subtotal, curMeta.code, true), 547, totalY, { align: 'right' });
+
+      // Small Terms of Payment at the bottom
+      const termsText = (payload.paymentTerms || '').trim();
+      if (termsText) {
+        const termsStartY = Math.max(bankY + 18, totalY + 32, 745);
+        doc.setDrawColor(229, 231, 235);
+        doc.line(40, termsStartY - 10, 555, termsStartY - 10);
+        doc.setFont(t.font, 'bold');
+        doc.setFontSize(7.5);
+        doc.setTextColor(107, 114, 128);
+        doc.text('TERMS OF PAYMENT', 40, termsStartY);
+        doc.setFont(t.font, 'normal');
+        doc.setFontSize(7.5);
+        doc.setTextColor(100, 116, 139);
+        const wrappedTerms = doc.splitTextToSize(termsText, 515).slice(0, 5);
+        doc.text(wrappedTerms, 40, termsStartY + 10);
+      }
+
+      const pdfBlob = doc.output('blob');
+      triggerBrowserBlobDownload(pdfBlob, strictFileName);
+      await saveFileToIndexedDBVault(strictFileName, '/03_Invoices_And_Quotations/', 'application/pdf', pdfBlob);
+      showToast(`Saved "${strictFileName}"`);
+    }
+
+    /* FILE CONVERTER */
+    function handleConverterDragOver(e) { e.preventDefault(); e.stopPropagation(); }
+    function handleConverterDragLeave(e) { e.preventDefault(); e.stopPropagation(); }
+    function handleConverterDrop(e) {
+      e.preventDefault(); e.stopPropagation();
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) loadConverterFile(e.dataTransfer.files[0]);
+    }
+    function handleConverterFileSelect(e) {
+      if (e.target.files && e.target.files.length > 0) loadConverterFile(e.target.files[0]);
+    }
+
+    function loadConverterFile(file) {
+      converterPendingFile = file;
+      converterPendingDataUrl = null;
+      converterPendingText = null;
+      document.getElementById('converterSelectedFileName').textContent = file.name;
+      document.getElementById('converterSelectedFileMeta').textContent = formatBytes(file.size);
+      document.getElementById('converterInspectorBadge').textContent = file.name;
+      document.getElementById('converterCustomName').value = file.name.replace(/\.[^/.]+$/, '') + '-converted';
+
+      const previewEl = document.getElementById('converterSourcePreview');
+      const isImage = /\.(png|jpg|jpeg)$/i.test(file.name) || (file.type && file.type.startsWith('image/'));
+      const reader = new FileReader();
+      if (isImage) {
+        reader.onload = e => {
+          converterPendingDataUrl = e.target.result;
+          previewEl.innerHTML = `<img src="${converterPendingDataUrl}" class="max-h-44 rounded-lg mx-auto object-contain" />`;
+        };
+        reader.readAsDataURL(file);
+      } else {
+        reader.onload = e => {
+          converterPendingText = e.target.result;
+          previewEl.textContent = String(converterPendingText).slice(0, 4000);
+        };
+        reader.readAsText(file);
+      }
+    }
+
+    async function executeRealFileConversion() {
+      const statusBanner = document.getElementById('converterStatusBanner');
+      if (!converterPendingFile) {
+        statusBanner.className = 'rounded-xl p-3 text-xs font-medium border bg-rose-500/10 border-rose-500/25 text-rose-500';
+        statusBanner.textContent = 'Please select a file first.';
+        statusBanner.classList.remove('hidden');
+        return;
+      }
+
+      const targetFormat = document.getElementById('converterTargetFormat').value;
+      const customBase = (document.getElementById('converterCustomName').value || 'converted').trim().replace(/\.[^/.]+$/, '');
+      const outFilename = `${customBase}.${targetFormat}`;
+      const rawText = converterPendingText || `Image: ${converterPendingFile.name}`;
+      let outBlob = null;
+      let outMime = 'text/plain';
+
+      if (targetFormat === 'pdf') {
+        const { jsPDF } = window.jspdf;
+        if (converterPendingDataUrl) {
+          const dims = await new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => resolve({ w: img.naturalWidth || img.width || 800, h: img.naturalHeight || img.height || 600 });
+            img.onerror = () => resolve({ w: 800, h: 600 });
+            img.src = converterPendingDataUrl;
+          });
+          const orientation = dims.w >= dims.h ? 'landscape' : 'portrait';
+          const doc = new jsPDF({ orientation, unit: 'pt', format: [dims.w, dims.h] });
+          const pageW = doc.internal.pageSize.getWidth();
+          const pageH = doc.internal.pageSize.getHeight();
+          const imgFormat = /\.png$/i.test(converterPendingFile.name) || /^data:image\/png/i.test(converterPendingDataUrl)
+            ? 'PNG'
+            : (/\.webp$/i.test(converterPendingFile.name) || /^data:image\/webp/i.test(converterPendingDataUrl) ? 'WEBP' : 'JPEG');
+          doc.addImage(converterPendingDataUrl, imgFormat, 0, 0, pageW, pageH);
+          outBlob = doc.output('blob');
+        } else {
+          const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+          doc.setFont('courier', 'normal');
+          doc.setFontSize(10);
+          doc.text(doc.splitTextToSize(rawText, 515).slice(0, 66), 40, 45);
+          outBlob = doc.output('blob');
+        }
+        outMime = 'application/pdf';
+      } else if (targetFormat === 'json') {
+        let obj;
+        try { obj = JSON.parse(rawText); }
+        catch (_) { obj = { source: converterPendingFile.name, lines: rawText.split(/\r?\n/).filter(Boolean) }; }
+        outMime = 'application/json';
+        outBlob = new Blob([JSON.stringify(obj, null, 2)], { type: outMime });
+      } else if (targetFormat === 'csv') {
+        const csv = ['"Line","Content"', ...rawText.split(/\r?\n/).map((l, i) => `"${i + 1}","${String(l).replace(/"/g, '""')}"`)].join('\n');
+        outMime = 'text/csv';
+        outBlob = new Blob([csv], { type: outMime });
+      } else if (targetFormat === 'html') {
+        const html = `<!DOCTYPE html><html><body style="font-family:sans-serif;padding:24px;"><pre>${escapeHtml(rawText)}</pre></body></html>`;
+        outMime = 'text/html';
+        outBlob = new Blob([html], { type: outMime });
+      } else {
+        outBlob = new Blob([rawText], { type: 'text/plain' });
+      }
+
+      triggerBrowserBlobDownload(outBlob, outFilename);
+      await saveFileToIndexedDBVault(outFilename, '/04_Converted_Files/', outMime, outBlob);
+
+      statusBanner.className = 'rounded-xl p-3 text-xs font-medium border bg-emerald-500/10 border-emerald-500/25 text-emerald-600 dark:text-emerald-400';
+      statusBanner.textContent = `Converted & archived "${outFilename}".`;
+      statusBanner.classList.remove('hidden');
+      showToast(`Converted "${outFilename}"`);
+    }
+
+    /* GOOGLE CALENDAR & MEETINGS */
+    function renderGoogleAndCalendarModule() {
+      const g = studioState.googleAccount || { connected: false, email: '' };
+      const sideDot = document.getElementById('sidebarGoogleStatusDot');
+      const sideText = document.getElementById('sidebarGoogleStatusText');
+      const sidePill = document.getElementById('sidebarGoogleStatusPill');
+      const calBadge = document.getElementById('calendarViewGoogleBadge');
+      const emailInput = document.getElementById('googleAccountEmailInput');
+
+      if (emailInput) emailInput.value = g.email || '';
+
+      if (g.connected && g.email) {
+        sideDot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-500';
+        sideText.textContent = 'Linked';
+        sidePill.className = 'inline-flex items-center gap-1.5 font-medium text-emerald-600 dark:text-emerald-400';
+        if (calBadge) {
+          calBadge.textContent = g.email;
+          calBadge.className = 'text-xs font-mono px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400';
+        }
+      } else {
+        sideDot.className = 'w-1.5 h-1.5 rounded-full bg-amber-500';
+        sideText.textContent = 'Offline';
+        sidePill.className = 'inline-flex items-center gap-1.5 font-medium text-amber-600 dark:text-amber-400';
+        if (calBadge) {
+          calBadge.textContent = 'Disconnected';
+          calBadge.className = 'text-xs font-mono px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400';
+        }
+      }
+
+      const projects = studioState.projects || [];
+      document.getElementById('meetingProjectSelect').innerHTML = `<option value="">General</option>` +
+        projects.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+
+      const meetings = studioState.meetings || [];
+      const meetingsEl = document.getElementById('calendarMeetingsList');
+      if (meetings.length === 0) {
+        meetingsEl.innerHTML = `<div class="py-4 text-xs text-slate-400">No meetings scheduled.</div>`;
+      } else {
+        meetingsEl.innerHTML = meetings.map(m => `
+          <div class="p-3.5 rounded-xl bg-slate-500/5 flex flex-wrap items-center justify-between gap-3">
+            <div class="min-w-0">
+              <div class="text-xs font-mono text-emerald-600 dark:text-emerald-400">${escapeHtml(m.date)} &bull; ${escapeHtml(m.startTime)} - ${escapeHtml(m.endTime)}</div>
+              <div class="text-sm font-medium mt-0.5">${escapeHtml(m.title)}</div>
+              <div class="text-xs text-slate-500 dark:text-slate-400">${escapeHtml(m.attendeeEmail)}</div>
+            </div>
+            <div class="flex items-center gap-2">
+              <button type="button" onclick='openGoogleCalendarTemplate(${JSON.stringify({ title: m.title, date: m.date, startTime: m.startTime, endTime: m.endTime, location: m.location || "", details: m.notes || "", add: m.attendeeEmail }).replace(/'/g, "&#39;")})' class="btn-mac-secondary px-3 py-1.5 text-xs">
+                Open Google Calendar
+              </button>
+              <button type="button" onclick="removeMeetingById('${m.id}')" class="btn-mac-secondary px-2.5 py-1.5 text-xs text-rose-500">Remove</button>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      const eventsEl = document.getElementById('calendarBookedEventsList');
+      eventsEl.innerHTML = projects.map(p => `
+        <div class="p-3.5 rounded-xl bg-slate-500/5 flex flex-wrap items-center justify-between gap-3">
+          <div class="min-w-0">
+            <div class="text-xs font-mono text-indigo-500">${escapeHtml(p.dateCreated)} &bull; ${escapeHtml(p.status)}</div>
+            <div class="text-sm font-medium mt-0.5">${escapeHtml(p.name)}</div>
+          </div>
+          <button type="button" onclick='openGoogleCalendarTemplate(${JSON.stringify({ title: p.name, date: p.dateCreated, details: p.scope || "" }).replace(/'/g, "&#39;")})' class="btn-mac-secondary px-3 py-1.5 text-xs">
+            Add to Google
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function linkGoogleAccount() {
+      const email = document.getElementById('googleAccountEmailInput').value.trim();
+      if (!email || !email.includes('@')) { showToast('Enter a valid email address.'); return; }
+      studioState.googleAccount = { connected: true, email };
+      saveStudioState();
+      showToast(`Linked ${email}`);
+    }
+
+    function disconnectGoogleAccount() {
+      studioState.googleAccount = { connected: false, email: '' };
+      saveStudioState();
+      showToast('Google account disconnected.');
+    }
+
+    function handleSaveMeeting(event) {
+      event.preventDefault();
+      const newMeeting = {
+        id: 'mtg-' + Date.now(),
+        title: document.getElementById('meetingTitleInput').value.trim(),
+        date: document.getElementById('meetingDateInput').value,
+        projectId: document.getElementById('meetingProjectSelect').value,
+        startTime: document.getElementById('meetingStartTimeInput').value || '10:00',
+        endTime: document.getElementById('meetingEndTimeInput').value || '11:00',
+        attendeeEmail: document.getElementById('meetingAttendeeInput').value.trim(),
+        location: 'Google Meet',
+        notes: document.getElementById('meetingNotesInput').value.trim()
+      };
+      studioState.meetings.unshift(newMeeting);
+      document.getElementById('meetingSchedulerForm').reset();
+      document.getElementById('meetingDateInput').value = new Date().toISOString().split('T')[0];
+      saveStudioState();
+
+      openGoogleCalendarTemplate({
+        title: newMeeting.title,
+        date: newMeeting.date,
+        startTime: newMeeting.startTime,
+        endTime: newMeeting.endTime,
+        location: '',
+        details: newMeeting.notes || 'Scheduled via Zubair Freelance Studio',
+        add: newMeeting.attendeeEmail
+      });
+    }
+
+    function removeMeetingById(id) {
+      studioState.meetings = (studioState.meetings || []).filter(m => m.id !== id);
+      saveStudioState();
+      showToast('Meeting removed.');
+    }
+
+    function openGoogleCalendarTemplate(item) {
+      const cleanDate = (item.date || '2026-11-18').replace(/-/g, '');
+      const s = (item.startTime || '09:00').replace(':', '') + '00';
+      const e = (item.endTime || '10:00').replace(':', '') + '00';
+      const profile = getActiveProfile();
+      const params = new URLSearchParams({
+        action: 'TEMPLATE',
+        text: `${profile.name}: ${item.title || 'Schedule'}`,
+        dates: `${cleanDate}T${s}/${cleanDate}T${e}`,
+        details: item.details || '',
+        location: item.location || ''
+      });
+      if (item.add) params.set('add', item.add);
+      const url = `https://calendar.google.com/calendar/render?${params.toString()}`;
+      window.open(url, '_blank');
+      showToast('Meeting saved. Opened Google Calendar in a new tab.');
+    }
+
+    function exportFullCalendarICS() {
+      const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Zubair Freelance//Studio//EN'];
+      (studioState.projects || []).forEach(p => {
+        const d = (p.dateCreated || '20261118').replace(/-/g, '');
+        lines.push('BEGIN:VEVENT', `UID:${p.id}@zubairfreelance`, `DTSTART;VALUE=DATE:${d}`, `SUMMARY:${p.name}`, 'END:VEVENT');
+      });
+      (studioState.meetings || []).forEach(m => {
+        const d = (m.date || '20261118').replace(/-/g, '');
+        const s = (m.startTime || '10:00').replace(':', '') + '00';
+        const e = (m.endTime || '11:00').replace(':', '') + '00';
+        lines.push('BEGIN:VEVENT', `UID:${m.id}@zubairfreelance`, `DTSTART:${d}T${s}`, `DTEND:${d}T${e}`, `SUMMARY:${m.title}`, 'END:VEVENT');
+      });
+      lines.push('END:VCALENDAR');
+      triggerBrowserBlobDownload(new Blob([lines.join('\r\n')], { type: 'text/calendar' }), 'Zubair-Freelance-Calendar.ics');
+      showToast('Exported .ICS file.');
+    }
+
+    /* ARCHIVE & ZIP */
+    async function refreshVaultTableUI() {
+      const files = await getAllVaultFiles();
+      files.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+
+      const invoiceFiles = files.filter(f => f.folder === '/03_Invoices_And_Quotations/');
+      const convertedFiles = files.filter(f => f.folder === '/04_Converted_Files/');
+
+      document.getElementById('vaultTotalBlobsBadge').textContent = `${files.length} Files`;
+      document.getElementById('vaultFolderCount01').textContent = `${(studioState.projects || []).length} records`;
+      document.getElementById('vaultFolderCount02').textContent = `${(studioState.clients || []).length + (studioState.suppliers || []).length} records`;
+      document.getElementById('vaultFolderCount03').textContent = `${invoiceFiles.length} files`;
+      document.getElementById('vaultFolderCount04').textContent = `${convertedFiles.length} files`;
+
+      const tbody = document.getElementById('localVaultTableBody');
+      if (files.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-400">No archived files yet.</td></tr>`;
+      } else {
+        tbody.innerHTML = files.map(f => `
+          <tr class="hover:bg-slate-500/5">
+            <td class="py-3 pr-3 font-mono text-xs font-medium">${escapeHtml(f.filename)}</td>
+            <td class="py-3 px-3 font-mono text-xs text-slate-500 dark:text-slate-400">${escapeHtml(f.folder)}</td>
+            <td class="py-3 px-3 font-mono text-xs text-slate-500 dark:text-slate-400">${formatBytes(f.size)}</td>
+            <td class="py-3 px-3 font-mono text-xs text-slate-500 dark:text-slate-400">${escapeHtml((f.createdAt || '').substring(0, 10))}</td>
+            <td class="py-3 pl-3 text-right space-x-2">
+              <button type="button" onclick="downloadVaultFileById('${f.id}')" class="btn-mac-secondary px-2.5 py-1 text-xs text-[#007AFF] dark:text-[#0A84FF]">Download</button>
+              <button type="button" onclick="deleteVaultFileById('${f.id}')" class="btn-mac-secondary px-2.5 py-1 text-xs text-rose-500">Delete</button>
+            </td>
+          </tr>
+        `).join('');
+      }
+
+      const convEl = document.getElementById('converterRecentVaultList');
+      if (convEl) {
+        convEl.innerHTML = convertedFiles.length === 0
+          ? `<div class="text-xs text-slate-400">No converted files yet.</div>`
+          : convertedFiles.slice(0, 4).map(f => `
+            <div class="flex items-center justify-between text-xs py-1">
+              <span class="font-mono truncate">${escapeHtml(f.filename)}</span>
+              <button type="button" onclick="downloadVaultFileById('${f.id}')" class="text-[#007AFF] dark:text-[#0A84FF] hover:underline ml-2">Download</button>
+            </div>
+          `).join('');
+      }
+    }
+
+    function exportWorkspaceJsonBackup() {
+      const profile = getActiveProfile();
+      const slug = profile.name.replace(/\s+/g, '-');
+      const blob = new Blob([JSON.stringify({ studio: profile.name, profileId: activeProfileId, state: studioState }, null, 2)], { type: 'application/json' });
+      triggerBrowserBlobDownload(blob, `${slug}-Backup-${new Date().toISOString().split('T')[0]}.json`);
+      showToast('Exported JSON backup.');
+    }
+
+    function mergeCollectionNonDestructive(existingList, incomingList, keyFields, idPrefix) {
+      if (!Array.isArray(incomingList)) return 0;
+      let addedCount = 0;
+      const existingIds = new Set(existingList.map(item => String(item.id || '')));
+
+      incomingList.forEach(rawItem => {
+        if (!rawItem || typeof rawItem !== 'object') return;
+        const item = JSON.parse(JSON.stringify(rawItem));
+
+        // Check if an identical record already exists so we never alter or overwrite existing records
+        const alreadyExists = existingList.some(ex => {
+          if (item.id && ex.id && String(item.id) === String(ex.id)) {
+            const samePrimary = keyFields.every(k => {
+              if (!item[k] && !ex[k]) return true;
+              return String(item[k] || '').trim().toLowerCase() === String(ex[k] || '').trim().toLowerCase();
+            });
+            if (samePrimary) return true;
+          }
+          return keyFields.length > 0 && keyFields.every(k => {
+            const a = String(item[k] || '').trim().toLowerCase();
+            const b = String(ex[k] || '').trim().toLowerCase();
+            return a && b && a === b;
+          });
+        });
+
+        if (alreadyExists) return;
+
+        // Ensure unique ID so existing items with the same ID are never altered
+        if (!item.id || existingIds.has(String(item.id))) {
+          item.id = `${idPrefix}-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+        }
+        existingIds.add(String(item.id));
+        existingList.push(item);
+        addedCount++;
+      });
+
+      return addedCount;
+    }
+
+    function mergeJsonPayloadNonDestructive(parsed) {
+      if (!parsed) return { projects: 0, clients: 0, suppliers: 0, meetings: 0, orgProfiles: 0 };
+      const counts = { projects: 0, clients: 0, suppliers: 0, meetings: 0, orgProfiles: 0 };
+
+      if (!Array.isArray(studioState.projects)) studioState.projects = [];
+      if (!Array.isArray(studioState.clients)) studioState.clients = [];
+      if (!Array.isArray(studioState.suppliers)) studioState.suppliers = [];
+      if (!Array.isArray(studioState.meetings)) studioState.meetings = [];
+      if (!Array.isArray(studioState.orgProfiles)) studioState.orgProfiles = [];
+      if (!Array.isArray(studioState.usedDocNumbers)) studioState.usedDocNumbers = [];
+
+      // Case 1: Array of records directly (e.g., projects.json, clients.json, suppliers.json)
+      if (Array.isArray(parsed)) {
+        const sample = parsed.find(x => x && typeof x === 'object') || {};
+        if ('lineItems' in sample || 'quotationNumber' in sample || 'invoiceNumber' in sample || 'scope' in sample) {
+          counts.projects += mergeCollectionNonDestructive(studioState.projects, parsed, ['name', 'dateCreated'], 'prj');
+        } else if ('company' in sample && ('contactPerson' in sample || 'eventType' in sample)) {
+          counts.clients += mergeCollectionNonDestructive(studioState.clients, parsed, ['company', 'email'], 'cli');
+        } else if ('serviceCategory' in sample || ('rateCard' in sample)) {
+          counts.suppliers += mergeCollectionNonDestructive(studioState.suppliers, parsed, ['name', 'email'], 'sup');
+        } else if ('startTime' in sample || 'attendeeEmail' in sample) {
+          counts.meetings += mergeCollectionNonDestructive(studioState.meetings, parsed, ['title', 'date', 'startTime'], 'mtg');
+        } else if ('taxId' in sample || 'iban' in sample) {
+          counts.orgProfiles += mergeCollectionNonDestructive(studioState.orgProfiles, parsed, ['name'], 'org');
+        } else if ('name' in sample) {
+          counts.projects += mergeCollectionNonDestructive(studioState.projects, parsed, ['name'], 'prj');
+        }
+        return counts;
+      }
+
+      // Case 2: Full backup object or partial workspace JSON ({ state: {...} } or { projects, clients, ... })
+      const source = (parsed.state && typeof parsed.state === 'object') ? parsed.state : parsed;
+      counts.projects += mergeCollectionNonDestructive(studioState.projects, source.projects, ['name', 'dateCreated'], 'prj');
+      counts.clients += mergeCollectionNonDestructive(studioState.clients, source.clients, ['company', 'email'], 'cli');
+      counts.suppliers += mergeCollectionNonDestructive(studioState.suppliers, source.suppliers, ['name', 'email'], 'sup');
+      counts.meetings += mergeCollectionNonDestructive(studioState.meetings, source.meetings, ['title', 'date', 'startTime'], 'mtg');
+      counts.orgProfiles += mergeCollectionNonDestructive(studioState.orgProfiles, source.orgProfiles, ['name'], 'org');
+
+      if (Array.isArray(source.usedDocNumbers)) {
+        source.usedDocNumbers.forEach(num => {
+          if (num && !studioState.usedDocNumbers.includes(num)) {
+            studioState.usedDocNumbers.push(num);
+          }
+        });
+      }
+
+      // Case 3: Single standalone entity object (e.g., a single project or client JSON file)
+      const totalFromCollections = counts.projects + counts.clients + counts.suppliers + counts.meetings + counts.orgProfiles;
+      if (totalFromCollections === 0 && typeof source === 'object') {
+        if ('lineItems' in source || 'quotationNumber' in source || 'scope' in source) {
+          counts.projects += mergeCollectionNonDestructive(studioState.projects, [source], ['name', 'dateCreated'], 'prj');
+        } else if ('company' in source && ('contactPerson' in source || 'email' in source)) {
+          counts.clients += mergeCollectionNonDestructive(studioState.clients, [source], ['company', 'email'], 'cli');
+        } else if ('serviceCategory' in source) {
+          counts.suppliers += mergeCollectionNonDestructive(studioState.suppliers, [source], ['name', 'email'], 'sup');
+        }
+      }
+
+      return counts;
+    }
+
+    async function addMultipleJsonFilesNonDestructive(event) {
+      const files = Array.from((event.target && event.target.files) || []);
+      if (files.length === 0) return;
+
+      const existingVaultFiles = await getAllVaultFiles();
+      const usedNames = new Set(existingVaultFiles.map(f => (f.filename || '').toLowerCase()));
+
+      let filesAdded = 0;
+      let totalRecordsMerged = 0;
+
+      for (const file of files) {
+        try {
+          const rawText = await file.text();
+          const parsed = JSON.parse(rawText);
+
+          // 1. Non-destructively merge any new workspace records without altering existing records
+          const counts = mergeJsonPayloadNonDestructive(parsed);
+          totalRecordsMerged += (counts.projects + counts.clients + counts.suppliers + counts.meetings + counts.orgProfiles);
+
+          // 2. Save the JSON file into IndexedDB Vault without overwriting existing files of the same name
+          let safeFilename = file.name || `Imported-${Date.now()}.json`;
+          if (usedNames.has(safeFilename.toLowerCase())) {
+            const dotIdx = safeFilename.lastIndexOf('.');
+            const base = dotIdx > 0 ? safeFilename.slice(0, dotIdx) : safeFilename;
+            const ext = dotIdx > 0 ? safeFilename.slice(dotIdx) : '.json';
+            let counter = 2;
+            while (usedNames.has(`${base}-${counter}${ext}`.toLowerCase())) counter++;
+            safeFilename = `${base}-${counter}${ext}`;
+          }
+          usedNames.add(safeFilename.toLowerCase());
+
+          const jsonBlob = new Blob([rawText], { type: 'application/json' });
+          await saveFileToIndexedDBVault(safeFilename, '/04_Converted_Files/', 'application/json', jsonBlob);
+          filesAdded++;
+        } catch (err) {
+          console.error('Error importing JSON file:', file.name, err);
+        }
+      }
+
+      event.target.value = '';
+      saveStudioState();
+      await refreshVaultTableUI();
+
+      if (filesAdded > 0) {
+        showToast(`Added ${filesAdded} JSON file${filesAdded > 1 ? 's' : ''} (${totalRecordsMerged} new record${totalRecordsMerged === 1 ? '' : 's'} merged; existing data untouched).`);
+      } else {
+        showToast('No valid JSON files could be added.');
+      }
+    }
+
+    function restoreWorkspaceJsonBackup(event) {
+      const files = Array.from((event.target && event.target.files) || []);
+      if (files.length === 0) return;
+      // Route through non-destructive multi-file JSON importer so existing files/records are never lost
+      addMultipleJsonFilesNonDestructive(event);
+    }
+
+    async function downloadOrganizedZipArchive() {
+      const zip = new JSZip();
+      const f1 = zip.folder('01_Event_Projects');
+      const f2 = zip.folder('02_Clients_And_Suppliers');
+      const f3 = zip.folder('03_Invoices_And_Quotations');
+      const f4 = zip.folder('04_Converted_Files');
+
+      f1.file('projects.json', JSON.stringify(studioState.projects || [], null, 2));
+      f2.file('clients.json', JSON.stringify(studioState.clients || [], null, 2));
+      f2.file('suppliers.json', JSON.stringify(studioState.suppliers || [], null, 2));
+
+      const vaultFiles = await getAllVaultFiles();
+      vaultFiles.forEach(item => {
+        if (!item.blob) return;
+        if (item.folder === '/03_Invoices_And_Quotations/') f3.file(item.filename, item.blob);
+        else if (item.folder === '/04_Converted_Files/') f4.file(item.filename, item.blob);
+      });
+
+      const blob = await zip.generateAsync({ type: 'blob' });
+      triggerBrowserBlobDownload(blob, 'Zubair_Freelance_Archive.zip');
+      showToast('Downloaded .ZIP archive.');
+    }
+
+    /* IMAGE TO TEXT SCANNER (OCR) & SMART ORGANIZER */
+    let ocrPendingImageDataUrl = null;
+    let ocrPendingFileName = 'scanned-text';
+    let ocrOutputMode = 'organized';
+    let lastOcrOrganizedData = null;
+
+    function setOcrOutputMode(mode) {
+      ocrOutputMode = mode;
+      document.getElementById('ocrModeBtnOrganized').classList.toggle('active', mode === 'organized');
+      document.getElementById('ocrModeBtnRaw').classList.toggle('active', mode === 'raw');
+      document.getElementById('ocrOrganizedPanel').classList.toggle('hidden', mode !== 'organized');
+      document.getElementById('ocrResultTextarea').classList.toggle('hidden', mode !== 'raw');
+    }
+
+    function handleOcrRawTextEdit() {
+      updateOcrTextStats();
+      organizeAndRenderOcrText(document.getElementById('ocrResultTextarea').value || '');
+    }
+
+    const OCR_VALID_2_LETTER = new Set([
+      'of','to','in','is','it','on','no','id','or','by','at','as','an','be',
+      'we','he','up','do','so','if','my','me','us','am','pm','mr','ms','dr',
+      'st','rd','po','co','uk','hr','kg','km','lb','oz','qt','sq','vs'
+    ]);
+    const OCR_ALWAYS_VALID_2_UPPER = new Set([
+      'ID','NO','AM','PM','MR','MS','DR','ST','RD','PO','CO','UK','US','HR','TV','IT','AI','UI','UX','QA','PR','VP'
+    ]);
+    const OCR_VALID_3_LETTER = new Set([
+      'the','and','for','are','but','not','you','all','any','can','had','her','was','one','our','out',
+      'day','get','has','him','his','how','man','new','now','old','see','two','way','who','boy','did',
+      'its','let','put','say','she','too','use','uae','usa','usd','aed','eur','gbp','tax','vat','inv',
+      'qtn','qty','ref','ceo','cfo','cto','coo','vip','llc','ltd','inc','plc','est','ext','jan','feb',
+      'mar','apr','may','jun','jul','aug','sep','oct','nov','dec','mon','tue','wed','thu','fri','sat',
+      'sun','box','fax','tel','web','app','pro','max','min','net','due','fee','sum','sub','pay','add',
+      'set','end','run','top','low','per','yes','yet','job','law','car','air','art','age','act','arm',
+      'ask','bad','bag','bar','bed','big','bit','bus','buy','cut','dog','eat','eye','far','few','fit',
+      'fly','fun','gas','gun','guy','hat','hit','hot','ice','key','kid','lay','leg','lie','lip','lot',
+      'map','met','mix','nor','oil','own','pan','pen','pop','red','rid','row','sad','sea','sex','sir',
+      'sit','six','sky','son','tea','ten','tie','tip','try','van','war','wet','win','won','ali','bin',
+      'abu','ave','blv','flr','ste','apt','zip','pin','dob','exp','iss','sig','num','doc','org','com',
+      'gov','edu'
+    ]);
+    const OCR_KNOWN_DOC_WORDS = new Set([
+      'united','arab','emirates','federal','authority','identity','citizenship','resident','card',
+      'number','name','date','birth','nationality','issuing','expiry','signature','holder','sex',
+      'bangladesh','mohammed','zubair','alam','fakhrul','invoice','quotation','receipt','subtotal',
+      'total','amount','balance','client','supplier','company','address','email','phone','mobile',
+      'website','event','meeting','schedule','agenda','venue','location','project','studio','management',
+      'description','price','quantity','discount','payment','account','bank','transfer','cash','check',
+      'director','manager','founder','producer','coordinator','consultant','service','services','dubai',
+      'abudhabi','sharjah','ajman','passport','license','permit'
+    ]);
+    const OCR_WORD_FIXES = {
+      'CTTIZE': 'CITIZENSHIP',
+      'CTTIZENSHIP': 'CITIZENSHIP',
+      'CITIZE': 'CITIZENSHIP',
+      'CITIZENSHP': 'CITIZENSHIP',
+      'IDENTTTY': 'IDENTITY',
+      'EMIRATE5': 'EMIRATES',
+      'RESLDENT': 'Resident',
+      'NATLONALITY': 'Nationality'
+    };
+
+    function isOcrStructuredToken(tok) {
+      if (!tok) return false;
+      if (/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(tok)) return true;
+      if (/^\d{3}-\d{4}-\d{5,8}-\d$/.test(tok)) return true;
+      if (/^\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4}$/.test(tok)) return true;
+      if (/^(?:\$|USD|AED|EUR|GBP)\s?\d[\d,]*(?:\.\d{2})?$/i.test(tok)) return true;
+      if (/^\d[\d,]*\.\d{2}$/.test(tok)) return true;
+      if (/^\d{1,2}:\d{2}(?:AM|PM)?$/i.test(tok)) return true;
+      if (/^[A-Z]{2,4}-\d{2,}[A-Z0-9-]*$/.test(tok)) return true;
+      if (/^\+?\d{7,15}$/.test(tok)) return true;
+      if (/^(?:19|20)\d{2}$/.test(tok)) return true;
+      return false;
+    }
+
+    function validateEnglishOcrToken(rawTok, conf = 75, lineIsUpper = false) {
+      if (!rawTok) return null;
+      // Reject any non-ASCII character
+      if (/[^\x20-\x7E]/.test(rawTok)) return null;
+      // Reject tokens with unmatched quotes/brackets/equals inside
+      if (/[()"'[\]{}<>=~_*^`|\\]/.test(rawTok)) return null;
+      const trimmed = rawTok.trim();
+      if (trimmed === '&' || trimmed === '-' || trimmed === '/' || trimmed === ':') {
+        return conf >= 60 ? trimmed : null;
+      }
+
+      const cleaned = trimmed.replace(/^[^A-Za-z0-9$+#@&]+|[^A-Za-z0-9%.,:;&/-]+$/g, '');
+      if (!cleaned) return null;
+      if (cleaned === '&' || cleaned === '-' || cleaned === '/' || cleaned === ':') {
+        return conf >= 60 ? cleaned : null;
+      }
+
+      let trailPunct = '';
+      const punctMatch = cleaned.match(/([.,:;]+)$/);
+      let core = cleaned;
+      if (punctMatch) {
+        trailPunct = punctMatch[1];
+        core = cleaned.slice(0, -trailPunct.length);
+      }
+      if (!core) return null;
+
+      if (OCR_WORD_FIXES[core.toUpperCase()]) {
+        core = OCR_WORD_FIXES[core.toUpperCase()];
+      }
+
+      if (isOcrStructuredToken(core)) {
+        return core + trailPunct;
+      }
+
+      if (/\d/.test(core) && /[A-Za-z]/.test(core)) {
+        if (/^\d+(st|nd|rd|th|am|pm|px|kg|mb|gb)$/i.test(core)) {
+          return core + trailPunct;
+        }
+        return null;
+      }
+
+      if (/^\d{1,6}$/.test(core)) {
+        return conf >= 80 ? (core + trailPunct) : null;
+      }
+
+      if (!/^[A-Za-z]+(?:-[A-Za-z]+)?$/.test(core)) {
+        return null;
+      }
+
+      const parts = core.split('-');
+      for (const p of parts) {
+        const isAllUpper = p === p.toUpperCase();
+        const isAllLower = p === p.toLowerCase();
+        const isTitle = p[0] === p[0].toUpperCase() && p.slice(1) === p.slice(1).toLowerCase();
+        if (!isAllUpper && !isAllLower && !isTitle) {
+          return null;
+        }
+      }
+
+      const letters = core.replace(/-/g, '');
+      const low = letters.toLowerCase();
+
+      if (letters.length === 1) {
+        if ((letters === 'A' || letters === 'I' || letters === 'a' || letters === 'M' || letters === 'F') && conf >= 70) {
+          return core + trailPunct;
+        }
+        return null;
+      }
+
+      if (letters.length === 2) {
+        if (!OCR_VALID_2_LETTER.has(low)) return null;
+        if (letters === letters.toUpperCase() && !lineIsUpper && !OCR_ALWAYS_VALID_2_UPPER.has(letters)) {
+          return null;
+        }
+        return conf >= 60 ? (core + trailPunct) : null;
+      }
+
+      if (!/[aeiouyAEIOUY]/.test(letters) && !['mr','ms','dr','st','rd','qty','llc','ltd','plc'].includes(low)) {
+        return null;
+      }
+
+      if (/([a-zA-Z])\1\1/.test(letters)) return null;
+      if (/^(vr|vl|vn|vm|sr|sb|sd|sg|sj|zb|zd|zg|zk|zm|zn|zp|zr|zs|zt|zv|xh|xj|xk|xl|xm|xn|xp|xq|xr|xs|xt|xv|xw|xz|qj|qk|ql|qm|qn|qp|qr|qs|qt|qv|qw|qx|qy|qz)/i.test(low)) {
+        return null;
+      }
+      if (/q(?!u)|qu(?![aeiouy])/i.test(low)) return null;
+      if (/[bcdfghjklmnpqrstvwxz]{5,}/i.test(low)) return null;
+      if (letters.length <= 6 && /[bcdfghjklmnpqrstvwxz]{4,}/i.test(low) && !['first','world','right','light','night','sight','might','eight','fifth','sixth','month','birth','worth','south','north','match','watch','catch','patch','batch','witch','pitch','ditch','fetch','latch','stats','http','https'].includes(low)) {
+        return null;
+      }
+
+      if (letters.length === 3) {
+        if (!OCR_VALID_3_LETTER.has(low)) return null;
+        const allowedUpper3 = new Set(['uae','usa','usd','aed','eur','gbp','tax','vat','inv','qtn','qty','ref','ceo','cfo','cto','coo','vip','llc','ltd','inc','plc','jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec','mon','tue','wed','thu','fri','sat','sun','dob','exp','iss','sig','tel','fax','web','box','app','pro']);
+        if (letters === letters.toUpperCase() && !lineIsUpper && !allowedUpper3.has(low)) {
+          return null;
+        }
+        return conf >= 62 ? (core + trailPunct) : null;
+      }
+
+      if (conf < 54 && !OCR_KNOWN_DOC_WORDS.has(low)) {
+        return null;
+      }
+
+      return core + trailPunct;
+    }
+
+    function filterEnglishWordObjectsOnLine(wordObjs) {
+      // Step 0: Strip Arabic / non-Latin script tokens first so bilingual lines keep their English half cleanly
+      const latinWordObjs = wordObjs.filter(w => {
+        const t = (w.text || '').trim();
+        return t && !/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF\u0400-\u04FF\u4E00-\u9FFF]/.test(t);
+      });
+      if (latinWordObjs.length === 0) return null;
+
+      const longUpperCount = latinWordObjs.filter(w => {
+        const alpha = (w.text || '').replace(/[^A-Za-z]/g, '');
+        return alpha.length >= 4 && alpha === alpha.toUpperCase();
+      }).length;
+      const lineIsUpper = longUpperCount >= 2;
+
+      const kept = [];
+      let rejectedStreak = 0;
+
+      for (const w of latinWordObjs) {
+        const conf = typeof w.confidence === 'number' ? w.confidence : 75;
+        const val = validateEnglishOcrToken(w.text, conf, lineIsUpper);
+        if (val !== null) {
+          const alpha = val.replace(/[^A-Za-z]/g, '');
+          if (lineIsUpper && kept.length >= 2 && alpha && alpha !== alpha.toUpperCase()) {
+            break;
+          }
+          if (lineIsUpper && kept.length >= 2 && rejectedStreak >= 1 && !OCR_KNOWN_DOC_WORDS.has(alpha.toLowerCase())) {
+            break;
+          }
+          kept.push(val);
+          rejectedStreak = 0;
+        } else {
+          rejectedStreak++;
+        }
+      }
+
+      while (kept.length > 0 && ['&', '-', '/', ':'].includes(kept[kept.length - 1])) kept.pop();
+      while (kept.length > 0 && ['&', '-', '/', ':'].includes(kept[0])) kept.shift();
+      if (kept.length === 0) return null;
+
+      const survival = kept.length / latinWordObjs.length;
+      const hasKnown = kept.some(w => {
+        const clean = w.replace(/[.,:;]+$/, '');
+        return OCR_KNOWN_DOC_WORDS.has(clean.replace(/[^A-Za-z]/g, '').toLowerCase()) || isOcrStructuredToken(clean);
+      });
+      const hasLongWord = kept.some(w => w.replace(/[^A-Za-z]/g, '').length >= 5);
+
+      if (latinWordObjs.length >= 3 && survival < 0.55 && !(hasKnown && kept.length >= 2)) {
+        return null;
+      }
+      if (kept.length < latinWordObjs.length && !hasKnown && !hasLongWord) {
+        return null;
+      }
+      if (kept.length === 1 && latinWordObjs.length >= 2 && !hasKnown) {
+        return null;
+      }
+
+      return kept.join(' ');
+    }
+
+    function filterEnglishLinesFromString(rawText) {
+      if (!rawText) return '';
+      const out = [];
+      for (const rawLine of rawText.split(/\r?\n/)) {
+        const parts = rawLine.trim().split(/\s+/).filter(Boolean);
+        if (parts.length === 0) continue;
+        const cleanedLine = filterEnglishWordObjectsOnLine(parts.map(t => ({ text: t, confidence: 75 })));
+        if (cleanedLine) out.push(cleanedLine);
+      }
+      return out.join('\n');
+    }
+
+    function extractCleanEnglishFromOcrResult(result) {
+      if (!result || !result.data) return '';
+      if (Array.isArray(result.data.lines) && result.data.lines.length > 0) {
+        const outLines = [];
+        for (const line of result.data.lines) {
+          const words = Array.isArray(line.words) && line.words.length > 0
+            ? line.words
+            : (line.text || '').trim().split(/\s+/).filter(Boolean).map(t => ({ text: t, confidence: line.confidence || 75 }));
+          const cleaned = filterEnglishWordObjectsOnLine(words);
+          if (cleaned) outLines.push(cleaned);
+        }
+        if (outLines.length > 0) return outLines.join('\n');
+      }
+      return filterEnglishLinesFromString(result.data.text || '');
+    }
+
+    function analyzeAndOrganizeOcrText(rawText) {
+      const cleanedEnglish = filterEnglishLinesFromString(rawText || '');
+      const text = (cleanedEnglish || rawText || '').trim();
+      const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      const lower = text.toLowerCase();
+
+      // Extract universal entities
+      const emiratesIds = [...new Set(text.match(/\b784-\d{4}-\d{6,8}-\d\b/g) || [])];
+      const emails = [...new Set(text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g) || [])];
+      const phones = [...new Set(text.match(/(?:\+?\d{1,3}[\s.-]?)?\(?\d{2,4}\)?[\s.-]?\d{3,4}[\s.-]?\d{3,4}/g) || [])]
+        .filter(p => p.replace(/\D/g, '').length >= 7 && !p.startsWith('784-'));
+      const urls = [...new Set(text.match(/(?:https?:\/\/|www\.)[^\s,;]+/gi) || [])];
+      const dates = [...new Set(text.match(/\b(?:\d{4}[-/]\d{1,2}[-/]\d{1,2}|\d{1,2}[-/]\d{1,2}[-/]\d{2,4}|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2},?\s+\d{2,4})\b/gi) || [])];
+      const times = [...new Set(text.match(/\b\d{1,2}:\d{2}(?:\s?(?:AM|PM))?\b/gi) || [])];
+      const moneyMatches = text.match(/(?:\$|USD|EUR|GBP|AED)\s?\d[\d,]*(?:\.\d{2})?|\d[\d,]*\.\d{2}/gi) || [];
+
+      // Heuristic classification
+      const idCardScore =
+        (/\b(united arab emirates|federal authority|identity|citizenship|resident identity|nationality|date of birth|issuing date|expiry date|passport)\b/i.test(text) ? 4 : 0) +
+        (emiratesIds.length > 0 ? 3 : 0);
+
+      const invoiceScore =
+        (/\b(invoice|quotation|quote|receipt|subtotal|total due|amount due|tax|bill to|qty|unit price)\b/i.test(text) ? 3 : 0) +
+        (moneyMatches.length >= 2 ? 2 : 0) +
+        (/\b(inv|qtn)[-\s]?\d+/i.test(text) ? 2 : 0);
+
+      const eventScore =
+        (/\b(event|meeting|agenda|schedule|venue|rsvp|keynote|conference|summit|gala|session|location|zoom|meet\.google)\b/i.test(text) ? 3 : 0) +
+        (dates.length > 0 && times.length > 0 ? 2 : 0);
+
+      const contactScore =
+        (emails.length > 0 || phones.length > 0 ? 2 : 0) +
+        (/\b(ceo|director|founder|manager|producer|coordinator|consultant|inc|llc|ltd|group|studio)\b/i.test(text) ? 2 : 0) +
+        (lines.length <= 12 && moneyMatches.length === 0 ? 1 : 0);
+
+      let category = 'notes';
+      let categoryLabel = 'Structured Notes';
+      if (idCardScore >= 3) {
+        category = 'id_card';
+        categoryLabel = 'Identity Card / Official ID';
+      } else if (invoiceScore >= 3 && invoiceScore >= eventScore) {
+        category = 'invoice';
+        categoryLabel = /\b(quotation|quote)\b/i.test(text) ? 'Quotation Document' : 'Invoice / Receipt';
+      } else if (eventScore >= 3 && eventScore >= contactScore) {
+        category = 'event';
+        categoryLabel = 'Event / Meeting Schedule';
+      } else if (contactScore >= 3) {
+        category = 'contact';
+        categoryLabel = 'Contact / Business Card';
+      }
+
+      const fields = [];
+      const items = [];
+      let structuredPayload = {};
+
+      if (category === 'id_card') {
+        const nameMatch = text.match(/\bName\s*[:\-]?\s*([A-Za-z][A-Za-z\s.'-]{2,})/i);
+        const natMatch = text.match(/\bNationality\s*[:\-]?\s*([A-Za-z][A-Za-z\s-]{2,})/i);
+        const dobMatch = text.match(/\bDate\s+of\s+Birth\s*[:\-]?\s*(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})/i);
+        const sexMatch = text.match(/\bSex\s*[:\-]?\s*([MF])\b/i);
+        const authorityLine = lines.find(l => /federal authority|identity|citizenship/i.test(l)) || '';
+        const countryLine = lines.find(l => /united arab emirates/i.test(l)) || '';
+
+        const holderName = nameMatch ? nameMatch[1].split(/\r?\n/)[0].trim() : '';
+        const nationality = natMatch ? natMatch[1].split(/\r?\n/)[0].trim() : '';
+        const idNum = emiratesIds[0] || '';
+
+        fields.push({ label: 'Document Type', value: /resident identity/i.test(text) ? 'Resident Identity Card' : 'Official Identity Card' });
+        if (countryLine) fields.push({ label: 'Country / Issuer', value: countryLine });
+        if (authorityLine) fields.push({ label: 'Issuing Authority', value: authorityLine });
+        if (idNum) fields.push({ label: 'ID Number', value: idNum });
+        if (holderName) fields.push({ label: 'Cardholder Name', value: holderName });
+        if (nationality) fields.push({ label: 'Nationality', value: nationality });
+        if (dobMatch && dobMatch[1]) fields.push({ label: 'Date of Birth', value: dobMatch[1] });
+        else if (dates[0]) fields.push({ label: 'Dates on Card', value: dates.join(' | ') });
+        if (sexMatch && sexMatch[1]) fields.push({ label: 'Sex', value: sexMatch[1].toUpperCase() });
+
+        lines.forEach(l => {
+          if (l !== countryLine && l !== authorityLine) items.push(l);
+        });
+
+        structuredPayload = {
+          name: holderName || countryLine || 'ID Cardholder',
+          company: nationality ? `${nationality} (${idNum || 'Verified ID'})` : (idNum || 'Verified ID'),
+          role: 'Resident Identity Card',
+          email: emails[0] || '',
+          phone: phones[0] || '',
+          address: countryLine || 'United Arab Emirates'
+        };
+      } else if (category === 'invoice') {
+        const refMatch = text.match(/\b(?:INV|QTN|REF|NO\.?|#)[-\s:]*([A-Z0-9-]{3,})\b/i);
+        const totalMatch = text.match(/(?:total\s*(?:due|amount)?|grand\s*total|amount\s*due|balance)\s*[:\-]?\s*([\$A-Z]{0,4}\s?\d[\d,]*(?:\.\d{2})?)/i);
+        const vendorLine = lines[0] || 'Vendor / Studio';
+
+        // Parse potential line items (lines containing a trailing amount)
+        lines.forEach(line => {
+          const m = line.match(/^(.+?)\s+(?:(\d+)\s*[xX×]?\s+)?(?:\$|USD|EUR|GBP|AED)?\s*(\d[\d,]*\.\d{2})\s*$/);
+          if (m && !/subtotal|total|tax|balance|discount|amount due/i.test(m[1])) {
+            items.push({
+              description: m[1].trim(),
+              qty: Number(m[2]) || 1,
+              price: parseFloat(m[3].replace(/,/g, '')) || 0
+            });
+          }
+        });
+
+        const docNumber = refMatch ? refMatch[1].toUpperCase() : 'INV-SCAN-01';
+        const totalVal = totalMatch ? totalMatch[1] : (moneyMatches[moneyMatches.length - 1] || 'N/A');
+
+        fields.push({ label: 'Document Type', value: categoryLabel });
+        fields.push({ label: 'Issuer / Title', value: vendorLine });
+        fields.push({ label: 'Reference Number', value: docNumber });
+        if (dates[0]) fields.push({ label: 'Date', value: dates[0] });
+        fields.push({ label: 'Total Amount', value: totalVal });
+        if (emails[0]) fields.push({ label: 'Email', value: emails[0] });
+
+        structuredPayload = { docType: categoryLabel.includes('Quotation') ? 'Quotation' : 'Invoice', docNumber, vendorLine, date: dates[0] || '', totalVal, items };
+      } else if (category === 'contact') {
+        const nameLine = lines.find(l => !l.includes('@') && !/\d{4,}/.test(l) && !/www\./i.test(l)) || lines[0] || 'Contact';
+        const companyLine = lines.find(l => l !== nameLine && !l.includes('@') && !/\d{5,}/.test(l) && !/www\./i.test(l)) || '';
+        const roleLine = lines.find(l => /\b(ceo|director|founder|manager|lead|producer|head|officer|specialist)\b/i.test(l)) || '';
+        const addrLine = lines.find(l => /\b(st|street|ave|avenue|rd|road|suite|floor|blvd|ny|ca|fl|tx|uk|dubai)\b/i.test(l)) || '';
+
+        fields.push({ label: 'Contact Person', value: nameLine });
+        if (companyLine) fields.push({ label: 'Company / Organization', value: companyLine });
+        if (roleLine) fields.push({ label: 'Role / Title', value: roleLine });
+        if (emails[0]) fields.push({ label: 'Email', value: emails[0] });
+        if (phones[0]) fields.push({ label: 'Phone', value: phones[0] });
+        if (urls[0]) fields.push({ label: 'Website', value: urls[0] });
+        if (addrLine) fields.push({ label: 'Address', value: addrLine });
+
+        structuredPayload = {
+          name: nameLine,
+          company: companyLine || nameLine,
+          role: roleLine,
+          email: emails[0] || '',
+          phone: phones[0] || '',
+          address: addrLine || ''
+        };
+      } else if (category === 'event') {
+        const titleLine = lines[0] || 'Scanned Event';
+        const venueLine = lines.find(l => /\b(venue|location|room|hall|pavilion|hotel|zoom|meet\.google|address)\b/i.test(l)) || '';
+        lines.forEach(l => {
+          if (l !== titleLine && l !== venueLine && l.length > 4) {
+            items.push(l.replace(/^[-*•\d.)]+\s*/, ''));
+          }
+        });
+
+        fields.push({ label: 'Event / Meeting Title', value: titleLine });
+        if (dates[0]) fields.push({ label: 'Date', value: dates[0] });
+        if (times.length > 0) fields.push({ label: 'Time', value: times.join(' - ') });
+        if (venueLine) fields.push({ label: 'Location / Venue', value: venueLine });
+        if (emails[0]) fields.push({ label: 'Contact / Attendee', value: emails[0] });
+
+        structuredPayload = {
+          title: titleLine,
+          date: dates[0] || '',
+          startTime: times[0] || '10:00',
+          endTime: times[1] || '11:00',
+          location: venueLine,
+          email: emails[0] || '',
+          notes: items.slice(0, 6).join('\n')
+        };
+      } else {
+        const heading = lines[0] || 'Scanned Document';
+        fields.push({ label: 'Topic / Heading', value: heading });
+        if (dates.length) fields.push({ label: 'Dates Mentioned', value: dates.join(', ') });
+        if (emails.length) fields.push({ label: 'Emails Found', value: emails.join(', ') });
+        if (phones.length) fields.push({ label: 'Phones Found', value: phones.join(', ') });
+        if (moneyMatches.length) fields.push({ label: 'Amounts Found', value: moneyMatches.join(', ') });
+
+        lines.slice(1).forEach(l => {
+          const clean = l.replace(/^[-*•\d.)]+\s*/, '').trim();
+          if (clean) items.push(clean);
+        });
+        structuredPayload = { heading, bullets: items };
+      }
+
+      return { category, categoryLabel, fields, items, structuredPayload, rawText: text };
+    }
+
+    function organizeAndRenderOcrText(rawText) {
+      const panel = document.getElementById('ocrOrganizedPanel');
+      const badge = document.getElementById('ocrDetectedTypeBadge');
+      const actionSlot = document.getElementById('ocrSmartActionSlot');
+
+      if (!rawText || !rawText.trim()) {
+        lastOcrOrganizedData = null;
+        badge.classList.add('hidden');
+        actionSlot.innerHTML = '';
+        panel.innerHTML = `<div class="p-6 rounded-xl bg-slate-500/5 text-center text-xs text-slate-400">Scan an image (invoice, receipt, business card, event flyer, or notes) and it will automatically be understood and organized here.</div>`;
+        return;
+      }
+
+      const data = analyzeAndOrganizeOcrText(rawText);
+      lastOcrOrganizedData = data;
+
+      badge.textContent = data.categoryLabel;
+      badge.classList.remove('hidden');
+
+      let html = `
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          ${data.fields.map(f => `
+            <div class="p-3 rounded-xl bg-slate-500/5 border border-slate-200/50 dark:border-white/5">
+              <div class="text-[11px] font-medium text-slate-400 uppercase tracking-wider">${escapeHtml(f.label)}</div>
+              <div class="text-sm font-medium mt-0.5 break-words">${escapeHtml(f.value)}</div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+
+      if (data.items.length > 0) {
+        if (data.category === 'invoice') {
+          html += `
+            <div class="p-3.5 rounded-xl bg-slate-500/5 border border-slate-200/50 dark:border-white/5 space-y-2">
+              <div class="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Detected Line Items (${data.items.length})</div>
+              <div class="divide-y divide-slate-200/50 dark:divide-white/5 text-xs">
+                ${data.items.map(it => `
+                  <div class="py-1.5 flex items-center justify-between gap-2">
+                    <span class="truncate">${escapeHtml(it.description)} (x${it.qty})</span>
+                    <span class="font-mono font-medium shrink-0">${formatCurrency(it.price)}</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `;
+        } else {
+          html += `
+            <div class="p-3.5 rounded-xl bg-slate-500/5 border border-slate-200/50 dark:border-white/5 space-y-1.5">
+              <div class="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Key Points &amp; Details</div>
+              <ul class="space-y-1 text-xs text-slate-600 dark:text-slate-300 list-disc pl-4">
+                ${data.items.map(pt => `<li>${escapeHtml(pt)}</li>`).join('')}
+              </ul>
+            </div>
+          `;
+        }
+      }
+
+      panel.innerHTML = html;
+
+      // Contextual smart action button based on document type
+      if (data.category === 'invoice') {
+        actionSlot.innerHTML = `<button type="button" onclick="applyOcrToBilling()" class="btn-mac-secondary px-3 py-2 text-xs text-[#007AFF] dark:text-[#0A84FF]">Send to Billing</button>`;
+      } else if (data.category === 'contact' || data.category === 'id_card') {
+        actionSlot.innerHTML = `
+          <button type="button" onclick="applyOcrToDirectory('client')" class="btn-mac-secondary px-3 py-2 text-xs text-[#007AFF] dark:text-[#0A84FF]">Save as Client</button>
+          <button type="button" onclick="applyOcrToDirectory('supplier')" class="btn-mac-secondary px-3 py-2 text-xs">Save as Supplier</button>
+        `;
+      } else if (data.category === 'event') {
+        actionSlot.innerHTML = `
+          <button type="button" onclick="applyOcrToMeeting()" class="btn-mac-secondary px-3 py-2 text-xs text-[#007AFF] dark:text-[#0A84FF]">Schedule Meeting</button>
+        `;
+      } else {
+        actionSlot.innerHTML = '';
+      }
+    }
+
+    function applyOcrToBilling() {
+      if (!lastOcrOrganizedData) return;
+      const p = lastOcrOrganizedData.structuredPayload;
+      studioState.billingDraft.docType = p.docType || 'Invoice';
+      studioState.billingDraft.docNumber = p.docNumber || 'INV-SCAN-01';
+      if (p.vendorLine) studioState.billingDraft.clientCompany = p.vendorLine;
+      if (p.items && p.items.length > 0) {
+        studioState.billingDraft.lineItems = p.items.map(i => ({ description: i.description, qty: i.qty, price: i.price }));
+      }
+      saveStudioState();
+      switchView('billing');
+      showToast('Loaded scanned invoice into Billing.');
+    }
+
+    function applyOcrToDirectory(target) {
+      if (!lastOcrOrganizedData) return;
+      const p = lastOcrOrganizedData.structuredPayload;
+      if (target === 'client') {
+        studioState.clients.unshift({
+          id: 'cli-' + Date.now(),
+          company: p.company || p.name || 'Scanned Client',
+          contactPerson: p.name || '',
+          email: p.email || '',
+          phone: p.phone || '',
+          eventType: p.role || 'Event Client',
+          address: p.address || ''
+        });
+        saveStudioState();
+        switchView('clients');
+        showToast('Saved scanned contact to Clients.');
+      } else {
+        studioState.suppliers.unshift({
+          id: 'sup-' + Date.now(),
+          name: p.company || p.name || 'Scanned Supplier',
+          category: 'Logistics',
+          contactPerson: p.name || '',
+          email: p.email || '',
+          phone: p.phone || ''
+        });
+        saveStudioState();
+        switchView('suppliers');
+        showToast('Saved scanned contact to Suppliers.');
+      }
+    }
+
+    function applyOcrToMeeting() {
+      if (!lastOcrOrganizedData) return;
+      const p = lastOcrOrganizedData.structuredPayload;
+      switchView('calendar');
+      document.getElementById('meetingTitleInput').value = p.title || '';
+      if (p.email) document.getElementById('meetingAttendeeInput').value = p.email;
+      if (p.notes) document.getElementById('meetingNotesInput').value = p.notes;
+      showToast('Pre-filled Schedule Meeting form from scan.');
+    }
+
+    function handleOcrDragOver(e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    function handleOcrDrop(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        loadOcrImageFile(e.dataTransfer.files[0]);
+      }
+    }
+
+    function handleOcrFileSelect(e) {
+      if (e.target.files && e.target.files.length > 0) {
+        loadOcrImageFile(e.target.files[0]);
+      }
+    }
+
+    function loadOcrImageFile(file) {
+      if (!file || !file.type.startsWith('image/')) {
+        showToast('Please select a valid image file.');
+        return;
+      }
+      ocrPendingFileName = (file.name || 'image').replace(/\.[^/.]+$/, '');
+      document.getElementById('ocrFileBadge').textContent = file.name || 'Clipboard Image';
+
+      const reader = new FileReader();
+      reader.onload = e => {
+        ocrPendingImageDataUrl = e.target.result;
+        document.getElementById('ocrImagePreview').src = ocrPendingImageDataUrl;
+        document.getElementById('ocrImagePreviewWrapper').classList.remove('hidden');
+        document.getElementById('ocrDropPrompt').textContent = 'Click or drop another image to replace';
+      };
+      reader.readAsDataURL(file);
+    }
+
+    document.addEventListener('paste', (e) => {
+      if (currentActiveView !== 'ocr' || !e.clipboardData || !e.clipboardData.items) return;
+      for (const item of e.clipboardData.items) {
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (file) loadOcrImageFile(file);
+          break;
+        }
+      }
+    });
+
+    function boxMeanFloat32(buf, w, h, radius) {
+      const tmp = new Float32Array(w * h);
+      for (let y = 0; y < h; y++) {
+        const yw = y * w;
+        let sum = 0;
+        let cnt = 0;
+        const initLim = Math.min(w, radius + 1);
+        for (let x = 0; x < initLim; x++) {
+          sum += buf[yw + x];
+          cnt++;
+        }
+        for (let x = 0; x < w; x++) {
+          tmp[yw + x] = sum / cnt;
+          const addX = x + radius + 1;
+          const remX = x - radius;
+          if (addX < w) { sum += buf[yw + addX]; cnt++; }
+          if (remX >= 0) { sum -= buf[yw + remX]; cnt--; }
+        }
+      }
+      const out = new Float32Array(w * h);
+      for (let x = 0; x < w; x++) {
+        let sum = 0;
+        let cnt = 0;
+        const initLim = Math.min(h, radius + 1);
+        for (let y = 0; y < initLim; y++) {
+          sum += tmp[y * w + x];
+          cnt++;
+        }
+        for (let y = 0; y < h; y++) {
+          out[y * w + x] = sum / cnt;
+          const addY = y + radius + 1;
+          const remY = y - radius;
+          if (addY < h) { sum += tmp[addY * w + x]; cnt++; }
+          if (remY >= 0) { sum -= tmp[remY * w + x]; cnt--; }
+        }
+      }
+      return out;
+    }
+
+    function preprocessImageForOcr(dataUrl) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          try {
+            const origW = img.naturalWidth || img.width || 800;
+            const origH = img.naturalHeight || img.height || 600;
+            const maxDim = Math.max(origW, origH);
+            const scale = maxDim < 2000 ? Math.min(3.5, Math.max(1.5, 2000 / maxDim)) : 1;
+            const w = Math.round(origW * scale);
+            const h = Math.round(origH * scale);
+
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(img, 0, 0, w, h);
+
+            const imgData = ctx.getImageData(0, 0, w, h);
+            const d = imgData.data;
+            const total = w * h;
+            const lum = new Float32Array(total);
+            let darkCount = 0;
+
+            for (let i = 0; i < total; i++) {
+              const idx = i * 4;
+              const r = d[idx];
+              const g = d[idx + 1];
+              const b = d[idx + 2];
+              const chroma = Math.max(r, g, b) - Math.min(r, g, b);
+              const l = Math.min(255, 0.299 * r + 0.587 * g + 0.114 * b + chroma * 0.4);
+              lum[i] = l;
+              if (l < 95) darkCount++;
+            }
+
+            // Invert if dark-mode image (light text on dark background)
+            if (darkCount > total * 0.58) {
+              for (let i = 0; i < total; i++) {
+                lum[i] = 255 - lum[i];
+              }
+            }
+
+            // Gentle unsharp mask to crisp up small upscaled letters without fusing gaps
+            const blurSmall = boxMeanFloat32(lum, w, h, 2);
+            const sharpened = new Float32Array(total);
+            for (let i = 0; i < total; i++) {
+              const s = lum[i] + (lum[i] - blurSmall[i]) * 0.75;
+              sharpened[i] = s < 0 ? 0 : (s > 255 ? 255 : s);
+            }
+
+            // Two-pass local upper-envelope paper background estimation
+            const rBg = Math.max(14, Math.round(Math.min(w, h) / 48));
+            const mean1 = boxMeanFloat32(lum, w, h, rBg);
+            const upper = new Float32Array(total);
+            for (let i = 0; i < total; i++) {
+              upper[i] = lum[i] > mean1[i] ? lum[i] : mean1[i];
+            }
+            const localBg = boxMeanFloat32(upper, w, h, rBg);
+
+            for (let i = 0; i < total; i++) {
+              const bg = localBg[i];
+              let v = 255;
+              if (bg > 95) {
+                const bgWeight = Math.min(1, (bg - 95) / 40);
+                const ratio = sharpened[i] / Math.max(115, bg);
+                if (ratio < 0.92) {
+                  const t = ratio / 0.92;
+                  const mapped = Math.round(255 * Math.pow(t, 1.45));
+                  v = Math.round(255 - (255 - mapped) * bgWeight);
+                }
+              }
+              const idx = i * 4;
+              d[idx] = v;
+              d[idx + 1] = v;
+              d[idx + 2] = v;
+              d[idx + 3] = 255;
+            }
+
+            ctx.putImageData(imgData, 0, 0);
+            resolve(canvas.toDataURL('image/png'));
+          } catch (_) {
+            resolve(dataUrl);
+          }
+        };
+        img.onerror = () => resolve(dataUrl);
+        img.src = dataUrl;
+      });
+    }
+
+    async function runOcrScan() {
+      if (!ocrPendingImageDataUrl) {
+        showToast('Select or paste an image first.');
+        return;
+      }
+      if (typeof Tesseract === 'undefined') {
+        showToast('OCR engine is still loading. Try again in a moment.');
+        return;
+      }
+
+      const scanBtn = document.getElementById('ocrScanBtn');
+      const progressBox = document.getElementById('ocrProgressContainer');
+      const progressStatus = document.getElementById('ocrProgressStatus');
+      const progressPercent = document.getElementById('ocrProgressPercent');
+      const progressBar = document.getElementById('ocrProgressBar');
+
+      scanBtn.disabled = true;
+      scanBtn.textContent = 'Scanning...';
+      progressBox.classList.remove('hidden');
+      progressStatus.textContent = 'Enhancing image contrast...';
+      progressPercent.textContent = '5%';
+      progressBar.style.width = '5%';
+
+      try {
+        const processedDataUrl = await preprocessImageForOcr(ocrPendingImageDataUrl);
+        const loggerFn = m => {
+          if (m.status) {
+            progressStatus.textContent = m.status.charAt(0).toUpperCase() + m.status.slice(1);
+          }
+          if (typeof m.progress === 'number') {
+            const pct = Math.max(8, Math.round(m.progress * 100));
+            progressPercent.textContent = `${pct}%`;
+            progressBar.style.width = `${pct}%`;
+          }
+        };
+
+        // Use 'eng+ara' under the hood so non-English/Arabic text on bilingual cards is isolated as Arabic Unicode and stripped cleanly rather than hallucinated as random English letters
+        let result;
+        try {
+          result = await Tesseract.recognize(processedDataUrl, 'eng+ara', { logger: loggerFn });
+        } catch (_) {
+          result = await Tesseract.recognize(processedDataUrl, 'eng', { logger: loggerFn });
+        }
+
+        let extracted = extractCleanEnglishFromOcrResult(result).trim();
+
+        // If preprocessed image yielded very little text, also check raw image and merge clean English lines
+        if (extracted.split(/\s+/).filter(Boolean).length < 5) {
+          try {
+            const rawRes = await Tesseract.recognize(ocrPendingImageDataUrl, 'eng+ara');
+            const rawExtracted = extractCleanEnglishFromOcrResult(rawRes).trim();
+            if (rawExtracted.length > extracted.length) {
+              extracted = rawExtracted;
+            }
+          } catch (_) {}
+        }
+
+        document.getElementById('ocrResultTextarea').value = extracted;
+        updateOcrTextStats();
+        organizeAndRenderOcrText(extracted);
+        setOcrOutputMode('organized');
+        progressStatus.textContent = 'English scan & organize complete';
+        progressPercent.textContent = '100%';
+        progressBar.style.width = '100%';
+        showToast(extracted ? 'English text extracted and organized.' : 'No clear English text detected.');
+      } catch (err) {
+        console.error('OCR error:', err);
+        progressStatus.textContent = 'Scan failed';
+        showToast('Could not scan image. Check internet connection for OCR model.');
+      } finally {
+        scanBtn.disabled = false;
+        scanBtn.textContent = 'Scan Image Text';
+      }
+    }
+
+    function updateOcrTextStats() {
+      const val = document.getElementById('ocrResultTextarea').value || '';
+      const words = val.trim() ? val.trim().split(/\s+/).length : 0;
+      document.getElementById('ocrTextStats').textContent = `${words} words • ${val.length} chars`;
+    }
+
+    function formatOrganizedSummaryText() {
+      if (!lastOcrOrganizedData) return document.getElementById('ocrResultTextarea').value || '';
+      const d = lastOcrOrganizedData;
+      const lines = [`[${d.categoryLabel}]`, ...d.fields.map(f => `${f.label}: ${f.value}`)];
+      if (d.items.length > 0) {
+        lines.push('', 'Details / Items:');
+        d.items.forEach(it => {
+          if (typeof it === 'object') lines.push(`- ${it.description} (x${it.qty}): ${formatCurrency(it.price)}`);
+          else lines.push(`- ${it}`);
+        });
+      }
+      return lines.join('\n');
+    }
+
+    async function copyOcrText() {
+      const val = ocrOutputMode === 'organized' ? formatOrganizedSummaryText() : document.getElementById('ocrResultTextarea').value;
+      if (!val) { showToast('Nothing to copy.'); return; }
+      try {
+        await navigator.clipboard.writeText(val);
+        showToast('Copied to clipboard.');
+      } catch (_) {
+        document.getElementById('ocrResultTextarea').select();
+        document.execCommand('copy');
+        showToast('Copied to clipboard.');
+      }
+    }
+
+    async function downloadOcrText() {
+      const val = ocrOutputMode === 'organized' ? formatOrganizedSummaryText() : document.getElementById('ocrResultTextarea').value;
+      if (!val) { showToast('Scan an image first.'); return; }
+      const filename = `${ocrPendingFileName || 'scanned-text'}-organized.txt`;
+      const blob = new Blob([val], { type: 'text/plain' });
+      triggerBrowserBlobDownload(blob, filename);
+      await saveFileToIndexedDBVault(filename, '/04_Converted_Files/', 'text/plain', blob);
+      showToast(`Saved "${filename}" to downloads & archive.`);
+    }
+
+    function clearOcrScanner() {
+      ocrPendingImageDataUrl = null;
+      ocrPendingFileName = 'scanned-text';
+      lastOcrOrganizedData = null;
+      document.getElementById('ocrFileInput').value = '';
+      document.getElementById('ocrImagePreview').src = '';
+      document.getElementById('ocrImagePreviewWrapper').classList.add('hidden');
+      document.getElementById('ocrDropPrompt').textContent = 'Drop an image, click to browse, or paste (Cmd+V)';
+      document.getElementById('ocrFileBadge').textContent = 'PNG, JPG, WEBP';
+      document.getElementById('ocrResultTextarea').value = '';
+      document.getElementById('ocrProgressContainer').classList.add('hidden');
+      updateOcrTextStats();
+      organizeAndRenderOcrText('');
+    }
+
+    /* HELPERS */
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function getActiveCurrencyCode() {
+      const code = (studioState && (studioState.currency || (studioState.billingDraft && studioState.billingDraft.currency))) || 'USD';
+      return STUDIO_CURRENCIES[code] ? code : 'USD';
+    }
+
+    function getActiveCurrencyMeta(overrideCode) {
+      const code = overrideCode && STUDIO_CURRENCIES[overrideCode] ? overrideCode : getActiveCurrencyCode();
+      return STUDIO_CURRENCIES[code] || STUDIO_CURRENCIES.USD;
+    }
+
+    function syncCurrencyLabelsUI() {
+      const cur = getActiveCurrencyMeta();
+      const setSelect = (id) => {
+        const el = document.getElementById(id);
+        if (el) el.value = cur.code;
+      };
+      setSelect('headerCurrencySelect');
+      setSelect('billingCurrencySelect');
+      setSelect('projCurrencySelect');
+
+      const setText = (id, text) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = text;
+      };
+      setText('projSupplierCostLabel', `Supplier & Operational Costs (${cur.code})`);
+      setText('projUnitPriceHeader', `Unit Price (${cur.code})`);
+      setText('billingUnitPriceHeader', `Unit Price (${cur.code})`);
+      setText('previewUnitPriceHeader', `Unit Price (${cur.code})`);
+    }
+
+    function setStudioCurrency(code) {
+      if (!STUDIO_CURRENCIES[code]) return;
+      studioState.currency = code;
+      if (studioState.billingDraft) {
+        studioState.billingDraft.currency = code;
+      }
+      syncCurrencyLabelsUI();
+      if (typeof renderProjectLineItemRows === 'function') renderProjectLineItemRows();
+      if (typeof renderLiveBillingPreview === 'function') renderLiveBillingPreview();
+      if (lastOcrOrganizedData && typeof organizeAndRenderOcrText === 'function') {
+        const rawEl = document.getElementById('ocrResultTextarea');
+        if (rawEl && rawEl.value) organizeAndRenderOcrText(rawEl.value);
+      }
+      saveStudioState();
+      showToast(`Currency set to ${STUDIO_CURRENCIES[code].label}.`);
+    }
+
+    function formatCurrency(val, overrideCode, forPdf = false) {
+      const cur = getActiveCurrencyMeta(overrideCode);
+      const prefix = forPdf ? cur.pdfPrefix : cur.symbol;
+      return prefix + (Number(val) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function formatBytes(bytes) {
+      const b = Number(bytes) || 0;
+      if (b < 1024) return b + ' B';
+      if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+      return (b / 1048576).toFixed(2) + ' MB';
+    }
+
+    function refreshAllUI() {
+      syncCurrencyLabelsUI();
+      markAllViewsDirty();
+      renderViewIfNeeded(currentActiveView, true);
+      renderGoogleAndCalendarModule();
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const projWs = document.getElementById('projectWorkspaceContainer');
+        if (projWs && !projWs.classList.contains('hidden')) {
+          closeProjectWorkspace();
+        }
+      }
+    });
+
+    window.addEventListener('resize', syncMobileViewportOrientation);
+    window.addEventListener('orientationchange', () => setTimeout(syncMobileViewportOrientation, 60));
+
+    /* ====================================================================== */
+    /* INTERACTIVE LOCK SCREEN: 3D ISOMETRIC EVENT STAGE & SKYLINE MATRIX     */
+    /* ====================================================================== */
+    let lockCanvasRafId = null;
+    let lockCanvasInitialized = false;
+    const lockPointer = {
+      x: -9999,
+      y: -9999,
+      targetX: -9999,
+      targetY: -9999,
+      vx: 0,
+      vy: 0,
+      speed: 0,
+      active: false
+    };
+    const lockIsoState = { tileW: 68, tileH: 34, cols: 0, rows: 0, cells: [] };
+    const lockStageWaves = [];
+    const lockSkySparks = [];
+
+    function rebuildIsoGrid(w, h) {
+      const tileW = w < 640 ? 58 : 72;
+      const tileH = tileW * 0.5;
+      const cols = Math.ceil(w / tileW) + 3;
+      const rows = Math.ceil(h / (tileH * 0.5)) + 7;
+      const cells = [];
+
+      for (let r = -1; r < rows; r++) {
+        const xOffset = (r % 2 !== 0) ? tileW * 0.5 : 0;
+        const by = r * (tileH * 0.5);
+        for (let c = -1; c < cols; c++) {
+          const bx = c * tileW + xOffset;
+          const stepGroup = Math.abs(Math.sin(c * 0.52 + r * 0.31));
+          cells.push({
+            r,
+            c,
+            bx,
+            by,
+            h: 8,
+            v: 0,
+            flash: 0,
+            phase: r * 0.37 + c * 0.61,
+            tier: stepGroup > 0.72 ? 8 : (stepGroup > 0.38 ? 3.5 : 0)
+          });
+        }
+      }
+
+      lockIsoState.tileW = tileW;
+      lockIsoState.tileH = tileH;
+      lockIsoState.cols = cols;
+      lockIsoState.rows = rows;
+      lockIsoState.cells = cells;
+    }
+
+    function initLockBgCanvas() {
+      if (lockCanvasInitialized) return;
+      const canvas = document.getElementById('lockBgCanvas');
+      const lockScreen = document.getElementById('authLockScreen');
+      if (!canvas || !lockScreen) return;
+      lockCanvasInitialized = true;
+
+      const resizeCanvas = () => {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const w = window.innerWidth || 1280;
+        const h = window.innerHeight || 720;
+        canvas.width = Math.floor(w * dpr);
+        canvas.height = Math.floor(h * dpr);
+        const ctx = canvas.getContext('2d');
+        if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        rebuildIsoGrid(w, h);
+      };
+
+      resizeCanvas();
+      window.addEventListener('resize', resizeCanvas);
+
+      lockScreen.addEventListener('pointermove', (e) => {
+        if (lockPointer.active) {
+          lockPointer.vx = e.clientX - lockPointer.targetX;
+          lockPointer.vy = e.clientY - lockPointer.targetY;
+          lockPointer.speed = Math.min(40, Math.hypot(lockPointer.vx, lockPointer.vy));
+        }
+        lockPointer.targetX = e.clientX;
+        lockPointer.targetY = e.clientY;
+        lockPointer.active = true;
+        if (lockPointer.x < -1000) {
+          lockPointer.x = e.clientX;
+          lockPointer.y = e.clientY;
+        }
+        if (lockPointer.speed > 7 && Math.random() > 0.45 && !e.target.closest('#authLockCard')) {
+          lockSkySparks.push({
+            x: e.clientX + (Math.random() - 0.5) * 24,
+            y: e.clientY + (Math.random() - 0.5) * 14,
+            vx: lockPointer.vx * 0.08 + (Math.random() - 0.5) * 0.8,
+            vy: -0.7 - Math.random() * 1.4,
+            life: 0.9,
+            gold: Math.random() > 0.42,
+            size: 1.3 + Math.random() * 1.3
+          });
+          if (lockSkySparks.length > 60) lockSkySparks.shift();
+        }
+      });
+
+      lockScreen.addEventListener('pointerdown', (e) => {
+        if (e.target.closest('#authLockCard')) return;
+        lockStageWaves.push({ x: e.clientX, y: e.clientY, radius: 10, maxRadius: 620, strength: 1.15 });
+        for (let i = 0; i < 20; i++) {
+          const ang = (Math.PI * 2 * i) / 20 + (Math.random() - 0.5) * 0.25;
+          const spd = 1.8 + Math.random() * 3.2;
+          lockSkySparks.push({
+            x: e.clientX,
+            y: e.clientY,
+            vx: Math.cos(ang) * spd,
+            vy: Math.sin(ang) * spd - 1.4,
+            life: 1.0,
+            gold: i % 2 === 0,
+            size: 1.5 + Math.random() * 1.7
+          });
+        }
+      });
+
+      lockScreen.addEventListener('pointerleave', () => {
+        lockPointer.active = false;
+        lockPointer.speed = 0;
+      });
+    }
+
+    function stopLockBgAnimation() {
+      if (lockCanvasRafId) {
+        cancelAnimationFrame(lockCanvasRafId);
+        lockCanvasRafId = null;
+      }
+    }
+
+    function mixRgbCss(base, accent, amount, alpha) {
+      const t = Math.max(0, Math.min(1, amount));
+      const r = Math.round(base[0] + (accent[0] - base[0]) * t);
+      const g = Math.round(base[1] + (accent[1] - base[1]) * t);
+      const b = Math.round(base[2] + (accent[2] - base[2]) * t);
+      return alpha < 1 ? `rgba(${r},${g},${b},${alpha.toFixed(2)})` : `rgb(${r},${g},${b})`;
+    }
+
+    function drawIsoPillar(ctx, cx, by, elev, hw, hh, topRgb, leftRgb, rightRgb, rimCss, collarCss) {
+      const ty = by - elev;
+      const bty = by;
+
+      // Left facet
+      ctx.beginPath();
+      ctx.moveTo(cx - hw, ty);
+      ctx.lineTo(cx, ty + hh);
+      ctx.lineTo(cx, bty + hh);
+      ctx.lineTo(cx - hw, bty);
+      ctx.closePath();
+      ctx.fillStyle = leftRgb;
+      ctx.fill();
+
+      // Right facet
+      ctx.beginPath();
+      ctx.moveTo(cx, ty + hh);
+      ctx.lineTo(cx + hw, ty);
+      ctx.lineTo(cx + hw, bty);
+      ctx.lineTo(cx, bty + hh);
+      ctx.closePath();
+      ctx.fillStyle = rightRgb;
+      ctx.fill();
+
+      // Illuminated architectural LED collar strip under active stage caps
+      if (collarCss && elev > 14) {
+        const band = Math.min(4.2, elev * 0.16);
+        ctx.beginPath();
+        ctx.moveTo(cx - hw, ty);
+        ctx.lineTo(cx, ty + hh);
+        ctx.lineTo(cx + hw, ty);
+        ctx.lineTo(cx + hw, ty + band);
+        ctx.lineTo(cx, ty + hh + band);
+        ctx.lineTo(cx - hw, ty + band);
+        ctx.closePath();
+        ctx.fillStyle = collarCss;
+        ctx.fill();
+      }
+
+      // Top diamond cap
+      ctx.beginPath();
+      ctx.moveTo(cx, ty - hh);
+      ctx.lineTo(cx + hw, ty);
+      ctx.lineTo(cx, ty + hh);
+      ctx.lineTo(cx - hw, ty);
+      ctx.closePath();
+      ctx.fillStyle = topRgb;
+      ctx.fill();
+
+      if (rimCss) {
+        ctx.strokeStyle = rimCss;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+    }
+
+    function drawPeakOverlayAndBeams(ctx, peaks, spotX, spotY, pointerActive, isDark, t) {
+      // Soft floor spotlight halo under cursor dome
+      const haloGrad = ctx.createRadialGradient(spotX, spotY, 8, spotX, spotY, 210);
+      if (isDark) {
+        haloGrad.addColorStop(0, 'rgba(56, 189, 248, 0.16)');
+        haloGrad.addColorStop(0.55, 'rgba(251, 191, 36, 0.06)');
+        haloGrad.addColorStop(1, 'rgba(15, 23, 42, 0)');
+      } else {
+        haloGrad.addColorStop(0, 'rgba(0, 122, 255, 0.11)');
+        haloGrad.addColorStop(0.55, 'rgba(217, 119, 6, 0.04)');
+        haloGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      }
+      ctx.fillStyle = haloGrad;
+      ctx.beginPath();
+      ctx.arc(spotX, spotY, 210, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (peaks.length) {
+        peaks.sort((a, b) => b.energy - a.energy);
+        const beamCount = Math.min(16, peaks.length);
+
+        for (let i = 0; i < beamCount; i++) {
+          const pk = peaks[i];
+          const beamH = 42 + pk.energy * 72;
+          const rgb = pk.gold
+            ? (isDark ? '251, 191, 36' : '217, 119, 6')
+            : (isDark ? '56, 189, 248' : '0, 122, 255');
+
+          const grad = ctx.createLinearGradient(pk.x, pk.y, pk.x, pk.y - beamH);
+          grad.addColorStop(0, `rgba(${rgb}, ${(0.38 * pk.energy).toFixed(3)})`);
+          grad.addColorStop(1, `rgba(${rgb}, 0)`);
+
+          ctx.beginPath();
+          ctx.moveTo(pk.x - 1.4, pk.y);
+          ctx.lineTo(pk.x + 1.4, pk.y);
+          ctx.lineTo(pk.x + 5.5, pk.y - beamH);
+          ctx.lineTo(pk.x - 5.5, pk.y - beamH);
+          ctx.closePath();
+          ctx.fillStyle = grad;
+          ctx.fill();
+
+          // Floating crisp diamond beacon above cap
+          const by = pk.y - 9 - pk.energy * 7;
+          ctx.beginPath();
+          ctx.moveTo(pk.x, by - 3.2);
+          ctx.lineTo(pk.x + 3.2, by);
+          ctx.lineTo(pk.x, by + 3.2);
+          ctx.lineTo(pk.x - 3.2, by);
+          ctx.closePath();
+          ctx.fillStyle = `rgba(${rgb}, ${(0.62 + pk.energy * 0.38).toFixed(3)})`;
+          ctx.fill();
+        }
+
+        // Connect neighboring summits into a luminous executive skyline
+        const maxConnect = Math.min(36, peaks.length);
+        for (let i = 0; i < maxConnect; i++) {
+          const a = peaks[i];
+          for (let j = i + 1; j < maxConnect; j++) {
+            const b = peaks[j];
+            const d = Math.hypot(a.x - b.x, a.y - b.y);
+            if (d < 112 && d > 18) {
+              const alpha = (1 - d / 112) * Math.min(a.energy, b.energy) * (isDark ? 0.58 : 0.44);
+              const rgb = (a.gold && b.gold)
+                ? (isDark ? '251, 191, 36' : '217, 119, 6')
+                : (isDark ? '125, 211, 252' : '0, 122, 255');
+              ctx.beginPath();
+              ctx.moveTo(a.x, a.y);
+              ctx.lineTo(b.x, b.y);
+              ctx.strokeStyle = `rgba(${rgb}, ${alpha.toFixed(3)})`;
+              ctx.lineWidth = 1.15;
+              ctx.stroke();
+            }
+          }
+        }
+      }
+
+      // Dual pulsing isometric cue rings around active cursor
+      if (pointerActive) {
+        const pulse = 1 + Math.sin(t * 3.5) * 0.08;
+        ctx.beginPath();
+        ctx.ellipse(spotX, spotY, 48 * pulse, 24 * pulse, 0, 0, Math.PI * 2);
+        ctx.strokeStyle = isDark ? 'rgba(56, 189, 248, 0.36)' : 'rgba(0, 122, 255, 0.28)';
+        ctx.lineWidth = 1.25;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.ellipse(spotX, spotY, 82, 41, 0, 0, Math.PI * 2);
+        ctx.strokeStyle = isDark ? 'rgba(251, 191, 36, 0.18)' : 'rgba(217, 119, 6, 0.14)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+    }
+
+    function startLockBgAnimation() {
+      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      initLockBgCanvas();
+      if (lockCanvasRafId) return;
+
+      const canvas = document.getElementById('lockBgCanvas');
+      const lockScreen = document.getElementById('authLockScreen');
+      if (!canvas || !lockScreen) return;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      const tick = (now) => {
+        if (lockScreen.classList.contains('hidden')) {
+          lockCanvasRafId = null;
+          return;
+        }
+
+        const w = window.innerWidth || 1280;
+        const h = window.innerHeight || 720;
+        const isDark = document.documentElement.classList.contains('dark');
+        const t = (now || performance.now()) * 0.001;
+
+        ctx.clearRect(0, 0, w, h);
+
+        // Cursor smoothing + velocity decay + idle stage sweep
+        const idleX = w * 0.5 + Math.sin(t * 0.52) * (w * 0.29);
+        const idleY = h * 0.52 + Math.sin(t * 1.04) * (h * 0.20);
+        const desiredX = lockPointer.active ? lockPointer.targetX : idleX;
+        const desiredY = lockPointer.active ? lockPointer.targetY : idleY;
+
+        if (lockPointer.x < -1000) {
+          lockPointer.x = desiredX;
+          lockPointer.y = desiredY;
+        } else {
+          lockPointer.x += (desiredX - lockPointer.x) * 0.15;
+          lockPointer.y += (desiredY - lockPointer.y) * 0.15;
+        }
+        lockPointer.speed *= 0.92;
+
+        const spotX = lockPointer.x;
+        const spotY = lockPointer.y;
+        const parX = (spotX / w - 0.5) * 16;
+        const parY = (spotY / h - 0.5) * 9;
+
+        const pal = isDark
+          ? {
+              topBase: [26, 36, 54],
+              leftBase: [19, 27, 42],
+              rightBase: [12, 19, 31],
+              blueTop: [56, 189, 248],
+              blueLeft: [14, 116, 184],
+              blueRight: [10, 70, 122],
+              goldTop: [251, 191, 36],
+              goldLeft: [186, 122, 16],
+              goldRight: [124, 76, 10],
+              rimBase: 'rgba(148, 163, 184, 0.13)'
+            }
+          : {
+              topBase: [253, 254, 255],
+              leftBase: [230, 237, 246],
+              rightBase: [208, 219, 234],
+              blueTop: [37, 99, 235],
+              blueLeft: [29, 78, 216],
+              blueRight: [30, 64, 175],
+              goldTop: [245, 158, 11],
+              goldLeft: [217, 119, 6],
+              goldRight: [180, 83, 9],
+              rimBase: 'rgba(148, 163, 184, 0.28)'
+            };
+
+        const { tileW, tileH, cells } = lockIsoState;
+        const hw = tileW * 0.44;
+        const hh = tileH * 0.44;
+        const cursorRadius = (w < 640 ? 160 : 225) + Math.min(45, lockPointer.speed * 1.4);
+        const velBoost = 1 + Math.min(0.45, lockPointer.speed * 0.018);
+        const peaks = [];
+
+        // Advance radial shockwaves
+        for (let i = lockStageWaves.length - 1; i >= 0; i--) {
+          const sw = lockStageWaves[i];
+          sw.radius += 11.5;
+          sw.strength *= 0.945;
+          if (sw.radius >= sw.maxRadius || sw.strength < 0.03) {
+            lockStageWaves.splice(i, 1);
+          }
+        }
+
+        // Update spring physics and render columns strictly back-to-front
+        for (let i = 0; i < cells.length; i++) {
+          const cell = cells[i];
+          const cx = cell.bx - parX;
+          const by = cell.by - parY;
+
+          // Intersecting event equalizer & terraced business bar wave
+          const wave =
+            Math.sin(cell.bx * 0.0068 - t * 1.35) * Math.cos(cell.by * 0.0082 + t * 0.92);
+          const barPulse = Math.sin(cell.bx * 0.019 + t * 1.85) * 0.5 + 0.5;
+          let targetH = 8 + cell.tier + Math.max(0, wave) * 14 + barPulse * 6;
+
+          // Cursor sculpting dome + subtle harmonic podium rings
+          const dist = Math.hypot(cx - spotX, by - spotY);
+          if (dist < cursorRadius) {
+            const f = 1 - dist / cursorRadius;
+            const ringHarmonic = lockPointer.active ? (0.86 + 0.14 * Math.sin(dist * 0.09 - t * 4.5)) : 1;
+            targetH += f * f * (lockPointer.active ? 58 * velBoost : 30) * ringHarmonic;
+          }
+
+          // Click acoustic shockwave impulse + flash crest
+          cell.flash *= 0.91;
+          for (let k = 0; k < lockStageWaves.length; k++) {
+            const sw = lockStageWaves[k];
+            const band = Math.abs(Math.hypot(cx - sw.x, by - sw.y) - sw.radius);
+            if (band < 46) {
+              const pulse = (1 - band / 46) * sw.strength;
+              cell.v += pulse * 6.2;
+              cell.flash = Math.max(cell.flash, pulse);
+            }
+          }
+
+          // Elastic spring-damper physics
+          cell.v = cell.v * 0.79 + (targetH - cell.h) * 0.21;
+          cell.h += cell.v;
+          const elev = Math.max(4, cell.h);
+
+          const e = Math.max(0, Math.min(1, (elev - 12) / 58 + cell.flash * 0.55));
+          const isGold = cell.flash > 0.25 || Math.sin(cell.phase + t * 0.45) > 0.32;
+          const topTarget = isGold ? pal.goldTop : pal.blueTop;
+          const leftTarget = isGold ? pal.goldLeft : pal.blueLeft;
+          const rightTarget = isGold ? pal.goldRight : pal.blueRight;
+
+          const colorMix = e * 0.90;
+          const topRgb = mixRgbCss(pal.topBase, topTarget, colorMix, 1);
+          const leftRgb = mixRgbCss(pal.leftBase, leftTarget, colorMix * 0.92, 1);
+          const rightRgb = mixRgbCss(pal.rightBase, rightTarget, colorMix * 0.92, 1);
+          const rimCss = e > 0.24
+            ? `rgba(${topTarget[0]},${topTarget[1]},${topTarget[2]},${(0.30 + e * 0.60).toFixed(2)})`
+            : pal.rimBase;
+          const collarCss = e > 0.30
+            ? `rgba(${topTarget[0]},${topTarget[1]},${topTarget[2]},${(0.32 + e * 0.48).toFixed(2)})`
+            : null;
+
+          drawIsoPillar(ctx, cx, by, elev, hw, hh, topRgb, leftRgb, rightRgb, rimCss, collarCss);
+
+          if (e > 0.44) {
+            peaks.push({ x: cx, y: by - elev, energy: e, gold: isGold });
+          }
+        }
+
+        // Peak beams, skyline threads, floor halo & cursor reticle
+        drawPeakOverlayAndBeams(ctx, peaks, spotX, spotY, lockPointer.active, isDark, t);
+
+        // Floating sparks from fast sweeps & click cues
+        for (let i = lockSkySparks.length - 1; i >= 0; i--) {
+          const s = lockSkySparks[i];
+          s.x += s.vx;
+          s.y += s.vy;
+          s.vx *= 0.96;
+          s.life -= 0.025;
+          if (s.life <= 0) {
+            lockSkySparks.splice(i, 1);
+            continue;
+          }
+          const rgb = s.gold
+            ? (isDark ? '251, 191, 36' : '217, 119, 6')
+            : (isDark ? '56, 189, 248' : '0, 122, 255');
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, s.size * s.life, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(${rgb}, ${s.life.toFixed(3)})`;
+          ctx.fill();
+        }
+
+        // Subtle outer stage vignette so the sculpted center pops with depth
+        const vig = ctx.createRadialGradient(w * 0.5, h * 0.5, Math.min(w, h) * 0.32, w * 0.5, h * 0.5, Math.hypot(w, h) * 0.58);
+        vig.addColorStop(0, 'rgba(0, 0, 0, 0)');
+        vig.addColorStop(1, isDark ? 'rgba(9, 13, 24, 0.42)' : 'rgba(219, 230, 246, 0.32)');
+        ctx.fillStyle = vig;
+        ctx.fillRect(0, 0, w, h);
+
+        lockCanvasRafId = requestAnimationFrame(tick);
+      };
+
+      lockCanvasRafId = requestAnimationFrame(tick);
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      syncMobileViewportOrientation();
+      initAppearanceTheme();
+      startLockBgAnimation();
+      const passcodeEl = document.getElementById('passcodeInput');
+      if (passcodeEl) passcodeEl.focus();
+      const meetingDateEl = document.getElementById('meetingDateInput');
+      if (meetingDateEl) meetingDateEl.value = new Date().toISOString().split('T')[0];
+      await initIndexedDBVault();
+      refreshAllUI();
+    });
+  </script>
+</body>
+</html>
