@@ -26,15 +26,16 @@
     };
   </script>
 
-  <link rel="stylesheet" href="styles.css?v=2" />
+  <link rel="stylesheet" href="styles.css?v=6" />
 </head>
 <body class="m-0 p-0 w-full h-screen overflow-hidden select-none">
 
   <!-- =================================================================== -->
   <!-- 1. MINIMAL AUTHENTICATION LOCK SCREEN                               -->
   <!-- =================================================================== -->
-  <div id="authLockScreen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/35 backdrop-blur-xl transition-opacity duration-300">
-    <div id="authLockCard" class="helios-lock-card w-full max-w-sm p-8">
+  <div id="authLockScreen" class="lock-screen-bg fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-300 overflow-hidden">
+    <canvas id="lockBgCanvas" aria-hidden="true"></canvas>
+    <div id="authLockCard" class="helios-lock-card relative z-10 w-full max-w-sm p-8">
       <div class="flex items-center justify-end mb-6">
         <button id="lockThemeToggleBtn" type="button" onclick="toggleAppearanceTheme()" class="btn-mac-secondary px-3 py-1.5 text-xs">
           <span id="lockThemeLabel">Dark Mode</span>
@@ -1569,6 +1570,28 @@
           calendarBookedHeading: 'Active Business Projects',
           defaultServiceDesc: 'Business Management Services'
         }
+      },
+      tester: {
+        id: 'tester',
+        name: 'Tester',
+        subtitle: 'Demo & QA Workspace',
+        initials: 'TS',
+        code: '1234',
+        storageKey: 'ZUBAIR_FREELANCE_STUDIO_PROFILE_TESTER_V1',
+        labels: {
+          projectsSection: 'Events',
+          pendingCard: 'Pending Events',
+          confirmedCard: 'Confirmed Events',
+          bookedLegend: 'Booked Event',
+          addProjectBtn: '+ Add Event / Project',
+          projNameField: 'Event / Project Name *',
+          projNamePlaceholder: 'e.g., Global FinTech Summit',
+          projDateField: 'Event Date *',
+          clientTypeField: 'Event Type',
+          clientTypePlaceholder: 'Corporate Gala / Summit',
+          calendarBookedHeading: 'Booked Event Projects',
+          defaultServiceDesc: 'Event Management Services'
+        }
       }
     };
 
@@ -1885,7 +1908,11 @@
     };
 
     function getDefaultStateForProfile(profileId) {
-      return profileId === 'banzir' ? defaultBanzirWorkspaceState : defaultZubairWorkspaceState;
+      if (profileId === 'banzir') return defaultBanzirWorkspaceState;
+      if (profileId === 'tester') {
+        return Object.assign({}, JSON.parse(JSON.stringify(defaultZubairWorkspaceState)), { profileId: 'tester' });
+      }
+      return defaultZubairWorkspaceState;
     }
 
     let studioState = loadStudioState('zubair');
@@ -2052,7 +2079,10 @@
         errorBanner.classList.add('hidden');
         const lockScreen = document.getElementById('authLockScreen');
         lockScreen.classList.add('opacity-0', 'pointer-events-none');
-        setTimeout(() => lockScreen.classList.add('hidden'), 260);
+        setTimeout(() => {
+          lockScreen.classList.add('hidden');
+          if (typeof stopLockBgAnimation === 'function') stopLockBgAnimation();
+        }, 260);
         input.value = '';
 
         try {
@@ -2087,6 +2117,7 @@
       if (errorBanner) errorBanner.classList.add('hidden');
       if (input) input.value = '';
       lockScreen.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
+      if (typeof startLockBgAnimation === 'function') startLockBgAnimation();
       if (input) input.focus();
     }
 
@@ -5254,9 +5285,483 @@
     window.addEventListener('resize', syncMobileViewportOrientation);
     window.addEventListener('orientationchange', () => setTimeout(syncMobileViewportOrientation, 60));
 
+    /* ====================================================================== */
+    /* INTERACTIVE LOCK SCREEN: 3D ISOMETRIC EVENT STAGE & SKYLINE MATRIX     */
+    /* ====================================================================== */
+    let lockCanvasRafId = null;
+    let lockCanvasInitialized = false;
+    const lockPointer = {
+      x: -9999,
+      y: -9999,
+      targetX: -9999,
+      targetY: -9999,
+      vx: 0,
+      vy: 0,
+      speed: 0,
+      active: false
+    };
+    const lockIsoState = { tileW: 68, tileH: 34, cols: 0, rows: 0, cells: [] };
+    const lockStageWaves = [];
+    const lockSkySparks = [];
+
+    function rebuildIsoGrid(w, h) {
+      const tileW = w < 640 ? 58 : 72;
+      const tileH = tileW * 0.5;
+      const cols = Math.ceil(w / tileW) + 3;
+      const rows = Math.ceil(h / (tileH * 0.5)) + 7;
+      const cells = [];
+
+      for (let r = -1; r < rows; r++) {
+        const xOffset = (r % 2 !== 0) ? tileW * 0.5 : 0;
+        const by = r * (tileH * 0.5);
+        for (let c = -1; c < cols; c++) {
+          const bx = c * tileW + xOffset;
+          const stepGroup = Math.abs(Math.sin(c * 0.52 + r * 0.31));
+          cells.push({
+            r,
+            c,
+            bx,
+            by,
+            h: 8,
+            v: 0,
+            flash: 0,
+            phase: r * 0.37 + c * 0.61,
+            tier: stepGroup > 0.72 ? 8 : (stepGroup > 0.38 ? 3.5 : 0)
+          });
+        }
+      }
+
+      lockIsoState.tileW = tileW;
+      lockIsoState.tileH = tileH;
+      lockIsoState.cols = cols;
+      lockIsoState.rows = rows;
+      lockIsoState.cells = cells;
+    }
+
+    function initLockBgCanvas() {
+      if (lockCanvasInitialized) return;
+      const canvas = document.getElementById('lockBgCanvas');
+      const lockScreen = document.getElementById('authLockScreen');
+      if (!canvas || !lockScreen) return;
+      lockCanvasInitialized = true;
+
+      const resizeCanvas = () => {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const w = window.innerWidth || 1280;
+        const h = window.innerHeight || 720;
+        canvas.width = Math.floor(w * dpr);
+        canvas.height = Math.floor(h * dpr);
+        const ctx = canvas.getContext('2d');
+        if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        rebuildIsoGrid(w, h);
+      };
+
+      resizeCanvas();
+      window.addEventListener('resize', resizeCanvas);
+
+      lockScreen.addEventListener('pointermove', (e) => {
+        if (lockPointer.active) {
+          lockPointer.vx = e.clientX - lockPointer.targetX;
+          lockPointer.vy = e.clientY - lockPointer.targetY;
+          lockPointer.speed = Math.min(40, Math.hypot(lockPointer.vx, lockPointer.vy));
+        }
+        lockPointer.targetX = e.clientX;
+        lockPointer.targetY = e.clientY;
+        lockPointer.active = true;
+        if (lockPointer.x < -1000) {
+          lockPointer.x = e.clientX;
+          lockPointer.y = e.clientY;
+        }
+        if (lockPointer.speed > 7 && Math.random() > 0.45 && !e.target.closest('#authLockCard')) {
+          lockSkySparks.push({
+            x: e.clientX + (Math.random() - 0.5) * 24,
+            y: e.clientY + (Math.random() - 0.5) * 14,
+            vx: lockPointer.vx * 0.08 + (Math.random() - 0.5) * 0.8,
+            vy: -0.7 - Math.random() * 1.4,
+            life: 0.9,
+            gold: Math.random() > 0.42,
+            size: 1.3 + Math.random() * 1.3
+          });
+          if (lockSkySparks.length > 60) lockSkySparks.shift();
+        }
+      });
+
+      lockScreen.addEventListener('pointerdown', (e) => {
+        if (e.target.closest('#authLockCard')) return;
+        lockStageWaves.push({ x: e.clientX, y: e.clientY, radius: 10, maxRadius: 620, strength: 1.15 });
+        for (let i = 0; i < 20; i++) {
+          const ang = (Math.PI * 2 * i) / 20 + (Math.random() - 0.5) * 0.25;
+          const spd = 1.8 + Math.random() * 3.2;
+          lockSkySparks.push({
+            x: e.clientX,
+            y: e.clientY,
+            vx: Math.cos(ang) * spd,
+            vy: Math.sin(ang) * spd - 1.4,
+            life: 1.0,
+            gold: i % 2 === 0,
+            size: 1.5 + Math.random() * 1.7
+          });
+        }
+      });
+
+      lockScreen.addEventListener('pointerleave', () => {
+        lockPointer.active = false;
+        lockPointer.speed = 0;
+      });
+    }
+
+    function stopLockBgAnimation() {
+      if (lockCanvasRafId) {
+        cancelAnimationFrame(lockCanvasRafId);
+        lockCanvasRafId = null;
+      }
+    }
+
+    function mixRgbCss(base, accent, amount, alpha) {
+      const t = Math.max(0, Math.min(1, amount));
+      const r = Math.round(base[0] + (accent[0] - base[0]) * t);
+      const g = Math.round(base[1] + (accent[1] - base[1]) * t);
+      const b = Math.round(base[2] + (accent[2] - base[2]) * t);
+      return alpha < 1 ? `rgba(${r},${g},${b},${alpha.toFixed(2)})` : `rgb(${r},${g},${b})`;
+    }
+
+    function drawIsoPillar(ctx, cx, by, elev, hw, hh, topRgb, leftRgb, rightRgb, rimCss, collarCss) {
+      const ty = by - elev;
+      const bty = by;
+
+      // Left facet
+      ctx.beginPath();
+      ctx.moveTo(cx - hw, ty);
+      ctx.lineTo(cx, ty + hh);
+      ctx.lineTo(cx, bty + hh);
+      ctx.lineTo(cx - hw, bty);
+      ctx.closePath();
+      ctx.fillStyle = leftRgb;
+      ctx.fill();
+
+      // Right facet
+      ctx.beginPath();
+      ctx.moveTo(cx, ty + hh);
+      ctx.lineTo(cx + hw, ty);
+      ctx.lineTo(cx + hw, bty);
+      ctx.lineTo(cx, bty + hh);
+      ctx.closePath();
+      ctx.fillStyle = rightRgb;
+      ctx.fill();
+
+      // Illuminated architectural LED collar strip under active stage caps
+      if (collarCss && elev > 14) {
+        const band = Math.min(4.2, elev * 0.16);
+        ctx.beginPath();
+        ctx.moveTo(cx - hw, ty);
+        ctx.lineTo(cx, ty + hh);
+        ctx.lineTo(cx + hw, ty);
+        ctx.lineTo(cx + hw, ty + band);
+        ctx.lineTo(cx, ty + hh + band);
+        ctx.lineTo(cx - hw, ty + band);
+        ctx.closePath();
+        ctx.fillStyle = collarCss;
+        ctx.fill();
+      }
+
+      // Top diamond cap
+      ctx.beginPath();
+      ctx.moveTo(cx, ty - hh);
+      ctx.lineTo(cx + hw, ty);
+      ctx.lineTo(cx, ty + hh);
+      ctx.lineTo(cx - hw, ty);
+      ctx.closePath();
+      ctx.fillStyle = topRgb;
+      ctx.fill();
+
+      if (rimCss) {
+        ctx.strokeStyle = rimCss;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+    }
+
+    function drawPeakOverlayAndBeams(ctx, peaks, spotX, spotY, pointerActive, isDark, t) {
+      // Soft floor spotlight halo under cursor dome
+      const haloGrad = ctx.createRadialGradient(spotX, spotY, 8, spotX, spotY, 210);
+      if (isDark) {
+        haloGrad.addColorStop(0, 'rgba(56, 189, 248, 0.16)');
+        haloGrad.addColorStop(0.55, 'rgba(251, 191, 36, 0.06)');
+        haloGrad.addColorStop(1, 'rgba(15, 23, 42, 0)');
+      } else {
+        haloGrad.addColorStop(0, 'rgba(0, 122, 255, 0.11)');
+        haloGrad.addColorStop(0.55, 'rgba(217, 119, 6, 0.04)');
+        haloGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      }
+      ctx.fillStyle = haloGrad;
+      ctx.beginPath();
+      ctx.arc(spotX, spotY, 210, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (peaks.length) {
+        peaks.sort((a, b) => b.energy - a.energy);
+        const beamCount = Math.min(16, peaks.length);
+
+        for (let i = 0; i < beamCount; i++) {
+          const pk = peaks[i];
+          const beamH = 42 + pk.energy * 72;
+          const rgb = pk.gold
+            ? (isDark ? '251, 191, 36' : '217, 119, 6')
+            : (isDark ? '56, 189, 248' : '0, 122, 255');
+
+          const grad = ctx.createLinearGradient(pk.x, pk.y, pk.x, pk.y - beamH);
+          grad.addColorStop(0, `rgba(${rgb}, ${(0.38 * pk.energy).toFixed(3)})`);
+          grad.addColorStop(1, `rgba(${rgb}, 0)`);
+
+          ctx.beginPath();
+          ctx.moveTo(pk.x - 1.4, pk.y);
+          ctx.lineTo(pk.x + 1.4, pk.y);
+          ctx.lineTo(pk.x + 5.5, pk.y - beamH);
+          ctx.lineTo(pk.x - 5.5, pk.y - beamH);
+          ctx.closePath();
+          ctx.fillStyle = grad;
+          ctx.fill();
+
+          // Floating crisp diamond beacon above cap
+          const by = pk.y - 9 - pk.energy * 7;
+          ctx.beginPath();
+          ctx.moveTo(pk.x, by - 3.2);
+          ctx.lineTo(pk.x + 3.2, by);
+          ctx.lineTo(pk.x, by + 3.2);
+          ctx.lineTo(pk.x - 3.2, by);
+          ctx.closePath();
+          ctx.fillStyle = `rgba(${rgb}, ${(0.62 + pk.energy * 0.38).toFixed(3)})`;
+          ctx.fill();
+        }
+
+        // Connect neighboring summits into a luminous executive skyline
+        const maxConnect = Math.min(36, peaks.length);
+        for (let i = 0; i < maxConnect; i++) {
+          const a = peaks[i];
+          for (let j = i + 1; j < maxConnect; j++) {
+            const b = peaks[j];
+            const d = Math.hypot(a.x - b.x, a.y - b.y);
+            if (d < 112 && d > 18) {
+              const alpha = (1 - d / 112) * Math.min(a.energy, b.energy) * (isDark ? 0.58 : 0.44);
+              const rgb = (a.gold && b.gold)
+                ? (isDark ? '251, 191, 36' : '217, 119, 6')
+                : (isDark ? '125, 211, 252' : '0, 122, 255');
+              ctx.beginPath();
+              ctx.moveTo(a.x, a.y);
+              ctx.lineTo(b.x, b.y);
+              ctx.strokeStyle = `rgba(${rgb}, ${alpha.toFixed(3)})`;
+              ctx.lineWidth = 1.15;
+              ctx.stroke();
+            }
+          }
+        }
+      }
+
+      // Dual pulsing isometric cue rings around active cursor
+      if (pointerActive) {
+        const pulse = 1 + Math.sin(t * 3.5) * 0.08;
+        ctx.beginPath();
+        ctx.ellipse(spotX, spotY, 48 * pulse, 24 * pulse, 0, 0, Math.PI * 2);
+        ctx.strokeStyle = isDark ? 'rgba(56, 189, 248, 0.36)' : 'rgba(0, 122, 255, 0.28)';
+        ctx.lineWidth = 1.25;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.ellipse(spotX, spotY, 82, 41, 0, 0, Math.PI * 2);
+        ctx.strokeStyle = isDark ? 'rgba(251, 191, 36, 0.18)' : 'rgba(217, 119, 6, 0.14)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+    }
+
+    function startLockBgAnimation() {
+      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      initLockBgCanvas();
+      if (lockCanvasRafId) return;
+
+      const canvas = document.getElementById('lockBgCanvas');
+      const lockScreen = document.getElementById('authLockScreen');
+      if (!canvas || !lockScreen) return;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      const tick = (now) => {
+        if (lockScreen.classList.contains('hidden')) {
+          lockCanvasRafId = null;
+          return;
+        }
+
+        const w = window.innerWidth || 1280;
+        const h = window.innerHeight || 720;
+        const isDark = document.documentElement.classList.contains('dark');
+        const t = (now || performance.now()) * 0.001;
+
+        ctx.clearRect(0, 0, w, h);
+
+        // Cursor smoothing + velocity decay + idle stage sweep
+        const idleX = w * 0.5 + Math.sin(t * 0.52) * (w * 0.29);
+        const idleY = h * 0.52 + Math.sin(t * 1.04) * (h * 0.20);
+        const desiredX = lockPointer.active ? lockPointer.targetX : idleX;
+        const desiredY = lockPointer.active ? lockPointer.targetY : idleY;
+
+        if (lockPointer.x < -1000) {
+          lockPointer.x = desiredX;
+          lockPointer.y = desiredY;
+        } else {
+          lockPointer.x += (desiredX - lockPointer.x) * 0.15;
+          lockPointer.y += (desiredY - lockPointer.y) * 0.15;
+        }
+        lockPointer.speed *= 0.92;
+
+        const spotX = lockPointer.x;
+        const spotY = lockPointer.y;
+        const parX = (spotX / w - 0.5) * 16;
+        const parY = (spotY / h - 0.5) * 9;
+
+        const pal = isDark
+          ? {
+              topBase: [26, 36, 54],
+              leftBase: [19, 27, 42],
+              rightBase: [12, 19, 31],
+              blueTop: [56, 189, 248],
+              blueLeft: [14, 116, 184],
+              blueRight: [10, 70, 122],
+              goldTop: [251, 191, 36],
+              goldLeft: [186, 122, 16],
+              goldRight: [124, 76, 10],
+              rimBase: 'rgba(148, 163, 184, 0.13)'
+            }
+          : {
+              topBase: [253, 254, 255],
+              leftBase: [230, 237, 246],
+              rightBase: [208, 219, 234],
+              blueTop: [37, 99, 235],
+              blueLeft: [29, 78, 216],
+              blueRight: [30, 64, 175],
+              goldTop: [245, 158, 11],
+              goldLeft: [217, 119, 6],
+              goldRight: [180, 83, 9],
+              rimBase: 'rgba(148, 163, 184, 0.28)'
+            };
+
+        const { tileW, tileH, cells } = lockIsoState;
+        const hw = tileW * 0.44;
+        const hh = tileH * 0.44;
+        const cursorRadius = (w < 640 ? 160 : 225) + Math.min(45, lockPointer.speed * 1.4);
+        const velBoost = 1 + Math.min(0.45, lockPointer.speed * 0.018);
+        const peaks = [];
+
+        // Advance radial shockwaves
+        for (let i = lockStageWaves.length - 1; i >= 0; i--) {
+          const sw = lockStageWaves[i];
+          sw.radius += 11.5;
+          sw.strength *= 0.945;
+          if (sw.radius >= sw.maxRadius || sw.strength < 0.03) {
+            lockStageWaves.splice(i, 1);
+          }
+        }
+
+        // Update spring physics and render columns strictly back-to-front
+        for (let i = 0; i < cells.length; i++) {
+          const cell = cells[i];
+          const cx = cell.bx - parX;
+          const by = cell.by - parY;
+
+          // Intersecting event equalizer & terraced business bar wave
+          const wave =
+            Math.sin(cell.bx * 0.0068 - t * 1.35) * Math.cos(cell.by * 0.0082 + t * 0.92);
+          const barPulse = Math.sin(cell.bx * 0.019 + t * 1.85) * 0.5 + 0.5;
+          let targetH = 8 + cell.tier + Math.max(0, wave) * 14 + barPulse * 6;
+
+          // Cursor sculpting dome + subtle harmonic podium rings
+          const dist = Math.hypot(cx - spotX, by - spotY);
+          if (dist < cursorRadius) {
+            const f = 1 - dist / cursorRadius;
+            const ringHarmonic = lockPointer.active ? (0.86 + 0.14 * Math.sin(dist * 0.09 - t * 4.5)) : 1;
+            targetH += f * f * (lockPointer.active ? 58 * velBoost : 30) * ringHarmonic;
+          }
+
+          // Click acoustic shockwave impulse + flash crest
+          cell.flash *= 0.91;
+          for (let k = 0; k < lockStageWaves.length; k++) {
+            const sw = lockStageWaves[k];
+            const band = Math.abs(Math.hypot(cx - sw.x, by - sw.y) - sw.radius);
+            if (band < 46) {
+              const pulse = (1 - band / 46) * sw.strength;
+              cell.v += pulse * 6.2;
+              cell.flash = Math.max(cell.flash, pulse);
+            }
+          }
+
+          // Elastic spring-damper physics
+          cell.v = cell.v * 0.79 + (targetH - cell.h) * 0.21;
+          cell.h += cell.v;
+          const elev = Math.max(4, cell.h);
+
+          const e = Math.max(0, Math.min(1, (elev - 12) / 58 + cell.flash * 0.55));
+          const isGold = cell.flash > 0.25 || Math.sin(cell.phase + t * 0.45) > 0.32;
+          const topTarget = isGold ? pal.goldTop : pal.blueTop;
+          const leftTarget = isGold ? pal.goldLeft : pal.blueLeft;
+          const rightTarget = isGold ? pal.goldRight : pal.blueRight;
+
+          const colorMix = e * 0.90;
+          const topRgb = mixRgbCss(pal.topBase, topTarget, colorMix, 1);
+          const leftRgb = mixRgbCss(pal.leftBase, leftTarget, colorMix * 0.92, 1);
+          const rightRgb = mixRgbCss(pal.rightBase, rightTarget, colorMix * 0.92, 1);
+          const rimCss = e > 0.24
+            ? `rgba(${topTarget[0]},${topTarget[1]},${topTarget[2]},${(0.30 + e * 0.60).toFixed(2)})`
+            : pal.rimBase;
+          const collarCss = e > 0.30
+            ? `rgba(${topTarget[0]},${topTarget[1]},${topTarget[2]},${(0.32 + e * 0.48).toFixed(2)})`
+            : null;
+
+          drawIsoPillar(ctx, cx, by, elev, hw, hh, topRgb, leftRgb, rightRgb, rimCss, collarCss);
+
+          if (e > 0.44) {
+            peaks.push({ x: cx, y: by - elev, energy: e, gold: isGold });
+          }
+        }
+
+        // Peak beams, skyline threads, floor halo & cursor reticle
+        drawPeakOverlayAndBeams(ctx, peaks, spotX, spotY, lockPointer.active, isDark, t);
+
+        // Floating sparks from fast sweeps & click cues
+        for (let i = lockSkySparks.length - 1; i >= 0; i--) {
+          const s = lockSkySparks[i];
+          s.x += s.vx;
+          s.y += s.vy;
+          s.vx *= 0.96;
+          s.life -= 0.025;
+          if (s.life <= 0) {
+            lockSkySparks.splice(i, 1);
+            continue;
+          }
+          const rgb = s.gold
+            ? (isDark ? '251, 191, 36' : '217, 119, 6')
+            : (isDark ? '56, 189, 248' : '0, 122, 255');
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, s.size * s.life, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(${rgb}, ${s.life.toFixed(3)})`;
+          ctx.fill();
+        }
+
+        // Subtle outer stage vignette so the sculpted center pops with depth
+        const vig = ctx.createRadialGradient(w * 0.5, h * 0.5, Math.min(w, h) * 0.32, w * 0.5, h * 0.5, Math.hypot(w, h) * 0.58);
+        vig.addColorStop(0, 'rgba(0, 0, 0, 0)');
+        vig.addColorStop(1, isDark ? 'rgba(9, 13, 24, 0.42)' : 'rgba(219, 230, 246, 0.32)');
+        ctx.fillStyle = vig;
+        ctx.fillRect(0, 0, w, h);
+
+        lockCanvasRafId = requestAnimationFrame(tick);
+      };
+
+      lockCanvasRafId = requestAnimationFrame(tick);
+    }
+
     window.addEventListener('DOMContentLoaded', async () => {
       syncMobileViewportOrientation();
       initAppearanceTheme();
+      startLockBgAnimation();
       const passcodeEl = document.getElementById('passcodeInput');
       if (passcodeEl) passcodeEl.focus();
       const meetingDateEl = document.getElementById('meetingDateInput');
