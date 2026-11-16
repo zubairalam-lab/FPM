@@ -10,9 +10,9 @@
   --card-border: rgba(15, 23, 42, 0.075);
   --card-inner-highlight: rgba(255, 255, 255, 0.90);
   --input-bg: rgba(255, 255, 255, 0.92);
-  --text-primary: #0F172A;
-  --text-secondary: #475569;
-  --text-muted: #94A3B8;
+  --text-primary: #000000;
+  --text-secondary: #1E293B;
+  --text-muted: #334155;
   --segmented-bg: rgba(15, 23, 42, 0.055);
   --sb-bg: #ffffff;
   --sb-border: #e2e8f0;
@@ -56,9 +56,9 @@ html.dark {
   --card-border: rgba(255, 255, 255, 0.105);
   --card-inner-highlight: rgba(255, 255, 255, 0.07);
   --input-bg: rgba(27, 34, 48, 0.88);
-  --text-primary: #F8FAFC;
-  --text-secondary: #CBD5E1;
-  --text-muted: #94A3B8;
+  --text-primary: #FFFFFF;
+  --text-secondary: #F8FAFC;
+  --text-muted: #E2E8F0;
   --segmented-bg: rgba(255, 255, 255, 0.085);
   --sb-bg: #1f2738;
   --sb-border: #2e3950;
@@ -116,6 +116,20 @@ html.dark body {
     radial-gradient(circle at 75% 88%, rgba(16, 185, 129, 0.11) 0px, transparent 52%),
     radial-gradient(circle at 20% 85%, rgba(56, 189, 248, 0.10) 0px, transparent 45%),
     linear-gradient(145deg, #182030 0%, #222C42 100%);
+}
+
+/* High-contrast readable text across light and dark modes */
+.text-slate-500 { color: #1E293B !important; }
+.text-slate-400 { color: #334155 !important; }
+
+html.dark .text-slate-400,
+html.dark .dark\:text-slate-400,
+html.dark .text-slate-500 { color: #F1F5F9 !important; }
+html.dark .dark\:text-slate-300 { color: #FFFFFF !important; }
+
+.helios-input::placeholder {
+  color: var(--text-muted);
+  opacity: 1;
 }
 
 h1, h2, h3, h4 {
@@ -254,6 +268,33 @@ h1, h2, h3, h4 {
 
 #studioHeader {
   background: transparent;
+}
+
+#authLockScreen.lock-screen-bg {
+  background: linear-gradient(135deg, #EEF3FB 0%, #E2EBF8 50%, #EDF2FA 100%);
+}
+
+html.dark #authLockScreen.lock-screen-bg {
+  background: linear-gradient(135deg, #111827 0%, #192234 55%, #1E293B 100%);
+}
+
+#lockBgCanvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@media (min-width: 1200px) {
+  html:not([data-vertical-mobile="true"]) #headerSegmentWrap {
+    position: fixed;
+    top: 13px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 25;
+  }
 }
 
 #headerCurrencySelect {
