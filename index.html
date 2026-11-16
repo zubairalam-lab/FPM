@@ -26,7 +26,7 @@
     };
   </script>
 
-  <link rel="stylesheet" href="styles.css?v=6" />
+  <link rel="stylesheet" href="styles.css?v=8" />
 </head>
 <body class="m-0 p-0 w-full h-screen overflow-hidden select-none">
 
@@ -5300,42 +5300,173 @@
       speed: 0,
       active: false
     };
-    const lockIsoState = { tileW: 68, tileH: 34, cols: 0, rows: 0, cells: [] };
+    const lockIsoState = { tileW: 72, tileH: 36, cols: 0, rows: 0, rowsList: [] };
     const lockStageWaves = [];
     const lockSkySparks = [];
+    const lockIsoPaletteCache = { light: null, dark: null };
+    const lockHaloCache = { light: null, dark: null };
+    const lockBgCache = { w: 0, h: 0, isDark: null, grad: null };
+    const lockRestRowScratch = [];
+    const lockActiveRowScratch = [];
+
+    function getIsoPaletteCache(isDark) {
+      const key = isDark ? 'dark' : 'light';
+      if (lockIsoPaletteCache[key]) return lockIsoPaletteCache[key];
+
+      const pal = isDark
+        ? {
+            topBase: [26, 36, 54],
+            leftBase: [19, 27, 42],
+            rightBase: [12, 19, 31],
+            blueTop: [56, 189, 248],
+            blueLeft: [14, 116, 184],
+            blueRight: [10, 70, 122],
+            goldTop: [251, 191, 36],
+            goldLeft: [186, 122, 16],
+            goldRight: [124, 76, 10],
+            rimBase: 'rgba(148, 163, 184, 0.13)'
+          }
+        : {
+            topBase: [253, 254, 255],
+            leftBase: [230, 237, 246],
+            rightBase: [208, 219, 234],
+            blueTop: [37, 99, 235],
+            blueLeft: [29, 78, 216],
+            blueRight: [30, 64, 175],
+            goldTop: [245, 158, 11],
+            goldLeft: [217, 119, 6],
+            goldRight: [180, 83, 9],
+            rimBase: 'rgba(148, 163, 184, 0.28)'
+          };
+
+      const mix = (a, b, t) =>
+        `rgb(${Math.round(a[0] + (b[0] - a[0]) * t)},${Math.round(a[1] + (b[1] - a[1]) * t)},${Math.round(a[2] + (b[2] - a[2]) * t)})`;
+
+      const levels = 32;
+      const buildRamp = (topAcc, leftAcc, rightAcc) => {
+        const ramp = new Array(levels);
+        for (let i = 0; i < levels; i++) {
+          const e = i / (levels - 1);
+          const m = e * 0.90;
+          ramp[i] = {
+            top: mix(pal.topBase, topAcc, m),
+            left: mix(pal.leftBase, leftAcc, m * 0.92),
+            right: mix(pal.rightBase, rightAcc, m * 0.92),
+            rim: e > 0.24 ? `rgba(${topAcc[0]},${topAcc[1]},${topAcc[2]},${(0.30 + e * 0.60).toFixed(2)})` : pal.rimBase,
+            collar: e > 0.30 ? `rgba(${topAcc[0]},${topAcc[1]},${topAcc[2]},${(0.32 + e * 0.48).toFixed(2)})` : null
+          };
+        }
+        return ramp;
+      };
+
+      const entry = {
+        rimBase: pal.rimBase,
+        restTop: `rgb(${pal.topBase[0]},${pal.topBase[1]},${pal.topBase[2]})`,
+        restLeft: `rgb(${pal.leftBase[0]},${pal.leftBase[1]},${pal.leftBase[2]})`,
+        restRight: `rgb(${pal.rightBase[0]},${pal.rightBase[1]},${pal.rightBase[2]})`,
+        blue: buildRamp(pal.blueTop, pal.blueLeft, pal.blueRight),
+        gold: buildRamp(pal.goldTop, pal.goldLeft, pal.goldRight)
+      };
+      lockIsoPaletteCache[key] = entry;
+      return entry;
+    }
+
+    function getLockBgGradient(ctx, w, h, isDark) {
+      if (lockBgCache.grad && lockBgCache.w === w && lockBgCache.h === h && lockBgCache.isDark === isDark) {
+        return lockBgCache.grad;
+      }
+      const g = ctx.createLinearGradient(0, 0, w, h);
+      if (isDark) {
+        g.addColorStop(0, '#111827');
+        g.addColorStop(0.55, '#192234');
+        g.addColorStop(1, '#1E293B');
+      } else {
+        g.addColorStop(0, '#EEF3FB');
+        g.addColorStop(0.5, '#E2EBF8');
+        g.addColorStop(1, '#EDF2FA');
+      }
+      lockBgCache.w = w;
+      lockBgCache.h = h;
+      lockBgCache.isDark = isDark;
+      lockBgCache.grad = g;
+      return g;
+    }
+
+    function getCursorHaloSprite(isDark) {
+      const key = isDark ? 'dark' : 'light';
+      if (lockHaloCache[key]) return lockHaloCache[key];
+
+      const off = document.createElement('canvas');
+      off.width = 256;
+      off.height = 256;
+      const octx = off.getContext('2d');
+      if (octx) {
+        const g = octx.createRadialGradient(128, 128, 4, 128, 128, 128);
+        if (isDark) {
+          g.addColorStop(0, 'rgba(56, 189, 248, 0.16)');
+          g.addColorStop(0.55, 'rgba(251, 191, 36, 0.06)');
+          g.addColorStop(1, 'rgba(15, 23, 42, 0)');
+        } else {
+          g.addColorStop(0, 'rgba(0, 122, 255, 0.11)');
+          g.addColorStop(0.55, 'rgba(217, 119, 6, 0.04)');
+          g.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        }
+        octx.fillStyle = g;
+        octx.fillRect(0, 0, 256, 256);
+      }
+      lockHaloCache[key] = off;
+      return off;
+    }
 
     function rebuildIsoGrid(w, h) {
       const tileW = w < 640 ? 58 : 72;
       const tileH = tileW * 0.5;
       const cols = Math.ceil(w / tileW) + 3;
-      const rows = Math.ceil(h / (tileH * 0.5)) + 7;
-      const cells = [];
+      const rows = Math.ceil(h / (tileH * 0.5)) + 6;
+      const rowsList = [];
 
       for (let r = -1; r < rows; r++) {
         const xOffset = (r % 2 !== 0) ? tileW * 0.5 : 0;
         const by = r * (tileH * 0.5);
+        const yTerm = by * 0.0082;
+        const sinY = Math.sin(yTerm);
+        const cosY = Math.cos(yTerm);
+        const rowCells = [];
+
         for (let c = -1; c < cols; c++) {
           const bx = c * tileW + xOffset;
+          const xTerm = bx * 0.0068;
+          const barTerm = bx * 0.019;
           const stepGroup = Math.abs(Math.sin(c * 0.52 + r * 0.31));
-          cells.push({
-            r,
-            c,
+          const phase = r * 0.37 + c * 0.61;
+          rowCells.push({
             bx,
             by,
             h: 8,
             v: 0,
             flash: 0,
-            phase: r * 0.37 + c * 0.61,
+            drawCx: bx,
+            drawTy: by - 8,
+            swatch: null,
+            sinX: Math.sin(xTerm),
+            cosX: Math.cos(xTerm),
+            sinY,
+            cosY,
+            sinBar: Math.sin(barTerm),
+            cosBar: Math.cos(barTerm),
+            sinPh: Math.sin(phase),
+            cosPh: Math.cos(phase),
             tier: stepGroup > 0.72 ? 8 : (stepGroup > 0.38 ? 3.5 : 0)
           });
         }
+        rowsList.push(rowCells);
       }
 
       lockIsoState.tileW = tileW;
       lockIsoState.tileH = tileH;
       lockIsoState.cols = cols;
       lockIsoState.rows = rows;
-      lockIsoState.cells = cells;
+      lockIsoState.rowsList = rowsList;
     }
 
     function initLockBgCanvas() {
@@ -5346,24 +5477,29 @@
       lockCanvasInitialized = true;
 
       const resizeCanvas = () => {
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
         const w = window.innerWidth || 1280;
         const h = window.innerHeight || 720;
+        const dprCap = (w * h > 1050000) ? 1.25 : 1.5;
+        const dpr = Math.min(window.devicePixelRatio || 1, dprCap);
         canvas.width = Math.floor(w * dpr);
         canvas.height = Math.floor(h * dpr);
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d', { alpha: false }) || canvas.getContext('2d');
         if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        lockBgCache.grad = null;
         rebuildIsoGrid(w, h);
       };
 
       resizeCanvas();
-      window.addEventListener('resize', resizeCanvas);
+      window.addEventListener('resize', resizeCanvas, { passive: true });
 
       lockScreen.addEventListener('pointermove', (e) => {
         if (lockPointer.active) {
-          lockPointer.vx = e.clientX - lockPointer.targetX;
-          lockPointer.vy = e.clientY - lockPointer.targetY;
-          lockPointer.speed = Math.min(40, Math.hypot(lockPointer.vx, lockPointer.vy));
+          const dvx = e.clientX - lockPointer.targetX;
+          const dvy = e.clientY - lockPointer.targetY;
+          lockPointer.vx = dvx;
+          lockPointer.vy = dvy;
+          const spd = Math.sqrt(dvx * dvx + dvy * dvy);
+          lockPointer.speed = spd < 40 ? spd : 40;
         }
         lockPointer.targetX = e.clientX;
         lockPointer.targetY = e.clientY;
@@ -5372,26 +5508,14 @@
           lockPointer.x = e.clientX;
           lockPointer.y = e.clientY;
         }
-        if (lockPointer.speed > 7 && Math.random() > 0.45 && !e.target.closest('#authLockCard')) {
-          lockSkySparks.push({
-            x: e.clientX + (Math.random() - 0.5) * 24,
-            y: e.clientY + (Math.random() - 0.5) * 14,
-            vx: lockPointer.vx * 0.08 + (Math.random() - 0.5) * 0.8,
-            vy: -0.7 - Math.random() * 1.4,
-            life: 0.9,
-            gold: Math.random() > 0.42,
-            size: 1.3 + Math.random() * 1.3
-          });
-          if (lockSkySparks.length > 60) lockSkySparks.shift();
-        }
-      });
+      }, { passive: true });
 
       lockScreen.addEventListener('pointerdown', (e) => {
         if (e.target.closest('#authLockCard')) return;
         lockStageWaves.push({ x: e.clientX, y: e.clientY, radius: 10, maxRadius: 620, strength: 1.15 });
-        for (let i = 0; i < 20; i++) {
-          const ang = (Math.PI * 2 * i) / 20 + (Math.random() - 0.5) * 0.25;
-          const spd = 1.8 + Math.random() * 3.2;
+        for (let i = 0; i < 18; i++) {
+          const ang = (Math.PI * 2 * i) / 18 + (Math.random() - 0.5) * 0.25;
+          const spd = 1.8 + Math.random() * 3.0;
           lockSkySparks.push({
             x: e.clientX,
             y: e.clientY,
@@ -5399,15 +5523,15 @@
             vy: Math.sin(ang) * spd - 1.4,
             life: 1.0,
             gold: i % 2 === 0,
-            size: 1.5 + Math.random() * 1.7
+            size: 1.5 + Math.random() * 1.6
           });
         }
-      });
+      }, { passive: true });
 
       lockScreen.addEventListener('pointerleave', () => {
         lockPointer.active = false;
         lockPointer.speed = 0;
-      });
+      }, { passive: true });
     }
 
     function stopLockBgAnimation() {
@@ -5417,41 +5541,81 @@
       }
     }
 
-    function mixRgbCss(base, accent, amount, alpha) {
-      const t = Math.max(0, Math.min(1, amount));
-      const r = Math.round(base[0] + (accent[0] - base[0]) * t);
-      const g = Math.round(base[1] + (accent[1] - base[1]) * t);
-      const b = Math.round(base[2] + (accent[2] - base[2]) * t);
-      return alpha < 1 ? `rgba(${r},${g},${b},${alpha.toFixed(2)})` : `rgb(${r},${g},${b})`;
+    function drawBatchedRestingRow(ctx, rowList, by, hw, hh, palCache) {
+      const len = rowList.length;
+      if (!len) return;
+
+      // Batch all left facets in this row
+      ctx.beginPath();
+      for (let i = 0; i < len; i++) {
+        const c = rowList[i];
+        const cx = c.drawCx;
+        const ty = c.drawTy;
+        ctx.moveTo(cx - hw, ty);
+        ctx.lineTo(cx, ty + hh);
+        ctx.lineTo(cx, by + hh);
+        ctx.lineTo(cx - hw, by);
+        ctx.closePath();
+      }
+      ctx.fillStyle = palCache.restLeft;
+      ctx.fill();
+
+      // Batch all right facets in this row
+      ctx.beginPath();
+      for (let i = 0; i < len; i++) {
+        const c = rowList[i];
+        const cx = c.drawCx;
+        const ty = c.drawTy;
+        ctx.moveTo(cx, ty + hh);
+        ctx.lineTo(cx + hw, ty);
+        ctx.lineTo(cx + hw, by);
+        ctx.lineTo(cx, by + hh);
+        ctx.closePath();
+      }
+      ctx.fillStyle = palCache.restRight;
+      ctx.fill();
+
+      // Batch all top caps + rim outlines in this row
+      ctx.beginPath();
+      for (let i = 0; i < len; i++) {
+        const c = rowList[i];
+        const cx = c.drawCx;
+        const ty = c.drawTy;
+        ctx.moveTo(cx, ty - hh);
+        ctx.lineTo(cx + hw, ty);
+        ctx.lineTo(cx, ty + hh);
+        ctx.lineTo(cx - hw, ty);
+        ctx.closePath();
+      }
+      ctx.fillStyle = palCache.restTop;
+      ctx.fill();
+      ctx.strokeStyle = palCache.rimBase;
+      ctx.lineWidth = 1;
+      ctx.stroke();
     }
 
-    function drawIsoPillar(ctx, cx, by, elev, hw, hh, topRgb, leftRgb, rightRgb, rimCss, collarCss) {
-      const ty = by - elev;
-      const bty = by;
-
+    function drawIsoPillar(ctx, cx, by, ty, hw, hh, swatch) {
       // Left facet
       ctx.beginPath();
       ctx.moveTo(cx - hw, ty);
       ctx.lineTo(cx, ty + hh);
-      ctx.lineTo(cx, bty + hh);
-      ctx.lineTo(cx - hw, bty);
-      ctx.closePath();
-      ctx.fillStyle = leftRgb;
+      ctx.lineTo(cx, by + hh);
+      ctx.lineTo(cx - hw, by);
+      ctx.fillStyle = swatch.left;
       ctx.fill();
 
       // Right facet
       ctx.beginPath();
       ctx.moveTo(cx, ty + hh);
       ctx.lineTo(cx + hw, ty);
-      ctx.lineTo(cx + hw, bty);
-      ctx.lineTo(cx, bty + hh);
-      ctx.closePath();
-      ctx.fillStyle = rightRgb;
+      ctx.lineTo(cx + hw, by);
+      ctx.lineTo(cx, by + hh);
+      ctx.fillStyle = swatch.right;
       ctx.fill();
 
       // Illuminated architectural LED collar strip under active stage caps
-      if (collarCss && elev > 14) {
-        const band = Math.min(4.2, elev * 0.16);
+      if (swatch.collar && (by - ty) > 14) {
+        const band = Math.min(4.2, (by - ty) * 0.16);
         ctx.beginPath();
         ctx.moveTo(cx - hw, ty);
         ctx.lineTo(cx, ty + hh);
@@ -5459,8 +5623,7 @@
         ctx.lineTo(cx + hw, ty + band);
         ctx.lineTo(cx, ty + hh + band);
         ctx.lineTo(cx - hw, ty + band);
-        ctx.closePath();
-        ctx.fillStyle = collarCss;
+        ctx.fillStyle = swatch.collar;
         ctx.fill();
       }
 
@@ -5471,32 +5634,18 @@
       ctx.lineTo(cx, ty + hh);
       ctx.lineTo(cx - hw, ty);
       ctx.closePath();
-      ctx.fillStyle = topRgb;
+      ctx.fillStyle = swatch.top;
       ctx.fill();
 
-      if (rimCss) {
-        ctx.strokeStyle = rimCss;
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      }
+      ctx.strokeStyle = swatch.rim;
+      ctx.lineWidth = 1;
+      ctx.stroke();
     }
 
     function drawPeakOverlayAndBeams(ctx, peaks, spotX, spotY, pointerActive, isDark, t) {
-      // Soft floor spotlight halo under cursor dome
-      const haloGrad = ctx.createRadialGradient(spotX, spotY, 8, spotX, spotY, 210);
-      if (isDark) {
-        haloGrad.addColorStop(0, 'rgba(56, 189, 248, 0.16)');
-        haloGrad.addColorStop(0.55, 'rgba(251, 191, 36, 0.06)');
-        haloGrad.addColorStop(1, 'rgba(15, 23, 42, 0)');
-      } else {
-        haloGrad.addColorStop(0, 'rgba(0, 122, 255, 0.11)');
-        haloGrad.addColorStop(0.55, 'rgba(217, 119, 6, 0.04)');
-        haloGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-      }
-      ctx.fillStyle = haloGrad;
-      ctx.beginPath();
-      ctx.arc(spotX, spotY, 210, 0, Math.PI * 2);
-      ctx.fill();
+      // Cached GPU texture blit for soft floor spotlight halo
+      const haloSprite = getCursorHaloSprite(isDark);
+      ctx.drawImage(haloSprite, spotX - 210, spotY - 210, 420, 420);
 
       if (peaks.length) {
         peaks.sort((a, b) => b.energy - a.energy);
@@ -5509,17 +5658,23 @@
             ? (isDark ? '251, 191, 36' : '217, 119, 6')
             : (isDark ? '56, 189, 248' : '0, 122, 255');
 
-          const grad = ctx.createLinearGradient(pk.x, pk.y, pk.x, pk.y - beamH);
-          grad.addColorStop(0, `rgba(${rgb}, ${(0.38 * pk.energy).toFixed(3)})`);
-          grad.addColorStop(1, `rgba(${rgb}, 0)`);
-
+          // Two-step translucent vertical stage pylon (zero gradient allocation)
+          const midY = pk.y - beamH * 0.45;
+          const topY = pk.y - beamH;
           ctx.beginPath();
           ctx.moveTo(pk.x - 1.4, pk.y);
           ctx.lineTo(pk.x + 1.4, pk.y);
-          ctx.lineTo(pk.x + 5.5, pk.y - beamH);
-          ctx.lineTo(pk.x - 5.5, pk.y - beamH);
-          ctx.closePath();
-          ctx.fillStyle = grad;
+          ctx.lineTo(pk.x + 3.4, midY);
+          ctx.lineTo(pk.x - 3.4, midY);
+          ctx.fillStyle = `rgba(${rgb}, ${(0.28 * pk.energy).toFixed(3)})`;
+          ctx.fill();
+
+          ctx.beginPath();
+          ctx.moveTo(pk.x - 3.4, midY);
+          ctx.lineTo(pk.x + 3.4, midY);
+          ctx.lineTo(pk.x + 5.5, topY);
+          ctx.lineTo(pk.x - 5.5, topY);
+          ctx.fillStyle = `rgba(${rgb}, ${(0.10 * pk.energy).toFixed(3)})`;
           ctx.fill();
 
           // Floating crisp diamond beacon above cap
@@ -5529,19 +5684,22 @@
           ctx.lineTo(pk.x + 3.2, by);
           ctx.lineTo(pk.x, by + 3.2);
           ctx.lineTo(pk.x - 3.2, by);
-          ctx.closePath();
           ctx.fillStyle = `rgba(${rgb}, ${(0.62 + pk.energy * 0.38).toFixed(3)})`;
           ctx.fill();
         }
 
         // Connect neighboring summits into a luminous executive skyline
-        const maxConnect = Math.min(36, peaks.length);
+        const maxConnect = Math.min(34, peaks.length);
+        ctx.lineWidth = 1.15;
         for (let i = 0; i < maxConnect; i++) {
           const a = peaks[i];
           for (let j = i + 1; j < maxConnect; j++) {
             const b = peaks[j];
-            const d = Math.hypot(a.x - b.x, a.y - b.y);
-            if (d < 112 && d > 18) {
+            const dx = a.x - b.x;
+            const dy = a.y - b.y;
+            const dSq = dx * dx + dy * dy;
+            if (dSq < 12544 && dSq > 324) {
+              const d = Math.sqrt(dSq);
               const alpha = (1 - d / 112) * Math.min(a.energy, b.energy) * (isDark ? 0.58 : 0.44);
               const rgb = (a.gold && b.gold)
                 ? (isDark ? '251, 191, 36' : '217, 119, 6')
@@ -5550,7 +5708,6 @@
               ctx.moveTo(a.x, a.y);
               ctx.lineTo(b.x, b.y);
               ctx.strokeStyle = `rgba(${rgb}, ${alpha.toFixed(3)})`;
-              ctx.lineWidth = 1.15;
               ctx.stroke();
             }
           }
@@ -5582,8 +5739,10 @@
       const canvas = document.getElementById('lockBgCanvas');
       const lockScreen = document.getElementById('authLockScreen');
       if (!canvas || !lockScreen) return;
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d', { alpha: false }) || canvas.getContext('2d');
       if (!ctx) return;
+
+      let lastNow = performance.now();
 
       const tick = (now) => {
         if (lockScreen.classList.contains('hidden')) {
@@ -5591,14 +5750,22 @@
           return;
         }
 
+        const currentNow = now || performance.now();
+        const dt = Math.min(0.05, Math.max(0.004, (currentNow - lastNow) * 0.001));
+        lastNow = currentNow;
+        const step = dt * 60;
+        const t = currentNow * 0.001;
+
         const w = window.innerWidth || 1280;
         const h = window.innerHeight || 720;
         const isDark = document.documentElement.classList.contains('dark');
-        const t = (now || performance.now()) * 0.001;
+        const palCache = getIsoPaletteCache(isDark);
 
-        ctx.clearRect(0, 0, w, h);
+        // Opaque canvas background fill (avoids alpha compositing with DOM underneath)
+        ctx.fillStyle = getLockBgGradient(ctx, w, h, isDark);
+        ctx.fillRect(0, 0, w, h);
 
-        // Cursor smoothing + velocity decay + idle stage sweep
+        // Delta-time normalized cursor tracking & idle stage sweep
         const idleX = w * 0.5 + Math.sin(t * 0.52) * (w * 0.29);
         const idleY = h * 0.52 + Math.sin(t * 1.04) * (h * 0.20);
         const desiredX = lockPointer.active ? lockPointer.targetX : idleX;
@@ -5608,130 +5775,162 @@
           lockPointer.x = desiredX;
           lockPointer.y = desiredY;
         } else {
-          lockPointer.x += (desiredX - lockPointer.x) * 0.15;
-          lockPointer.y += (desiredY - lockPointer.y) * 0.15;
+          const followLerp = 1 - Math.pow(0.85, step);
+          lockPointer.x += (desiredX - lockPointer.x) * followLerp;
+          lockPointer.y += (desiredY - lockPointer.y) * followLerp;
         }
-        lockPointer.speed *= 0.92;
+        lockPointer.speed *= Math.pow(0.92, step);
+
+        // Emit subtle trailing sparks smoothly once per frame when sweeping fast
+        if (lockPointer.active && lockPointer.speed > 7 && Math.random() > 0.52) {
+          lockSkySparks.push({
+            x: lockPointer.targetX + (Math.random() - 0.5) * 24,
+            y: lockPointer.targetY + (Math.random() - 0.5) * 14,
+            vx: lockPointer.vx * 0.08 + (Math.random() - 0.5) * 0.8,
+            vy: -0.7 - Math.random() * 1.4,
+            life: 0.9,
+            gold: Math.random() > 0.42,
+            size: 1.3 + Math.random() * 1.3
+          });
+          if (lockSkySparks.length > 52) lockSkySparks.shift();
+        }
 
         const spotX = lockPointer.x;
         const spotY = lockPointer.y;
         const parX = (spotX / w - 0.5) * 16;
         const parY = (spotY / h - 0.5) * 9;
 
-        const pal = isDark
-          ? {
-              topBase: [26, 36, 54],
-              leftBase: [19, 27, 42],
-              rightBase: [12, 19, 31],
-              blueTop: [56, 189, 248],
-              blueLeft: [14, 116, 184],
-              blueRight: [10, 70, 122],
-              goldTop: [251, 191, 36],
-              goldLeft: [186, 122, 16],
-              goldRight: [124, 76, 10],
-              rimBase: 'rgba(148, 163, 184, 0.13)'
-            }
-          : {
-              topBase: [253, 254, 255],
-              leftBase: [230, 237, 246],
-              rightBase: [208, 219, 234],
-              blueTop: [37, 99, 235],
-              blueLeft: [29, 78, 216],
-              blueRight: [30, 64, 175],
-              goldTop: [245, 158, 11],
-              goldLeft: [217, 119, 6],
-              goldRight: [180, 83, 9],
-              rimBase: 'rgba(148, 163, 184, 0.28)'
-            };
-
-        const { tileW, tileH, cells } = lockIsoState;
+        const { tileW, tileH, rowsList } = lockIsoState;
         const hw = tileW * 0.44;
         const hh = tileH * 0.44;
         const cursorRadius = (w < 640 ? 160 : 225) + Math.min(45, lockPointer.speed * 1.4);
+        const cursorRadiusSq = cursorRadius * cursorRadius;
         const velBoost = 1 + Math.min(0.45, lockPointer.speed * 0.018);
+
+        const subSteps = Math.max(1, Math.ceil(step));
+        const sStep = step / subSteps;
+        const subDamp = Math.pow(0.79, sStep);
+        const subStiff = 0.21 * sStep;
+        const flashDecay = Math.pow(0.91, step);
         const peaks = [];
+
+        // Precompute frame-level trig terms once (zero per-cell Math.sin/cos)
+        const sinWtX = Math.sin(t * 1.35);
+        const cosWtX = Math.cos(t * 1.35);
+        const sinWtY = Math.sin(t * 0.92);
+        const cosWtY = Math.cos(t * 0.92);
+        const sinBarT = Math.sin(t * 1.85);
+        const cosBarT = Math.cos(t * 1.85);
+        const sinPhT = Math.sin(t * 0.45);
+        const cosPhT = Math.cos(t * 0.45);
 
         // Advance radial shockwaves
         for (let i = lockStageWaves.length - 1; i >= 0; i--) {
           const sw = lockStageWaves[i];
-          sw.radius += 11.5;
-          sw.strength *= 0.945;
+          sw.radius += 11.5 * step;
+          sw.strength *= Math.pow(0.945, step);
           if (sw.radius >= sw.maxRadius || sw.strength < 0.03) {
             lockStageWaves.splice(i, 1);
           }
         }
 
-        // Update spring physics and render columns strictly back-to-front
-        for (let i = 0; i < cells.length; i++) {
-          const cell = cells[i];
-          const cx = cell.bx - parX;
-          const by = cell.by - parY;
+        const hasWaves = lockStageWaves.length > 0;
+        const minVisX = -hw;
+        const maxVisX = w + hw;
 
-          // Intersecting event equalizer & terraced business bar wave
-          const wave =
-            Math.sin(cell.bx * 0.0068 - t * 1.35) * Math.cos(cell.by * 0.0082 + t * 0.92);
-          const barPulse = Math.sin(cell.bx * 0.019 + t * 1.85) * 0.5 + 0.5;
-          let targetH = 8 + cell.tier + Math.max(0, wave) * 14 + barPulse * 6;
+        // Update spring physics and draw row-by-row back-to-front
+        for (let r = 0; r < rowsList.length; r++) {
+          const rowCells = rowsList[r];
+          if (!rowCells.length) continue;
 
-          // Cursor sculpting dome + subtle harmonic podium rings
-          const dist = Math.hypot(cx - spotX, by - spotY);
-          if (dist < cursorRadius) {
-            const f = 1 - dist / cursorRadius;
-            const ringHarmonic = lockPointer.active ? (0.86 + 0.14 * Math.sin(dist * 0.09 - t * 4.5)) : 1;
-            targetH += f * f * (lockPointer.active ? 58 * velBoost : 30) * ringHarmonic;
-          }
+          const by = rowCells[0].by - parY;
+          if (by < -hh || by - 120 > h) continue;
 
-          // Click acoustic shockwave impulse + flash crest
-          cell.flash *= 0.91;
-          for (let k = 0; k < lockStageWaves.length; k++) {
-            const sw = lockStageWaves[k];
-            const band = Math.abs(Math.hypot(cx - sw.x, by - sw.y) - sw.radius);
-            if (band < 46) {
-              const pulse = (1 - band / 46) * sw.strength;
-              cell.v += pulse * 6.2;
-              cell.flash = Math.max(cell.flash, pulse);
+          lockRestRowScratch.length = 0;
+          lockActiveRowScratch.length = 0;
+
+          for (let c = 0; c < rowCells.length; c++) {
+            const cell = rowCells[c];
+            const cx = cell.bx - parX;
+
+            // Trigonometric addition identity avoids per-cell sin/cos calls
+            const waveX = cell.sinX * cosWtX - cell.cosX * sinWtX;
+            const waveY = cell.cosY * cosWtY - cell.sinY * sinWtY;
+            const wave = waveX * waveY;
+            const barPulse = (cell.sinBar * cosBarT + cell.cosBar * sinBarT) * 0.5 + 0.5;
+            let targetH = 8 + cell.tier + (wave > 0 ? wave * 14 : 0) + barPulse * 6;
+
+            const dx = cx - spotX;
+            const dy = by - spotY;
+            const dSq = dx * dx + dy * dy;
+            if (dSq < cursorRadiusSq) {
+              const dist = Math.sqrt(dSq);
+              const f = 1 - dist / cursorRadius;
+              const ringHarmonic = lockPointer.active ? (0.86 + 0.14 * Math.sin(dist * 0.09 - t * 4.5)) : 1;
+              targetH += f * f * (lockPointer.active ? 58 * velBoost : 30) * ringHarmonic;
+            }
+
+            cell.flash *= flashDecay;
+            if (hasWaves) {
+              for (let k = 0; k < lockStageWaves.length; k++) {
+                const sw = lockStageWaves[k];
+                const wdx = cx - sw.x;
+                const wdy = by - sw.y;
+                const band = Math.abs(Math.sqrt(wdx * wdx + wdy * wdy) - sw.radius);
+                if (band < 46) {
+                  const pulse = (1 - band / 46) * sw.strength;
+                  cell.v += pulse * 6.2 * step;
+                  cell.flash = Math.max(cell.flash, pulse);
+                }
+              }
+            }
+
+            for (let s = 0; s < subSteps; s++) {
+              cell.v = cell.v * subDamp + (targetH - cell.h) * subStiff;
+              cell.h += cell.v * sStep;
+            }
+
+            if (cx < minVisX || cx > maxVisX) continue;
+
+            const elev = cell.h > 4 ? cell.h : 4;
+            const e = Math.max(0, Math.min(1, (elev - 12) / 58 + cell.flash * 0.55));
+            const lvl = e <= 0 ? 0 : Math.min(31, Math.floor(e * 31));
+
+            cell.drawCx = cx;
+            cell.drawTy = by - elev;
+
+            if (lvl === 0) {
+              lockRestRowScratch.push(cell);
+            } else {
+              const isGold = cell.flash > 0.25 || (cell.sinPh * cosPhT + cell.cosPh * sinPhT) > 0.32;
+              cell.swatch = (isGold ? palCache.gold : palCache.blue)[lvl];
+              lockActiveRowScratch.push(cell);
+
+              if (e > 0.44) {
+                peaks.push({ x: cx, y: cell.drawTy, energy: e, gold: isGold });
+              }
             }
           }
 
-          // Elastic spring-damper physics
-          cell.v = cell.v * 0.79 + (targetH - cell.h) * 0.21;
-          cell.h += cell.v;
-          const elev = Math.max(4, cell.h);
-
-          const e = Math.max(0, Math.min(1, (elev - 12) / 58 + cell.flash * 0.55));
-          const isGold = cell.flash > 0.25 || Math.sin(cell.phase + t * 0.45) > 0.32;
-          const topTarget = isGold ? pal.goldTop : pal.blueTop;
-          const leftTarget = isGold ? pal.goldLeft : pal.blueLeft;
-          const rightTarget = isGold ? pal.goldRight : pal.blueRight;
-
-          const colorMix = e * 0.90;
-          const topRgb = mixRgbCss(pal.topBase, topTarget, colorMix, 1);
-          const leftRgb = mixRgbCss(pal.leftBase, leftTarget, colorMix * 0.92, 1);
-          const rightRgb = mixRgbCss(pal.rightBase, rightTarget, colorMix * 0.92, 1);
-          const rimCss = e > 0.24
-            ? `rgba(${topTarget[0]},${topTarget[1]},${topTarget[2]},${(0.30 + e * 0.60).toFixed(2)})`
-            : pal.rimBase;
-          const collarCss = e > 0.30
-            ? `rgba(${topTarget[0]},${topTarget[1]},${topTarget[2]},${(0.32 + e * 0.48).toFixed(2)})`
-            : null;
-
-          drawIsoPillar(ctx, cx, by, elev, hw, hh, topRgb, leftRgb, rightRgb, rimCss, collarCss);
-
-          if (e > 0.44) {
-            peaks.push({ x: cx, y: by - elev, energy: e, gold: isGold });
+          drawBatchedRestingRow(ctx, lockRestRowScratch, by, hw, hh, palCache);
+          for (let i = 0; i < lockActiveRowScratch.length; i++) {
+            const ac = lockActiveRowScratch[i];
+            drawIsoPillar(ctx, ac.drawCx, by, ac.drawTy, hw, hh, ac.swatch);
           }
         }
 
-        // Peak beams, skyline threads, floor halo & cursor reticle
+        // Peak beams, skyline threads, cached halo & pulsing reticle
         drawPeakOverlayAndBeams(ctx, peaks, spotX, spotY, lockPointer.active, isDark, t);
 
         // Floating sparks from fast sweeps & click cues
+        const sparkDecay = 0.025 * step;
+        const sparkDamp = Math.pow(0.96, step);
         for (let i = lockSkySparks.length - 1; i >= 0; i--) {
           const s = lockSkySparks[i];
-          s.x += s.vx;
-          s.y += s.vy;
-          s.vx *= 0.96;
-          s.life -= 0.025;
+          s.x += s.vx * step;
+          s.y += s.vy * step;
+          s.vx *= sparkDamp;
+          s.life -= sparkDecay;
           if (s.life <= 0) {
             lockSkySparks.splice(i, 1);
             continue;
@@ -5744,13 +5943,6 @@
           ctx.fillStyle = `rgba(${rgb}, ${s.life.toFixed(3)})`;
           ctx.fill();
         }
-
-        // Subtle outer stage vignette so the sculpted center pops with depth
-        const vig = ctx.createRadialGradient(w * 0.5, h * 0.5, Math.min(w, h) * 0.32, w * 0.5, h * 0.5, Math.hypot(w, h) * 0.58);
-        vig.addColorStop(0, 'rgba(0, 0, 0, 0)');
-        vig.addColorStop(1, isDark ? 'rgba(9, 13, 24, 0.42)' : 'rgba(219, 230, 246, 0.32)');
-        ctx.fillStyle = vig;
-        ctx.fillRect(0, 0, w, h);
 
         lockCanvasRafId = requestAnimationFrame(tick);
       };
