@@ -26,7 +26,7 @@
     };
   </script>
 
-  <link rel="stylesheet" href="styles.css?v=8" />
+  <link rel="stylesheet" href="styles.css?v=9" />
 </head>
 <body class="m-0 p-0 w-full h-screen overflow-hidden select-none">
 
@@ -35,7 +35,7 @@
   <!-- =================================================================== -->
   <div id="authLockScreen" class="lock-screen-bg fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-300 overflow-hidden">
     <canvas id="lockBgCanvas" aria-hidden="true"></canvas>
-    <div id="authLockCard" class="helios-lock-card relative z-10 w-full max-w-sm p-8">
+    <div id="authLockCard" class="helios-lock-card relative z-10 w-full max-w-sm p-6 sm:p-8">
       <div class="flex items-center justify-end mb-6">
         <button id="lockThemeToggleBtn" type="button" onclick="toggleAppearanceTheme()" class="btn-mac-secondary px-3 py-1.5 text-xs">
           <span id="lockThemeLabel">Dark Mode</span>
@@ -322,6 +322,22 @@
           </div>
         </div>
 
+        <div id="testerSidebarMobileRow" class="hidden">
+          <button
+            id="testerSidebarMobileBtn"
+            type="button"
+            onclick="toggleTesterMobilePreview()"
+            class="sb-footer-btn btn-mac-secondary w-full py-2 px-2.5 text-xs flex items-center justify-center gap-1.5"
+            title="Switch between Mobile and Desktop layout preview"
+          >
+            <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="6" y="2" width="12" height="20" rx="2.5"></rect>
+              <line x1="12" y1="18" x2="12.01" y2="18"></line>
+            </svg>
+            <span id="testerSidebarMobileLabel" class="sb-footer-btn-label truncate">Mobile View: Off</span>
+          </button>
+        </div>
+
         <div class="sb-footer-actions grid grid-cols-2 gap-2">
           <button type="button" onclick="toggleAppearanceTheme()" class="sb-footer-btn btn-mac-secondary py-2 px-2 text-xs flex items-center justify-center gap-1.5" title="Toggle Dark/Light Mode">
             <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -344,8 +360,8 @@
     <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
 
       <!-- TOP HEADER WITH SEGMENTED CONTROL BAR -->
-      <header id="studioHeader" class="px-4 py-3 lg:px-7 lg:py-4 flex flex-wrap items-center justify-between gap-3 shrink-0">
-        <div class="flex items-center gap-2.5 min-w-0 lg:flex-1">
+      <header id="studioHeader" class="px-4 py-3 lg:px-7 lg:py-4 flex flex-wrap items-center justify-between gap-2 sm:gap-3 shrink-0">
+        <div class="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
           <button id="mobileMenuBtn" type="button" onclick="toggleMobileSidebar()" aria-label="Open menu" class="lg:hidden btn-mac-secondary px-2.5 py-1.5 text-xs flex items-center gap-1.5 shrink-0">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
             <span class="hidden sm:inline">Menu</span>
@@ -361,7 +377,22 @@
           <button type="button" onclick="switchView('calendar')" data-top-segment="calendar" class="mac-segment-btn">Calendar</button>
         </div>
 
-        <div class="flex items-center justify-end gap-2 sm:gap-3 min-w-0 max-w-full lg:flex-1">
+        <div class="flex items-center justify-end gap-1.5 sm:gap-2.5 shrink-0 lg:flex-1">
+          <button
+            id="testerMobileToggleBtn"
+            type="button"
+            onclick="toggleTesterMobilePreview()"
+            aria-pressed="false"
+            title="Toggle Mobile Version Preview"
+            class="hidden btn-mac-secondary px-2.5 py-1.5 text-xs flex items-center gap-1.5 shrink-0"
+          >
+            <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="6" y="2" width="12" height="20" rx="2.5"></rect>
+              <line x1="12" y1="18" x2="12.01" y2="18"></line>
+            </svg>
+            <span id="testerMobileToggleLabel">Mobile</span>
+          </button>
+
           <select id="headerCurrencySelect" onchange="setStudioCurrency(this.value)" aria-label="Select Currency" class="text-xs font-mono font-medium shrink-0 cursor-pointer" title="Active Studio Currency">
             <option value="USD">USD ($)</option>
             <option value="AED">AED (DH)</option>
@@ -370,7 +401,7 @@
             <option value="BDT">BDT (৳)</option>
           </select>
 
-          <button type="button" onclick="downloadOrganizedZipArchive()" class="btn-mac-secondary px-3 sm:px-3.5 py-1.5 text-xs shrink-0">
+          <button type="button" onclick="downloadOrganizedZipArchive()" class="btn-mac-secondary px-2.5 sm:px-3.5 py-1.5 text-xs shrink-0">
             <span class="hidden sm:inline">Export .ZIP</span>
             <span class="sm:hidden">.ZIP</span>
           </button>
@@ -400,7 +431,7 @@
             </div>
 
             <div class="helios-card p-5">
-              <div class="flex items-center justify-between">
+              <div class="flex flex-wrap items-center justify-between gap-2">
                 <span class="text-xs font-medium text-slate-500 dark:text-slate-400">Client Contacts</span>
                 <span id="metricSupplierBadge" class="text-[11px] font-medium px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
                   0 Verified Suppliers
@@ -457,11 +488,11 @@
           <!-- Booked Days Calendar + Upcoming Schedule -->
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
             <div class="helios-card p-6 lg:col-span-5">
-              <div class="flex items-center justify-between mb-4">
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
                 <h3 class="text-sm font-semibold">Booked Days</h3>
                 <div class="flex items-center gap-1.5">
                   <button type="button" onclick="changeCalendarMonth(-1)" class="btn-mac-secondary px-2.5 py-1 text-xs">&lt;</button>
-                  <span id="calendarMonthLabel" class="text-xs font-medium px-2 min-w-[110px] text-center">November 2026</span>
+                  <span id="calendarMonthLabel" class="text-xs font-medium px-1.5 min-w-[96px] text-center">November 2026</span>
                   <button type="button" onclick="changeCalendarMonth(1)" class="btn-mac-secondary px-2.5 py-1 text-xs">&gt;</button>
                 </div>
               </div>
@@ -479,12 +510,12 @@
 
             <div class="helios-card p-6 lg:col-span-7 flex flex-col justify-between">
               <div>
-                <div class="flex items-center justify-between gap-2 mb-4">
-                  <div class="flex items-center gap-2">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+                  <div class="flex items-center gap-2 min-w-0">
                     <h3 class="text-sm font-semibold">Upcoming Meetings &amp; Booked Schedule</h3>
                     <span id="scheduleActiveDateBadge" class="hidden text-xs font-mono px-2 py-0.5 rounded bg-blue-500/10 text-[#007AFF] dark:text-[#0A84FF]"></span>
                   </div>
-                  <div class="flex items-center gap-2">
+                  <div class="flex items-center gap-2 shrink-0">
                     <button id="clearScheduleFilterBtn" type="button" onclick="clearCalendarDateFilter()" class="hidden btn-mac-secondary px-2.5 py-1 text-xs">
                       Clear Filter
                     </button>
@@ -747,7 +778,7 @@
                   <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Line Items</span>
                   <button type="button" onclick="addProjectLineItemRow()" class="btn-mac-secondary px-3 py-1 text-xs">+ Add Line Item</button>
                 </div>
-                <div class="grid grid-cols-12 gap-2 text-xs text-slate-400">
+                <div class="studio-line-item-header grid grid-cols-12 gap-2 text-xs text-slate-400">
                   <div class="col-span-6">Line Item Description</div>
                   <div class="col-span-2">Quantity (Qty)</div>
                   <div id="projUnitPriceHeader" class="col-span-3">Unit Price (USD)</div>
@@ -761,11 +792,11 @@
               </div>
 
               <div class="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-200/70 dark:border-white/10">
-                <div class="flex items-center gap-2">
+                <div class="flex flex-wrap items-center gap-2">
                   <button type="submit" class="btn-mac-primary px-5 py-2 text-xs">Save Project</button>
                   <button type="button" onclick="closeProjectWorkspace()" class="btn-mac-secondary px-4 py-2 text-xs">Cancel</button>
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex flex-wrap items-center gap-2">
                   <button type="button" onclick="generateProjectDirectPDF('Quotation')" class="btn-mac-secondary px-3.5 py-2 text-xs">
                     Save &amp; Download Quotation PDF
                   </button>
@@ -1134,7 +1165,7 @@
                     <span class="text-xs font-medium text-slate-500 dark:text-slate-400">Line Items</span>
                     <button type="button" onclick="addBillingLineItemRow()" class="btn-mac-secondary px-3 py-1 text-xs">+ Add Item</button>
                   </div>
-                  <div class="grid grid-cols-12 gap-2 text-xs text-slate-400">
+                  <div class="studio-line-item-header grid grid-cols-12 gap-2 text-xs text-slate-400">
                     <div class="col-span-6">Line Item Description</div>
                     <div class="col-span-2">Quantity (Qty)</div>
                     <div id="billingUnitPriceHeader" class="col-span-3">Unit Price (USD)</div>
@@ -1148,7 +1179,7 @@
                   <textarea id="billingPaymentTermsInput" rows="2" placeholder="Payment terms and conditions..." oninput="renderLiveBillingPreview()" class="helios-input w-full px-3 py-2 text-xs leading-relaxed"></textarea>
                 </div>
 
-                <div class="flex items-center justify-between pt-4 border-t border-slate-200/70 dark:border-white/10">
+                <div class="flex flex-wrap items-center justify-between gap-2 pt-4 border-t border-slate-200/70 dark:border-white/10">
                   <button type="button" onclick="window.print()" class="btn-mac-secondary px-4 py-2 text-xs">Print</button>
                   <button type="button" onclick="downloadAndArchiveBillingPDF()" class="btn-mac-primary px-5 py-2.5 text-xs">
                     Download &amp; Archive PDF
@@ -1160,9 +1191,9 @@
             <!-- Live Document Preview -->
             <div class="xl:col-span-6">
               <div class="helios-card p-6 space-y-4">
-                <div class="flex items-center justify-between">
+                <div class="flex flex-wrap items-center justify-between gap-2">
                   <h3 class="text-sm font-semibold">Document Preview</h3>
-                  <span id="pdfFilenamePreviewLabel" class="text-xs font-mono text-slate-500 dark:text-slate-400">
+                  <span id="pdfFilenamePreviewLabel" class="text-xs font-mono text-slate-500 dark:text-slate-400 truncate max-w-full">
                     Zubair Freelance - INV-849201.pdf
                   </span>
                 </div>
@@ -1517,6 +1548,8 @@
     const STORAGE_KEY_LEGACY = 'ZUBAIR_FREELANCE_STUDIO_STATE_V1';
     const STORAGE_KEY_ACTIVE_PROFILE = 'ZUBAIR_FREELANCE_ACTIVE_PROFILE';
     const STORAGE_KEY_THEME = 'ZUBAIR_FREELANCE_THEME_MODE';
+    const STORAGE_KEY_TESTER_MOBILE_VIEW = 'ZUBAIR_FREELANCE_TESTER_MOBILE_VIEW';
+    let testerMobileOverride = null;
 
     const STUDIO_CURRENCIES = {
       USD: { code: 'USD', symbol: '$', pdfPrefix: '$', label: 'USD ($)' },
@@ -2063,6 +2096,20 @@
       setText('clientsTableTypeHeader', labels.clientTypeField);
       setPlaceholder('clientEventTypeInput', labels.clientTypePlaceholder);
       setText('calendarBookedHeading', labels.calendarBookedHeading);
+
+      const isTester = profile.id === 'tester';
+      const headerBtn = document.getElementById('testerMobileToggleBtn');
+      const sidebarRow = document.getElementById('testerSidebarMobileRow');
+      if (headerBtn) headerBtn.classList.toggle('hidden', !isTester);
+      if (sidebarRow) sidebarRow.classList.toggle('hidden', !isTester);
+
+      if (isTester) {
+        const saved = localStorage.getItem(STORAGE_KEY_TESTER_MOBILE_VIEW);
+        testerMobileOverride = (saved === 'mobile' || saved === 'desktop') ? saved : null;
+      } else {
+        testerMobileOverride = null;
+      }
+      syncMobileViewportOrientation();
     }
 
     /* AUTH */
@@ -2117,6 +2164,7 @@
       if (errorBanner) errorBanner.classList.add('hidden');
       if (input) input.value = '';
       lockScreen.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
+      syncMobileViewportOrientation();
       if (typeof startLockBgAnimation === 'function') startLockBgAnimation();
       if (input) input.focus();
     }
@@ -2203,6 +2251,33 @@
       triggerBtn.setAttribute('aria-expanded', String(willOpen));
     }
 
+    function syncTesterMobileToggleUI(isVerticalActive) {
+      const btn = document.getElementById('testerMobileToggleBtn');
+      const label = document.getElementById('testerMobileToggleLabel');
+      const sbBtn = document.getElementById('testerSidebarMobileBtn');
+      const sbLabel = document.getElementById('testerSidebarMobileLabel');
+      const activeClass = 'tester-mobile-active';
+
+      if (btn) {
+        btn.setAttribute('aria-pressed', String(!!isVerticalActive));
+        btn.classList.toggle(activeClass, !!isVerticalActive);
+      }
+      if (label) label.textContent = isVerticalActive ? 'Desktop' : 'Mobile';
+      if (sbBtn) sbBtn.classList.toggle(activeClass, !!isVerticalActive);
+      if (sbLabel) sbLabel.textContent = isVerticalActive ? 'Mobile View: On' : 'Mobile View: Off';
+    }
+
+    function toggleTesterMobilePreview() {
+      if (activeProfileId !== 'tester') return;
+      const isCurrentlyMobile = document.documentElement.getAttribute('data-vertical-mobile') === 'true';
+      const next = isCurrentlyMobile ? 'desktop' : 'mobile';
+      testerMobileOverride = next;
+      localStorage.setItem(STORAGE_KEY_TESTER_MOBILE_VIEW, next);
+      if (isMobileSidebarOpen) toggleMobileSidebar(false);
+      syncMobileViewportOrientation();
+      showToast(next === 'mobile' ? 'Mobile view enabled.' : 'Desktop view enabled.');
+    }
+
     function syncMobileViewportOrientation() {
       const width = window.innerWidth || document.documentElement.clientWidth || 1024;
       const height = window.innerHeight || document.documentElement.clientHeight || 768;
@@ -2211,15 +2286,32 @@
       const isPortrait = height >= width;
       const isMobile = width < 1024 || isMobileUA || (isCoarsePointer && height <= 560);
 
-      const isVerticalActive = (isMobile && isPortrait) || width < 680;
+      const lockEl = document.getElementById('authLockScreen');
+      const isUnlocked = !lockEl || lockEl.classList.contains('hidden') || lockEl.classList.contains('opacity-0');
+      let isVerticalActive = (isMobile && isPortrait) || width < 680;
+      let deviceAttr = (isMobile || isVerticalActive) ? 'mobile' : 'desktop';
+      let orientationAttr = (isPortrait || isVerticalActive) ? 'portrait' : 'landscape';
 
-      document.documentElement.setAttribute('data-device', (isMobile || isVerticalActive) ? 'mobile' : 'desktop');
-      document.documentElement.setAttribute('data-orientation', (isPortrait || isVerticalActive) ? 'portrait' : 'landscape');
+      if (isUnlocked && activeProfileId === 'tester' && testerMobileOverride) {
+        if (testerMobileOverride === 'mobile') {
+          isVerticalActive = true;
+          deviceAttr = 'mobile';
+          orientationAttr = 'portrait';
+        } else {
+          isVerticalActive = false;
+          deviceAttr = 'desktop';
+          orientationAttr = 'landscape';
+        }
+      }
+
+      document.documentElement.setAttribute('data-device', deviceAttr);
+      document.documentElement.setAttribute('data-orientation', orientationAttr);
       document.documentElement.setAttribute('data-vertical-mobile', isVerticalActive ? 'true' : 'false');
 
-      if (!isMobile && !isVerticalActive && isMobileSidebarOpen) {
+      if (!isVerticalActive && deviceAttr === 'desktop' && isMobileSidebarOpen) {
         toggleMobileSidebar(false);
       }
+      syncTesterMobileToggleUI(isVerticalActive);
     }
 
     function switchView(viewKey) {
@@ -2896,19 +2988,23 @@
       document.getElementById('projectWorkspaceContainer').classList.add('hidden');
     }
 
+    function buildLineItemRowHtml(item, idx, updateFn, removeFn) {
+      return `
+        <div class="studio-line-item-row grid grid-cols-12 gap-2 items-center">
+          <div class="col-span-6 line-desc"><input type="text" value="${escapeHtml(item.description)}" placeholder="Description" oninput="${updateFn}(${idx}, 'description', this.value)" class="helios-input w-full px-2.5 sm:px-3 py-1.5 text-sm" /></div>
+          <div class="col-span-2 line-qty"><input type="number" min="1" aria-label="Quantity" placeholder="Qty" value="${Number(item.qty) || 1}" oninput="${updateFn}(${idx}, 'qty', this.value)" class="helios-input w-full px-2.5 sm:px-3 py-1.5 text-sm font-mono" /></div>
+          <div class="col-span-3 line-price"><input type="number" min="0" step="0.01" aria-label="Unit price" placeholder="Price" value="${Number(item.price) || 0}" oninput="${updateFn}(${idx}, 'price', this.value)" class="helios-input w-full px-2.5 sm:px-3 py-1.5 text-sm font-mono" /></div>
+          <div class="col-span-1 line-del text-right"><button type="button" onclick="${removeFn}(${idx})" aria-label="Remove item" class="btn-mac-secondary w-full sm:w-auto px-2.5 py-1.5 text-xs text-rose-500">&times;</button></div>
+        </div>
+      `;
+    }
+
     function renderProjectLineItemRows() {
       const container = document.getElementById('projectLineItemsRows');
       let total = 0;
       container.innerHTML = currentProjectLineItems.map((item, idx) => {
         total += (Number(item.qty) || 0) * (Number(item.price) || 0);
-        return `
-          <div class="grid grid-cols-12 gap-2 items-center">
-            <div class="col-span-6"><input type="text" value="${escapeHtml(item.description)}" placeholder="Description" oninput="updateProjectLineItem(${idx}, 'description', this.value)" class="helios-input w-full px-3 py-1.5 text-sm" /></div>
-            <div class="col-span-2"><input type="number" min="1" value="${Number(item.qty) || 1}" oninput="updateProjectLineItem(${idx}, 'qty', this.value)" class="helios-input w-full px-3 py-1.5 text-sm font-mono" /></div>
-            <div class="col-span-3"><input type="number" min="0" step="0.01" value="${Number(item.price) || 0}" oninput="updateProjectLineItem(${idx}, 'price', this.value)" class="helios-input w-full px-3 py-1.5 text-sm font-mono" /></div>
-            <div class="col-span-1 text-right"><button type="button" onclick="removeProjectLineItemRow(${idx})" class="btn-mac-secondary px-2.5 py-1.5 text-xs text-rose-500">&times;</button></div>
-          </div>
-        `;
+        return buildLineItemRowHtml(item, idx, 'updateProjectLineItem', 'removeProjectLineItemRow');
       }).join('');
       document.getElementById('projectLineItemsTotalDisplay').textContent = formatCurrency(total);
     }
@@ -3350,14 +3446,9 @@
 
     function renderBillingLineItemsRows() {
       const container = document.getElementById('billingLineItemsContainer');
-      container.innerHTML = (studioState.billingDraft.lineItems || []).map((item, idx) => `
-        <div class="grid grid-cols-12 gap-2 items-center">
-          <div class="col-span-6"><input type="text" value="${escapeHtml(item.description)}" placeholder="Description" oninput="updateBillingLineItem(${idx}, 'description', this.value)" class="helios-input w-full px-3 py-1.5 text-sm" /></div>
-          <div class="col-span-2"><input type="number" min="1" value="${Number(item.qty) || 1}" oninput="updateBillingLineItem(${idx}, 'qty', this.value)" class="helios-input w-full px-3 py-1.5 text-sm font-mono" /></div>
-          <div class="col-span-3"><input type="number" min="0" step="0.01" value="${Number(item.price) || 0}" oninput="updateBillingLineItem(${idx}, 'price', this.value)" class="helios-input w-full px-3 py-1.5 text-sm font-mono" /></div>
-          <div class="col-span-1 text-right"><button type="button" onclick="removeBillingLineItemRow(${idx})" class="btn-mac-secondary px-2.5 py-1.5 text-xs text-rose-500">&times;</button></div>
-        </div>
-      `).join('');
+      container.innerHTML = (studioState.billingDraft.lineItems || [])
+        .map((item, idx) => buildLineItemRowHtml(item, idx, 'updateBillingLineItem', 'removeBillingLineItemRow'))
+        .join('');
     }
 
     function updateBillingLineItem(idx, field, value) {
