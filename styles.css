@@ -118,14 +118,28 @@ html.dark body {
     linear-gradient(145deg, #182030 0%, #222C42 100%);
 }
 
-/* High-contrast readable text across light and dark modes */
-.text-slate-500 { color: #1E293B !important; }
-.text-slate-400 { color: #334155 !important; }
+/* High-contrast readable text across light and dark modes (excluding invoice paper preview) */
+.text-slate-500:not(#invoicePreviewPrintArea *) { color: #1E293B !important; }
+.text-slate-400:not(#invoicePreviewPrintArea *) { color: #334155 !important; }
 
-html.dark .text-slate-400,
-html.dark .dark\:text-slate-400,
-html.dark .text-slate-500 { color: #F1F5F9 !important; }
-html.dark .dark\:text-slate-300 { color: #FFFFFF !important; }
+html.dark .text-slate-400:not(#invoicePreviewPrintArea *),
+html.dark .dark\:text-slate-400:not(#invoicePreviewPrintArea *),
+html.dark .text-slate-500:not(#invoicePreviewPrintArea *) { color: #F1F5F9 !important; }
+html.dark .dark\:text-slate-300:not(#invoicePreviewPrintArea *) { color: #FFFFFF !important; }
+
+/* Lock invoice paper sheet ink to crisp dark/black typography in both Light & Dark modes */
+#invoicePreviewPrintArea { color: #0F172A !important; }
+#invoicePreviewPrintArea .text-slate-900,
+#invoicePreviewPrintArea .text-slate-800 { color: #0F172A !important; }
+#invoicePreviewPrintArea .text-slate-700 { color: #1E293B !important; }
+#invoicePreviewPrintArea .text-slate-600,
+#invoicePreviewPrintArea .text-slate-500 { color: #334155 !important; }
+#invoicePreviewPrintArea .text-slate-400 { color: #475569 !important; }
+#invoicePreviewPrintArea #previewHeaderBlock.bg-slate-900 .text-white,
+#invoicePreviewPrintArea #previewTableHeadRow.bg-slate-900 { color: #FFFFFF !important; }
+#invoicePreviewPrintArea #previewHeaderBlock.bg-slate-900 .text-slate-300 { color: #CBD5E1 !important; }
+#invoicePreviewPrintArea #previewHeaderBlock.bg-slate-900 .text-slate-400 { color: #94A3B8 !important; }
+#invoicePreviewPrintArea #previewHeaderBlock.bg-slate-900 .text-amber-400 { color: #FBBF24 !important; }
 
 .helios-input::placeholder {
   color: var(--text-muted);
