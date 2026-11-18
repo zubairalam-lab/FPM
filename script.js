@@ -7666,4 +7666,3 @@ window.addEventListener('DOMContentLoaded', () => {
   if (typeof playLockScreenEntrance === 'function') playLockScreenEntrance();
   ensureStudioInitialized();
 });
-
