@@ -1139,15 +1139,6 @@ html.dark .mobile-bottom-btn.active {
     inset 0 1px 0 rgba(255, 255, 255, 0.24);
 }
 
-.tester-mobile-active {
-  background: linear-gradient(180deg, #1A88FF 0%, var(--mac-blue) 100%) !important;
-  border-color: var(--mac-blue) !important;
-  color: #FFFFFF !important;
-  box-shadow:
-    0 2px 8px rgba(0, 122, 255, 0.32),
-    inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
-}
-
 /* Responsive Line Items (Mobile + Desktop Vertical Mobile Toggle) */
 @media (max-width: 639px) {
   .studio-line-item-header {
@@ -1250,7 +1241,7 @@ html[data-device="mobile"][data-orientation="landscape"] .mobile-landscape-3col 
   grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
 }
 
-/* Dedicated Vertical Mobile Layout (Auto on Portrait Mobile + Tester Mobile Toggle) */
+/* Dedicated Vertical Mobile Layout (Auto on Portrait Mobile) */
 html[data-vertical-mobile="true"] body {
   display: flex;
   align-items: center;
