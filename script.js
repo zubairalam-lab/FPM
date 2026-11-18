@@ -35,9 +35,9 @@ const STUDIO_PROFILES = {
     name: 'Zubair Alam',
     subtitle: 'Event Management Studio',
     initials: 'ZA',
-    authSalt: 'a6c4962d2d80a78fa0a676af858d5072',
-    dataSalt: '315f20394e90a00e4c75a37121050b85',
-    verifier: 'bdf7a895179e81ad221a30440b4bc233029dea0fc6a8260f4b9b188295168733',
+    authSalt: 'dbee6a65182bd4857f917b275ffb917e',
+    dataSalt: '94648b7d142515ae6e2aec44d86b2d55',
+    verifier: 'cf1cde6545d723d49d3bed758591f47f32b8c6882ad0b6b37e5fac9ddc0ae3b4',
     iterations: 120000,
     storageKey: 'ZUBAIR_FREELANCE_STUDIO_PROFILE_ZUBAIR_V1',
     labels: EVENT_STUDIO_LABELS
@@ -7666,3 +7666,4 @@ window.addEventListener('DOMContentLoaded', () => {
   if (typeof playLockScreenEntrance === 'function') playLockScreenEntrance();
   ensureStudioInitialized();
 });
+
