@@ -1,11 +1,9 @@
 const STORAGE_KEY_LEGACY = 'ZUBAIR_FREELANCE_STUDIO_STATE_V1';
 const STORAGE_KEY_ACTIVE_PROFILE = 'ZUBAIR_FREELANCE_ACTIVE_PROFILE';
 const STORAGE_KEY_THEME = 'ZUBAIR_FREELANCE_THEME_MODE';
-const STORAGE_KEY_TESTER_MOBILE_VIEW = 'ZUBAIR_FREELANCE_TESTER_MOBILE_VIEW';
 const STORAGE_KEY_AUTH_META = 'ZUBAIR_FREELANCE_AUTH_META_V2';
 const STORAGE_KEY_AUTH_GUARD = 'ZUBAIR_FREELANCE_AUTH_GUARD_V1';
 const STORAGE_KEY_SEC_PREFS = 'ZUBAIR_FREELANCE_SEC_PREFS_V1';
-let testerMobileOverride = null;
 
 const STUDIO_CURRENCIES = {
   USD: { code: 'USD', symbol: '$', pdfPrefix: '$', label: 'USD ($)' },
@@ -13,6 +11,22 @@ const STUDIO_CURRENCIES = {
   EUR: { code: 'EUR', symbol: '€', pdfPrefix: 'EUR ', label: 'EUR (€)' },
   GBP: { code: 'GBP', symbol: '£', pdfPrefix: 'GBP ', label: 'GBP (£)' },
   BDT: { code: 'BDT', symbol: '৳', pdfPrefix: 'BDT ', label: 'BDT (৳)' }
+};
+
+const EVENT_STUDIO_LABELS = {
+  projectsSection: 'Events',
+  pendingCard: 'Pending Events',
+  confirmedCard: 'Confirmed Events',
+  bookedLegend: 'Booked Event',
+  addProjectBtn: '+ Add Event / Project',
+  projNameField: 'Event / Project Name *',
+  projNamePlaceholder: 'e.g., Global FinTech Summit',
+  projDateField: 'Event Start Day *',
+  projEndDateField: 'Event End Day *',
+  clientTypeField: 'Event Type',
+  clientTypePlaceholder: 'Corporate Gala / Summit',
+  calendarBookedHeading: 'Booked Event Projects',
+  defaultServiceDesc: 'Event Management Services'
 };
 
 const STUDIO_PROFILES = {
@@ -26,21 +40,7 @@ const STUDIO_PROFILES = {
     verifier: 'bdf7a895179e81ad221a30440b4bc233029dea0fc6a8260f4b9b188295168733',
     iterations: 120000,
     storageKey: 'ZUBAIR_FREELANCE_STUDIO_PROFILE_ZUBAIR_V1',
-    labels: {
-      projectsSection: 'Events',
-      pendingCard: 'Pending Events',
-      confirmedCard: 'Confirmed Events',
-      bookedLegend: 'Booked Event',
-      addProjectBtn: '+ Add Event / Project',
-      projNameField: 'Event / Project Name *',
-      projNamePlaceholder: 'e.g., Global FinTech Summit',
-      projDateField: 'Event Start Day *',
-      projEndDateField: 'Event End Day *',
-      clientTypeField: 'Event Type',
-      clientTypePlaceholder: 'Corporate Gala / Summit',
-      calendarBookedHeading: 'Booked Event Projects',
-      defaultServiceDesc: 'Event Management Services'
-    }
+    labels: EVENT_STUDIO_LABELS
   },
   banzir: {
     id: 'banzir',
@@ -67,34 +67,35 @@ const STUDIO_PROFILES = {
       calendarBookedHeading: 'Active Business Projects',
       defaultServiceDesc: 'Business Management Services'
     }
-  },
-  tester: {
-    id: 'tester',
-    name: 'Tester',
-    subtitle: 'Demo & QA Workspace',
-    initials: 'TS',
-    authSalt: 'a0fb8303529b79a105f1e0abe1b2b995',
-    dataSalt: '5e7ded6f8675320a4952f63174d0b291',
-    verifier: 'ce3d7f6d60a273115327fcb3aeb9e93d9e2666842eccbaa11d4449981c16faa0',
-    iterations: 120000,
-    storageKey: 'ZUBAIR_FREELANCE_STUDIO_PROFILE_TESTER_V1',
-    labels: {
-      projectsSection: 'Events',
-      pendingCard: 'Pending Events',
-      confirmedCard: 'Confirmed Events',
-      bookedLegend: 'Booked Event',
-      addProjectBtn: '+ Add Event / Project',
-      projNameField: 'Event / Project Name *',
-      projNamePlaceholder: 'e.g., Global FinTech Summit',
-      projDateField: 'Event Start Day *',
-      projEndDateField: 'Event End Day *',
-      clientTypeField: 'Event Type',
-      clientTypePlaceholder: 'Corporate Gala / Summit',
-      calendarBookedHeading: 'Booked Event Projects',
-      defaultServiceDesc: 'Event Management Services'
-    }
   }
 };
+
+[
+  { num: 1, authSalt: '69a4e7ccff0b61a82a28b50f32a888d3', dataSalt: '5bf3515393b988c6e22369e2c1bb4e66', verifier: 'a1f9db58125fd61d032ccc8fff752075ef36ead257dc3b320bd7da181041ec61' },
+  { num: 2, authSalt: '4098a87944f207c8b7ea22dc0f66e3de', dataSalt: '0cf5d9f2deb664687c24234715952799', verifier: '1792f5134a07f25f4c3b78e05cb7724587247dac939b4b914e5b39f8d5954ae6' },
+  { num: 3, authSalt: '16a7b8ec87b91ee743b71ecced3b4a94', dataSalt: 'df0beb1492a468acfbf03589c0952817', verifier: '521b08f455da874c9774d8dca7ff2eaa6bbfa437ef2dab7f6c381dc249d1b9ab' },
+  { num: 4, authSalt: '90cb4be8876872e430873bad2f8f75c0', dataSalt: '5a150145f69d9ef7538d357c0fa130ba', verifier: '29353c584b33fe2ca780ff704c3e688e6063261f7a709425a87568ae1eeaedfb' },
+  { num: 5, authSalt: '12b2c1976bb52c5bf3ca55d55fc21180', dataSalt: '8673b66fe8ccec50eaf179da9cc14a62', verifier: '138e2883985aeabccbcb315e70f93411cfd1d28c988eb368e3736dae1a01c645' },
+  { num: 6, authSalt: 'f4b6fbc1bcf838ea027707a152615ab0', dataSalt: '8f3f225809c9b7a9b8fea3c6438395e8', verifier: '6f501cae71f79f50c3ea1aa7f937716a2291ab436b917d2c6e35c607cf267939' },
+  { num: 7, authSalt: 'b9f7f71339750b20f14bf0325ed71fc3', dataSalt: '4e03e2d4c494eab885d31283f4d26348', verifier: '25c1517d0ddd43affe7b5eb4f049a213c808dbb95f25c12865981b5b4cf6aced' },
+  { num: 8, authSalt: '1fe00fa81f66aad00a30aeb894914d19', dataSalt: 'b4b46e469aa5f884ed35c459ec6785ab', verifier: '9b867468d931a06875721094cf07f7b49b78f9aa22d1caa87235db71fdb42688' },
+  { num: 9, authSalt: '985efab76a582d7423d3bc12ee479947', dataSalt: '13293b248a5e565f2029165ebf8f132b', verifier: 'bcf7da263e7c796afaf3674ceaf82b65a926e69c60575bb433a63068cf891e09' },
+  { num: 10, authSalt: 'd511a5f84a3a0f33a66d54299fe8a9a6', dataSalt: 'b436b2c3a93bf5f5e01009d03f586bc3', verifier: '3aea7b7851469cc321bc38ab2a00d91985afd644d5f8a65830e520cfff2ce12a' }
+].forEach(t => {
+  const id = `tester${t.num}`;
+  STUDIO_PROFILES[id] = {
+    id,
+    name: `Tester ${t.num}`,
+    subtitle: 'Event Management Studio',
+    initials: `T${t.num}`,
+    authSalt: t.authSalt,
+    dataSalt: t.dataSalt,
+    verifier: t.verifier,
+    iterations: 120000,
+    storageKey: `ZUBAIR_FREELANCE_STUDIO_PROFILE_TESTER_${t.num}_V1`,
+    labels: EVENT_STUDIO_LABELS
+  };
+});
 
 let activeProfileId = 'zubair';
 
@@ -887,8 +888,24 @@ function saveSecurityPrefs(prefs) {
 
 function getDefaultStateForProfile(profileId) {
   if (profileId === 'banzir') return defaultBanzirWorkspaceState;
-  if (profileId === 'tester') {
-    return Object.assign({}, JSON.parse(JSON.stringify(defaultZubairWorkspaceState)), { profileId: 'tester' });
+  if (typeof profileId === 'string' && /^tester\d+$/.test(profileId)) {
+    const p = STUDIO_PROFILES[profileId] || { name: 'Tester' };
+    const clone = JSON.parse(JSON.stringify(defaultZubairWorkspaceState));
+    clone.profileId = profileId;
+    clone.googleAccount = { connected: false, email: `${profileId}@eventstudio.local` };
+    clone.orgProfiles = [{
+      id: 'org-1',
+      name: `${p.name} — Event Management Studio`,
+      taxId: 'EIN-00-0000000',
+      email: `${profileId}@eventstudio.local`,
+      address: '100 Studio Plaza, Suite 200',
+      bankName: 'Sample Business Bank',
+      accountHolder: p.name,
+      accountNumber: '0000000000',
+      iban: 'AE000000000000000000000',
+      swift: 'SAMPLEXX'
+    }];
+    return clone;
   }
   return defaultZubairWorkspaceState;
 }
@@ -1078,22 +1095,6 @@ function applyProfileBranding(profile) {
   setText('clientsTableTypeHeader', labels.clientTypeField);
   setPlaceholder('clientEventTypeInput', labels.clientTypePlaceholder);
   setText('calendarBookedHeading', labels.calendarBookedHeading);
-
-  const isTester = profile.id === 'tester';
-  const headerBtn = document.getElementById('testerMobileToggleBtn');
-  const sidebarRow = document.getElementById('testerSidebarMobileRow');
-  if (headerBtn) {
-    headerBtn.classList.toggle('hidden', !isTester);
-    headerBtn.classList.toggle('inline-flex', isTester);
-  }
-  if (sidebarRow) sidebarRow.classList.toggle('hidden', !isTester);
-
-  if (isTester) {
-    const saved = localStorage.getItem(STORAGE_KEY_TESTER_MOBILE_VIEW);
-    testerMobileOverride = (saved === 'mobile' || saved === 'desktop') ? saved : null;
-  } else {
-    testerMobileOverride = null;
-  }
   syncMobileViewportOrientation();
 }
 
@@ -1167,12 +1168,24 @@ async function handlePasscodeSubmit(event) {
   try {
     let matchedProfile = null;
     let matchedAuth = null;
-    for (const profile of Object.values(STUDIO_PROFILES)) {
-      const auth = await verifyPasscodeForProfile(entered, profile.id);
-      if (auth) {
-        matchedProfile = profile;
-        matchedAuth = auth;
-        break;
+    const allProfiles = Object.values(STUDIO_PROFILES);
+    if (StudioCrypto.hasWebCrypto()) {
+      const results = await Promise.all(
+        allProfiles.map(p => verifyPasscodeForProfile(entered, p.id).then(auth => (auth ? { profile: p, auth } : null)))
+      );
+      const hit = results.find(Boolean);
+      if (hit) {
+        matchedProfile = hit.profile;
+        matchedAuth = hit.auth;
+      }
+    } else {
+      for (const profile of allProfiles) {
+        const auth = await verifyPasscodeForProfile(entered, profile.id);
+        if (auth) {
+          matchedProfile = profile;
+          matchedAuth = auth;
+          break;
+        }
       }
     }
 
@@ -1411,33 +1424,6 @@ function toggleSidebarGroup(triggerBtn) {
   triggerBtn.setAttribute('aria-expanded', String(willOpen));
 }
 
-function syncTesterMobileToggleUI(isVerticalActive) {
-  const btn = document.getElementById('testerMobileToggleBtn');
-  const label = document.getElementById('testerMobileToggleLabel');
-  const sbBtn = document.getElementById('testerSidebarMobileBtn');
-  const sbLabel = document.getElementById('testerSidebarMobileLabel');
-  const activeClass = 'tester-mobile-active';
-
-  if (btn) {
-    btn.setAttribute('aria-pressed', String(!!isVerticalActive));
-    btn.classList.toggle(activeClass, !!isVerticalActive);
-  }
-  if (label) label.textContent = isVerticalActive ? 'Desktop' : 'Mobile';
-  if (sbBtn) sbBtn.classList.toggle(activeClass, !!isVerticalActive);
-  if (sbLabel) sbLabel.textContent = isVerticalActive ? 'Mobile View: On' : 'Mobile View: Off';
-}
-
-function toggleTesterMobilePreview() {
-  if (activeProfileId !== 'tester') return;
-  const isCurrentlyMobile = document.documentElement.getAttribute('data-vertical-mobile') === 'true';
-  const next = isCurrentlyMobile ? 'desktop' : 'mobile';
-  testerMobileOverride = next;
-  localStorage.setItem(STORAGE_KEY_TESTER_MOBILE_VIEW, next);
-  if (isMobileSidebarOpen) toggleMobileSidebar(false);
-  syncMobileViewportOrientation();
-  showToast(next === 'mobile' ? 'Mobile view enabled.' : 'Desktop view enabled.');
-}
-
 function syncMobileViewportOrientation() {
   const width = window.innerWidth || document.documentElement.clientWidth || 1024;
   const height = window.innerHeight || document.documentElement.clientHeight || 768;
@@ -1446,23 +1432,9 @@ function syncMobileViewportOrientation() {
   const isPortrait = height >= width;
   const isMobile = width < 1024 || isMobileUA || (isCoarsePointer && height <= 560);
 
-  const lockEl = document.getElementById('authLockScreen');
-  const isUnlocked = !lockEl || lockEl.classList.contains('hidden') || lockEl.classList.contains('opacity-0');
-  let isVerticalActive = (isMobile && isPortrait) || width < 680;
-  let deviceAttr = (isMobile || isVerticalActive) ? 'mobile' : 'desktop';
-  let orientationAttr = (isPortrait || isVerticalActive) ? 'portrait' : 'landscape';
-
-  if (isUnlocked && activeProfileId === 'tester' && testerMobileOverride) {
-    if (testerMobileOverride === 'mobile') {
-      isVerticalActive = true;
-      deviceAttr = 'mobile';
-      orientationAttr = 'portrait';
-    } else {
-      isVerticalActive = false;
-      deviceAttr = 'desktop';
-      orientationAttr = 'landscape';
-    }
-  }
+  const isVerticalActive = (isMobile && isPortrait) || width < 680;
+  const deviceAttr = (isMobile || isVerticalActive) ? 'mobile' : 'desktop';
+  const orientationAttr = (isPortrait || isVerticalActive) ? 'portrait' : 'landscape';
 
   document.documentElement.setAttribute('data-device', deviceAttr);
   document.documentElement.setAttribute('data-orientation', orientationAttr);
@@ -1471,7 +1443,6 @@ function syncMobileViewportOrientation() {
   if (!isVerticalActive && deviceAttr === 'desktop' && isMobileSidebarOpen) {
     toggleMobileSidebar(false);
   }
-  syncTesterMobileToggleUI(isVerticalActive);
 }
 
 function switchView(viewKey) {
