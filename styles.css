@@ -881,16 +881,16 @@ html.dark table tbody tr:hover {
 .tab-view.active-view {
   display: block;
   will-change: transform, opacity;
-  animation: macSlideFade 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: macSlideFade 0.36s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 @keyframes macSlideFade {
-  0% { opacity: 0; transform: translate3d(0, 8px, 0); }
+  0% { opacity: 0; transform: translate3d(0, 10px, 0); }
   100% { opacity: 1; transform: translate3d(0, 0, 0); }
 }
 
 #studioToast {
-  transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1), transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.24s cubic-bezier(0.22, 1, 0.36, 1), transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
   transform: translate3d(0, 10px, 0);
   opacity: 0;
   pointer-events: none;
@@ -906,9 +906,142 @@ html.dark table tbody tr:hover {
   50% { transform: translateX(6px); }
 }
 
-.shake-anim {
-  animation: shakeError 0.32s ease both;
+.shake-anim,
+#authLockCard.shake-anim {
+  animation: shakeError 0.32s ease both !important;
 }
+
+/* Smooth Website Load-In & Studio Unlock Choreography */
+@keyframes lockCanvasFade {
+  0% { opacity: 0; transform: translate3d(0, 0, 0) scale(1.018); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes lockCardEnter {
+  0% { opacity: 0; transform: translate3d(0, 18px, 0) scale(0.972); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes lockBadgePop {
+  0% { opacity: 0; transform: translate3d(0, 10px, 0) scale(0.90); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes lockFieldRise {
+  0% { opacity: 0; transform: translate3d(0, 10px, 0); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes badgeSheen {
+  0% { transform: translateX(-140%) skewX(-22deg); opacity: 0; }
+  35% { opacity: 0.7; }
+  100% { transform: translateX(220%) skewX(-22deg); opacity: 0; }
+}
+
+@keyframes studioHeaderDrop {
+  0% { opacity: 0; transform: translate3d(0, -10px, 0); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes studioSidebarSlide {
+  0% { opacity: 0; transform: translate3d(-16px, 0, 0); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes studioCardRise {
+  0% { opacity: 0; transform: translate3d(0, 14px, 0) scale(0.988); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+#lockBrandBadge {
+  position: relative;
+  overflow: hidden;
+  backface-visibility: hidden;
+}
+
+#authLockScreen.lock-enter-anim #lockBgCanvas {
+  will-change: transform, opacity;
+  animation: lockCanvasFade 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+#authLockScreen.lock-enter-anim #authLockCard {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  animation: lockCardEnter 0.78s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+#authLockScreen.lock-enter-anim .lock-stagger-1 {
+  will-change: transform, opacity;
+  animation: lockBadgePop 0.68s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both;
+}
+
+#authLockScreen.lock-enter-anim .lock-stagger-2 {
+  will-change: transform, opacity;
+  animation: lockFieldRise 0.62s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
+}
+
+#authLockScreen.lock-enter-anim .lock-stagger-3 {
+  will-change: transform, opacity;
+  animation: lockFieldRise 0.62s cubic-bezier(0.22, 1, 0.36, 1) 0.22s both;
+}
+
+#authLockScreen.lock-enter-anim .lock-stagger-4 {
+  will-change: transform, opacity;
+  animation: lockFieldRise 0.62s cubic-bezier(0.22, 1, 0.36, 1) 0.29s both;
+}
+
+#authLockScreen.lock-enter-anim #lockBrandBadge::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 60%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.42), transparent);
+  animation: badgeSheen 1.05s cubic-bezier(0.22, 1, 0.36, 1) 0.42s both;
+  pointer-events: none;
+}
+
+#authLockScreen.is-unlocking {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.44s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+#authLockScreen.is-unlocking #authLockCard {
+  opacity: 0;
+  transform: translate3d(0, -14px, 0) scale(1.02);
+  transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+#mainStudioShell.shell-pre-enter #studioHeader,
+#mainStudioShell.shell-pre-enter #studioSidebar,
+#mainStudioShell.shell-pre-enter #view-dashboard .grid > .helios-card {
+  opacity: 0;
+}
+
+#mainStudioShell.shell-entering #studioHeader {
+  will-change: transform, opacity;
+  animation: studioHeaderDrop 0.60s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (min-width: 1024px) {
+  html:not([data-vertical-mobile="true"]) #mainStudioShell.shell-entering #studioSidebar {
+    will-change: transform, opacity;
+    animation: studioSidebarSlide 0.64s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+
+#mainStudioShell.shell-entering #view-dashboard .grid > .helios-card {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  animation: studioCardRise 0.64s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+#mainStudioShell.shell-entering #view-dashboard > .grid:first-child > .helios-card:nth-child(1) { animation-delay: 0.06s; }
+#mainStudioShell.shell-entering #view-dashboard > .grid:first-child > .helios-card:nth-child(2) { animation-delay: 0.11s; }
+#mainStudioShell.shell-entering #view-dashboard > .grid:first-child > .helios-card:nth-child(3) { animation-delay: 0.16s; }
+#mainStudioShell.shell-entering #view-dashboard > .grid:first-child > .helios-card:nth-child(4) { animation-delay: 0.21s; }
+#mainStudioShell.shell-entering #view-dashboard > .grid:nth-child(2) > .helios-card:nth-child(1) { animation-delay: 0.24s; }
+#mainStudioShell.shell-entering #view-dashboard > .grid:nth-child(2) > .helios-card:nth-child(2) { animation-delay: 0.30s; }
 
 .traffic-dot {
   width: 12px;
