@@ -28,7 +28,7 @@
 
   <link rel="stylesheet" href="styles.css?v=15" />
   <style id="criticalMobileSyncStyles">
-    /* Authoritative Mobile, Theme-Parity & Tester Toggle Styles (cache-proof against stale CDN CSS) */
+    /* Authoritative Mobile & Theme-Parity Styles (cache-proof against stale CDN CSS) */
     /* Keep invoice document preview paper ink crisp dark/black in both Light & Dark modes */
     #invoicePreviewPrintArea { color: #0F172A !important; }
     #invoicePreviewPrintArea .text-slate-900,
@@ -123,19 +123,6 @@
     html.dark #mobileBottomNav .mobile-bottom-btn.active {
       background: linear-gradient(180deg, #2E96FF 0%, var(--mac-blue) 100%);
       box-shadow: 0 2px 10px rgba(10, 132, 255, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.24);
-    }
-
-    #testerMobileToggleBtn.hidden,
-    #testerSidebarMobileRow.hidden {
-      display: none !important;
-    }
-
-    #testerMobileToggleBtn.tester-mobile-active,
-    #testerSidebarMobileBtn.tester-mobile-active {
-      background: linear-gradient(180deg, #1A88FF 0%, var(--mac-blue) 100%) !important;
-      border-color: var(--mac-blue) !important;
-      color: #FFFFFF !important;
-      box-shadow: 0 2px 8px rgba(0, 122, 255, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
     }
 
     html[data-device="desktop"][data-vertical-mobile="false"] #mobileBottomNav {
@@ -618,22 +605,6 @@
           </div>
         </div>
 
-        <div id="testerSidebarMobileRow" class="hidden">
-          <button
-            id="testerSidebarMobileBtn"
-            type="button"
-            onclick="toggleTesterMobilePreview()"
-            class="sb-footer-btn btn-mac-secondary w-full py-2 px-2.5 text-xs flex items-center justify-center gap-1.5"
-            title="Switch between Mobile and Desktop layout preview"
-          >
-            <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <rect x="6" y="2" width="12" height="20" rx="2.5"></rect>
-              <line x1="12" y1="18" x2="12.01" y2="18"></line>
-            </svg>
-            <span id="testerSidebarMobileLabel" class="sb-footer-btn-label truncate">Mobile View: Off</span>
-          </button>
-        </div>
-
         <div class="sb-footer-actions grid grid-cols-2 gap-2">
           <button type="button" onclick="toggleAppearanceTheme()" class="sb-footer-btn btn-mac-secondary py-2 px-2 text-xs flex items-center justify-center gap-1.5" title="Toggle Dark/Light Mode">
             <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -674,21 +645,6 @@
         </div>
 
         <div class="flex items-center justify-end gap-1.5 sm:gap-2.5 shrink-0 lg:flex-1">
-          <button
-            id="testerMobileToggleBtn"
-            type="button"
-            onclick="toggleTesterMobilePreview()"
-            aria-pressed="false"
-            title="Toggle Mobile Version Preview"
-            class="hidden btn-mac-secondary px-2.5 py-1.5 text-xs items-center gap-1.5 shrink-0"
-          >
-            <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <rect x="6" y="2" width="12" height="20" rx="2.5"></rect>
-              <line x1="12" y1="18" x2="12.01" y2="18"></line>
-            </svg>
-            <span id="testerMobileToggleLabel">Mobile</span>
-          </button>
-
           <select id="headerCurrencySelect" onchange="setStudioCurrency(this.value)" aria-label="Select Currency" class="text-xs font-mono font-medium shrink-0 cursor-pointer" title="Active Studio Currency">
             <option value="USD">USD ($)</option>
             <option value="AED">AED (DH)</option>
