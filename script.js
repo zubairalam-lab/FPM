@@ -1,4 +1,3 @@
-const STORAGE_KEY_LEGACY = 'ZUBAIR_FREELANCE_STUDIO_STATE_V1';
 const STORAGE_KEY_ACTIVE_PROFILE = 'ZUBAIR_FREELANCE_ACTIVE_PROFILE';
 const STORAGE_KEY_THEME = 'ZUBAIR_FREELANCE_THEME_MODE';
 const STORAGE_KEY_AUTH_META = 'ZUBAIR_FREELANCE_AUTH_META_V2';
@@ -30,16 +29,16 @@ const EVENT_STUDIO_LABELS = {
 };
 
 const STUDIO_PROFILES = {
-  zubair: {
-    id: 'zubair',
-    name: 'Zubair Alam',
+  mza: {
+    id: 'mza',
+    name: 'Mohammed Zubair Alam',
     subtitle: 'Event Management Studio',
-    initials: 'ZA',
-    authSalt: 'dbee6a65182bd4857f917b275ffb917e',
-    dataSalt: '94648b7d142515ae6e2aec44d86b2d55',
-    verifier: 'cf1cde6545d723d49d3bed758591f47f32b8c6882ad0b6b37e5fac9ddc0ae3b4',
+    initials: 'MZA',
+    authSalt: '43a1698fff0e11dfac1aaf64250ad448',
+    dataSalt: 'b281f5a381cb7bc75fcd1458f5e5770f',
+    verifier: 'e706b27761560df6a7bd45948c32f8e3984bb7fd497f6e4f60b72071535480da',
     iterations: 120000,
-    storageKey: 'ZUBAIR_FREELANCE_STUDIO_PROFILE_ZUBAIR_V1',
+    storageKey: 'EVENT_STUDIO_PROFILE_MZA_V1',
     labels: EVENT_STUDIO_LABELS
   },
   banzir: {
@@ -97,13 +96,13 @@ const STUDIO_PROFILES = {
   };
 });
 
-let activeProfileId = 'zubair';
+let activeProfileId = 'tester1';
 
 function getActiveProfile() {
-  return STUDIO_PROFILES[activeProfileId] || STUDIO_PROFILES.zubair;
+  return STUDIO_PROFILES[activeProfileId] || STUDIO_PROFILES.tester1;
 }
 
-const IDB_NAME = 'ZubairFreelanceLocalVaultDB';
+const IDB_NAME = 'EventStudioLocalVaultDB';
 const IDB_VERSION = 1;
 const IDB_STORE = 'vault_files';
 
@@ -116,9 +115,9 @@ let converterPendingDataUrl = null;
 let converterPendingText = null;
 let currentProjectLineItems = [];
 
-const defaultZubairWorkspaceState = {
-  profileId: 'zubair',
-  googleAccount: { connected: true, email: 'zubair.events@gmail.com' },
+const defaultEventWorkspaceState = {
+  profileId: 'tester1',
+  googleAccount: { connected: false, email: 'studio@eventstudio.local' },
   clients: [
     {
       id: 'cli-101',
@@ -232,15 +231,15 @@ const defaultZubairWorkspaceState = {
   orgProfiles: [
     {
       id: 'org-1',
-      name: 'Zubair Alam — Event Management Studio',
-      taxId: 'EIN-92-4810294',
-      email: 'zubair.events@gmail.com',
-      address: '350 Fifth Avenue, Suite 4100, New York, NY 10118',
-      bankName: 'Emirates NBD / Chase Business',
-      accountHolder: 'Zubair Alam',
-      accountNumber: '1015284920101',
-      iban: 'AE07 0260 0010 1528 4920 101',
-      swift: 'EBILAEAD'
+      name: 'Event Management Studio',
+      taxId: 'EIN-00-0000000',
+      email: 'studio@eventstudio.local',
+      address: '100 Studio Plaza, Suite 200',
+      bankName: 'Sample Business Bank',
+      accountHolder: 'Event Management Studio',
+      accountNumber: '0000000000',
+      iban: 'AE000000000000000000000',
+      swift: 'SAMPLEXX'
     }
   ],
   selectedOrgProfileId: 'org-1',
@@ -414,7 +413,7 @@ const defaultBanzirWorkspaceState = {
   ]
 };
 
-function createEmptyLockedState(profileId = 'zubair') {
+function createEmptyLockedState(profileId = 'tester1') {
   return {
     profileId,
     currency: 'USD',
@@ -832,10 +831,10 @@ function getAuthMetaOverrides() {
 }
 
 function getEffectiveProfileAuth(profileId) {
-  const profile = STUDIO_PROFILES[profileId] || STUDIO_PROFILES.zubair;
+  const profile = STUDIO_PROFILES[profileId] || STUDIO_PROFILES.tester1;
   const overrides = getAuthMetaOverrides();
   const custom = overrides && overrides[profile.id];
-  if (custom && custom.authSalt && custom.dataSalt && custom.verifier) {
+  if (custom && custom.authSalt && custom.dataSalt && custom.verifier && custom.builtinVerifier === profile.verifier) {
     return {
       authSalt: custom.authSalt,
       dataSalt: custom.dataSalt,
@@ -888,26 +887,23 @@ function saveSecurityPrefs(prefs) {
 
 function getDefaultStateForProfile(profileId) {
   if (profileId === 'banzir') return defaultBanzirWorkspaceState;
-  if (typeof profileId === 'string' && /^tester\d+$/.test(profileId)) {
-    const p = STUDIO_PROFILES[profileId] || { name: 'Tester' };
-    const clone = JSON.parse(JSON.stringify(defaultZubairWorkspaceState));
-    clone.profileId = profileId;
-    clone.googleAccount = { connected: false, email: `${profileId}@eventstudio.local` };
-    clone.orgProfiles = [{
-      id: 'org-1',
-      name: `${p.name} — Event Management Studio`,
-      taxId: 'EIN-00-0000000',
-      email: `${profileId}@eventstudio.local`,
-      address: '100 Studio Plaza, Suite 200',
-      bankName: 'Sample Business Bank',
-      accountHolder: p.name,
-      accountNumber: '0000000000',
-      iban: 'AE000000000000000000000',
-      swift: 'SAMPLEXX'
-    }];
-    return clone;
-  }
-  return defaultZubairWorkspaceState;
+  const p = STUDIO_PROFILES[profileId] || { name: 'Event Studio' };
+  const clone = JSON.parse(JSON.stringify(defaultEventWorkspaceState));
+  clone.profileId = profileId;
+  clone.googleAccount = { connected: false, email: `${profileId}@eventstudio.local` };
+  clone.orgProfiles = [{
+    id: 'org-1',
+    name: `${p.name} — Event Management Studio`,
+    taxId: 'EIN-00-0000000',
+    email: `${profileId}@eventstudio.local`,
+    address: '100 Studio Plaza, Suite 200',
+    bankName: 'Sample Business Bank',
+    accountHolder: p.name,
+    accountNumber: '0000000000',
+    iban: 'AE000000000000000000000',
+    swift: 'SAMPLEXX'
+  }];
+  return clone;
 }
 
 function normalizeStudioState(parsed, profile) {
@@ -927,29 +923,21 @@ function normalizeStudioState(parsed, profile) {
   return merged;
 }
 
-let studioState = createEmptyLockedState('zubair');
+let studioState = createEmptyLockedState('tester1');
 
 async function persistEncryptedProfileState(profileId, stateObj, keyObj) {
-  const profile = STUDIO_PROFILES[profileId] || STUDIO_PROFILES.zubair;
+  const profile = STUDIO_PROFILES[profileId] || STUDIO_PROFILES.tester1;
   const envelope = await StudioCrypto.encryptJsonEnvelope(stateObj, keyObj, profile.id, { profileId: profile.id });
   localStorage.setItem(profile.storageKey, JSON.stringify(envelope));
   sessionCryptoState.lastStorageEncrypted = true;
 }
 
 async function loadEncryptedStudioState(profileId = activeProfileId, keyObj = sessionCryptoState.keyObj) {
-  const profile = STUDIO_PROFILES[profileId] || STUDIO_PROFILES.zubair;
+  const profile = STUDIO_PROFILES[profileId] || STUDIO_PROFILES.tester1;
   const baseDefault = getDefaultStateForProfile(profile.id);
   if (!keyObj) return JSON.parse(JSON.stringify(baseDefault));
 
-  let raw = localStorage.getItem(profile.storageKey);
-  let migratedFromLegacy = false;
-  if (!raw && profile.id === 'zubair') {
-    const legacyRaw = localStorage.getItem(STORAGE_KEY_LEGACY);
-    if (legacyRaw) {
-      raw = legacyRaw;
-      migratedFromLegacy = true;
-    }
-  }
+  const raw = localStorage.getItem(profile.storageKey);
 
   if (!raw) {
     const fresh = JSON.parse(JSON.stringify(baseDefault));
@@ -973,9 +961,6 @@ async function loadEncryptedStudioState(profileId = activeProfileId, keyObj = se
   // Upgrade plaintext pre-encryption state automatically without losing data
   const normalized = normalizeStudioState(parsed, profile);
   await persistEncryptedProfileState(profile.id, normalized, keyObj);
-  if (migratedFromLegacy || profile.id === 'zubair') {
-    localStorage.removeItem(STORAGE_KEY_LEGACY);
-  }
   return normalized;
 }
 
@@ -1068,7 +1053,7 @@ function toggleAppearanceTheme() {
 
 function applyProfileBranding(profile) {
   if (!profile) return;
-  const labels = profile.labels || STUDIO_PROFILES.zubair.labels;
+  const labels = profile.labels || EVENT_STUDIO_LABELS;
   const setText = (id, val) => {
     const el = document.getElementById(id);
     if (el && val !== undefined) el.textContent = val;
@@ -1139,13 +1124,158 @@ function bindIdleAutoLockListeners() {
   document.addEventListener('keydown', bump, { passive: true });
 }
 
+let pendingAuthRecovery = null;
+
+async function finalizeProfileUnlock(matchedProfile, dataKey, decryptedState) {
+  pendingAuthRecovery = null;
+  const recoveryPanel = document.getElementById('authRekeyRecoveryPanel');
+  const legacyInput = document.getElementById('authLegacyPassInput');
+  if (recoveryPanel) recoveryPanel.classList.add('hidden');
+  if (legacyInput) legacyInput.value = '';
+
+  sessionCryptoState.unlocked = true;
+  sessionCryptoState.profileId = matchedProfile.id;
+  sessionCryptoState.keyObj = dataKey;
+
+  activeProfileId = matchedProfile.id;
+  localStorage.setItem(STORAGE_KEY_ACTIVE_PROFILE, activeProfileId);
+  studioState = decryptedState;
+
+  await ensureStudioInitialized();
+  await migrateLegacyVaultFilesForActiveProfile();
+  applyProfileBranding(matchedProfile);
+
+  if (typeof closeProjectWorkspace === 'function') closeProjectWorkspace();
+  if (typeof clearOcrScanner === 'function') clearOcrScanner();
+  refreshAllUI();
+  initBillingModuleUI();
+  await refreshVaultTableUI();
+  await refreshSecurityStatusUI();
+  bindIdleAutoLockListeners();
+  resetIdleAutoLockTimer();
+
+  const lockScreen = document.getElementById('authLockScreen');
+  const mainShell = document.getElementById('mainStudioShell');
+  if (mainShell) {
+    mainShell.classList.remove('hidden', 'shell-entering');
+    mainShell.classList.add('shell-pre-enter');
+  }
+  const startRevealTransition = () => {
+    if (typeof triggerLockIntroWave === 'function') triggerLockIntroWave(1.25);
+    if (lockScreen) {
+      lockScreen.classList.remove('lock-enter-anim', 'lock-pre-enter');
+      lockScreen.classList.add('is-unlocking', 'pointer-events-none');
+    }
+    if (mainShell) {
+      mainShell.classList.remove('shell-pre-enter');
+      mainShell.classList.add('shell-entering');
+      setTimeout(() => {
+        mainShell.classList.remove('shell-entering');
+      }, 1050);
+    }
+    setTimeout(() => {
+      if (lockScreen) {
+        lockScreen.classList.add('hidden');
+        lockScreen.classList.remove('is-unlocking');
+      }
+      if (typeof stopLockBgAnimation === 'function') stopLockBgAnimation();
+    }, 460);
+  };
+  if (typeof requestAnimationFrame === 'function') {
+    requestAnimationFrame(() => requestAnimationFrame(startRevealTransition));
+  } else {
+    startRevealTransition();
+  }
+  showToast(`Unlocked & decrypted ${matchedProfile.name} workspace.`);
+}
+
+async function recoverAndMigrateLegacyEncryptedData() {
+  if (!pendingAuthRecovery) return;
+  const legacyEl = document.getElementById('authLegacyPassInput');
+  const errorBanner = document.getElementById('authErrorBanner');
+  const oldCode = ((legacyEl && legacyEl.value) || '').trim();
+  if (!oldCode) {
+    if (errorBanner) {
+      errorBanner.textContent = 'Enter your previous access code to decrypt and migrate saved records.';
+      errorBanner.classList.remove('hidden');
+    }
+    return;
+  }
+
+  const { profile, newKeyObj } = pendingAuthRecovery;
+  const candidateSalts = [...new Set([...(profile.legacyDataSalts || []), profile.dataSalt])];
+  let recoveredState = null;
+  let oldKeyUsed = null;
+
+  for (const salt of candidateSalts) {
+    try {
+      const candidateKey = await StudioCrypto.deriveDataKey(oldCode, salt, profile.iterations || 120000);
+      recoveredState = await loadEncryptedStudioState(profile.id, candidateKey);
+      oldKeyUsed = candidateKey;
+      break;
+    } catch (_) {
+      // Try next historical salt
+    }
+  }
+
+  if (!recoveredState || !oldKeyUsed) {
+    if (errorBanner) {
+      errorBanner.textContent = 'Previous code could not decrypt saved browser data.';
+      errorBanner.classList.remove('hidden');
+    }
+    return;
+  }
+
+  await ensureStudioInitialized();
+  if (dbInstance) {
+    activeProfileId = profile.id;
+    const rawList = await getRawVaultRecordsForActiveProfile();
+    const plainItems = [];
+    for (const rec of rawList) {
+      try {
+        const res = await getDecryptedVaultBlobByRecord(rec, oldKeyUsed);
+        if (res && res.blob) plainItems.push({ id: rec.id, res });
+      } catch (_) {}
+    }
+    sessionCryptoState.unlocked = true;
+    sessionCryptoState.profileId = profile.id;
+    sessionCryptoState.keyObj = newKeyObj;
+    for (const item of plainItems) {
+      await saveFileToIndexedDBVault(
+        item.res.meta.filename,
+        item.res.meta.folder,
+        item.res.meta.mimeType,
+        item.res.blob,
+        { id: item.id, projectId: item.res.meta.projectId || '' }
+      );
+    }
+  }
+
+  await persistEncryptedProfileState(profile.id, recoveredState, newKeyObj);
+  if (errorBanner) errorBanner.classList.add('hidden');
+  await finalizeProfileUnlock(profile, newKeyObj, recoveredState);
+}
+
+async function resetStaleProfileStorageAndOpen() {
+  if (!pendingAuthRecovery) return;
+  const { profile, newKeyObj } = pendingAuthRecovery;
+  const errorBanner = document.getElementById('authErrorBanner');
+  localStorage.removeItem(profile.storageKey);
+  const freshState = await loadEncryptedStudioState(profile.id, newKeyObj);
+  if (errorBanner) errorBanner.classList.add('hidden');
+  await finalizeProfileUnlock(profile, newKeyObj, freshState);
+}
+
 async function handlePasscodeSubmit(event) {
   event.preventDefault();
   const input = document.getElementById('passcodeInput');
   const card = document.getElementById('authLockCard');
   const errorBanner = document.getElementById('authErrorBanner');
+  const recoveryPanel = document.getElementById('authRekeyRecoveryPanel');
   const submitBtn = document.getElementById('authUnlockSubmitBtn');
   const entered = (input.value || '').trim();
+  if (recoveryPanel) recoveryPanel.classList.add('hidden');
+  pendingAuthRecovery = null;
 
   const guard = getAuthGuardState();
   const nowMs = Date.now();
@@ -1186,6 +1316,7 @@ async function handlePasscodeSubmit(event) {
           matchedAuth = auth;
           break;
         }
+        await new Promise(r => setTimeout(r, 0));
       }
     }
 
@@ -1198,58 +1329,18 @@ async function handlePasscodeSubmit(event) {
       input.value = '';
 
       await saveWriteQueue.catch(() => {});
-      const decryptedState = await loadEncryptedStudioState(matchedProfile.id, dataKey);
-
-      sessionCryptoState.unlocked = true;
-      sessionCryptoState.profileId = matchedProfile.id;
-      sessionCryptoState.keyObj = dataKey;
-
-      activeProfileId = matchedProfile.id;
-      localStorage.setItem(STORAGE_KEY_ACTIVE_PROFILE, activeProfileId);
-      studioState = decryptedState;
-
-      await ensureStudioInitialized();
-      await migrateLegacyVaultFilesForActiveProfile();
-      applyProfileBranding(matchedProfile);
-
-      if (typeof closeProjectWorkspace === 'function') closeProjectWorkspace();
-      if (typeof clearOcrScanner === 'function') clearOcrScanner();
-      refreshAllUI();
-      initBillingModuleUI();
-      await refreshVaultTableUI();
-      await refreshSecurityStatusUI();
-      bindIdleAutoLockListeners();
-      resetIdleAutoLockTimer();
-
-      const lockScreen = document.getElementById('authLockScreen');
-      const mainShell = document.getElementById('mainStudioShell');
-      if (mainShell) {
-        mainShell.classList.remove('hidden', 'shell-entering');
-        mainShell.classList.add('shell-pre-enter');
+      let decryptedState = null;
+      try {
+        decryptedState = await loadEncryptedStudioState(matchedProfile.id, dataKey);
+      } catch (decryptErr) {
+        pendingAuthRecovery = { profile: matchedProfile, newKeyObj: dataKey };
+        if (recoveryPanel) recoveryPanel.classList.remove('hidden');
+        errorBanner.textContent = decryptErr && decryptErr.message ? decryptErr.message : 'Unable to decrypt saved workspace data.';
+        errorBanner.classList.remove('hidden');
+        return;
       }
-      const startRevealTransition = () => {
-        if (typeof triggerLockIntroWave === 'function') triggerLockIntroWave(1.25);
-        if (lockScreen) {
-          lockScreen.classList.remove('lock-enter-anim', 'lock-pre-enter');
-          lockScreen.classList.add('is-unlocking', 'pointer-events-none');
-        }
-        if (mainShell) {
-          mainShell.classList.remove('shell-pre-enter');
-          mainShell.classList.add('shell-entering');
-          setTimeout(() => {
-            mainShell.classList.remove('shell-entering');
-          }, 1050);
-        }
-        setTimeout(() => {
-          if (lockScreen) {
-            lockScreen.classList.add('hidden');
-            lockScreen.classList.remove('is-unlocking');
-          }
-          if (typeof stopLockBgAnimation === 'function') stopLockBgAnimation();
-        }, 460);
-      };
-      requestAnimationFrame(() => requestAnimationFrame(startRevealTransition));
-      showToast(`Unlocked & decrypted ${matchedProfile.name} workspace.`);
+
+      await finalizeProfileUnlock(matchedProfile, dataKey, decryptedState);
     } else {
       const nextFails = (guard.fails || 0) + 1;
       let nextLockUntil = 0;
@@ -1317,13 +1408,18 @@ function playLockScreenEntrance() {
 
 function lockWorkspace(reasonMessage = '') {
   stopIdleAutoLockMonitor();
+  pendingAuthRecovery = null;
+  const recoveryPanel = document.getElementById('authRekeyRecoveryPanel');
+  const legacyInput = document.getElementById('authLegacyPassInput');
+  if (recoveryPanel) recoveryPanel.classList.add('hidden');
+  if (legacyInput) legacyInput.value = '';
   sessionCryptoState.unlocked = false;
   sessionCryptoState.profileId = null;
   if (sessionCryptoState.keyObj && sessionCryptoState.keyObj.keyBytes) {
     sessionCryptoState.keyObj.keyBytes.fill(0);
   }
   sessionCryptoState.keyObj = null;
-  studioState = createEmptyLockedState(activeProfileId || 'zubair');
+  studioState = createEmptyLockedState(activeProfileId || 'tester1');
   scrubDomSensitiveFields();
   closeSecurityCenterModal();
 
@@ -1542,7 +1638,7 @@ function getRawVaultRecordsForActiveProfile() {
     const req = dbInstance.transaction([IDB_STORE], 'readonly').objectStore(IDB_STORE).getAll();
     req.onsuccess = () => {
       const allRecords = req.result || [];
-      resolve(allRecords.filter(r => (r.profileId || 'zubair') === activeProfileId));
+      resolve(allRecords.filter(r => (r.profileId || 'tester1') === activeProfileId));
     };
     req.onerror = () => resolve([]);
   });
@@ -1649,7 +1745,7 @@ function getRawVaultRecordById(id) {
 async function getDecryptedVaultBlobById(id) {
   if (!sessionCryptoState.unlocked || !sessionCryptoState.keyObj) return null;
   const rec = await getRawVaultRecordById(id);
-  if (!rec || (rec.profileId || 'zubair') !== activeProfileId) return null;
+  if (!rec || (rec.profileId || 'tester1') !== activeProfileId) return null;
   const res = await getDecryptedVaultBlobByRecord(rec, sessionCryptoState.keyObj);
   return res ? res.blob : null;
 }
@@ -1680,7 +1776,7 @@ async function downloadVaultFileById(id) {
   if (!dbInstance || !sessionCryptoState.unlocked) return;
   try {
     const rec = await getRawVaultRecordById(id);
-    if (!rec || (rec.profileId || 'zubair') !== activeProfileId) return;
+    if (!rec || (rec.profileId || 'tester1') !== activeProfileId) return;
     const res = await getDecryptedVaultBlobByRecord(rec, sessionCryptoState.keyObj);
     if (res && res.blob) {
       triggerBrowserBlobDownload(res.blob, res.meta.filename);
@@ -2964,7 +3060,7 @@ async function generateProjectDirectPDF(docType) {
     issueDate: project.dateCreated || new Date().toISOString().split('T')[0],
     orgName: org.name, orgAddress: org.address, orgTaxId: org.taxId, orgEmail: org.email,
     orgBankName: org.bankName || 'Emirates NBD / Chase Business',
-    orgAccountHolder: org.accountHolder || org.name || 'Zubair Freelance Studio',
+    orgAccountHolder: org.accountHolder || org.name || 'Event Management Studio',
     orgAccountNumber: org.accountNumber || '',
     orgIban: org.iban || 'AE07 0260 0010 1528 4920 101',
     orgSwift: org.swift || 'EBILAEAD',
@@ -3790,7 +3886,7 @@ function renderSuppliersDirectory() {
 function getSelectedOrgProfile() {
   const profiles = studioState.orgProfiles || [];
   return profiles.find(o => o.id === studioState.selectedOrgProfileId) || profiles[0] || {
-    id: 'org-1', name: 'Zubair Freelance — Event Management Studio', taxId: '', email: '', address: ''
+    id: 'org-1', name: 'Event Management Studio', taxId: '', email: '', address: ''
   };
 }
 
@@ -3806,7 +3902,7 @@ function initBillingModuleUI() {
   document.getElementById('billingOrgEmail').value = activeOrg.email || '';
   document.getElementById('billingOrgAddress').value = activeOrg.address || '';
   document.getElementById('billingOrgBankName').value = activeOrg.bankName || 'Emirates NBD / Chase Business';
-  document.getElementById('billingOrgAccountHolder').value = activeOrg.accountHolder || activeOrg.name || 'Zubair Freelance Studio';
+  document.getElementById('billingOrgAccountHolder').value = activeOrg.accountHolder || activeOrg.name || 'Event Management Studio';
   document.getElementById('billingOrgAccountNumber').value = activeOrg.accountNumber || '';
   document.getElementById('billingOrgIban').value = activeOrg.iban || 'AE07 0260 0010 1528 4920 101';
   document.getElementById('billingOrgSwift').value = activeOrg.swift || 'EBILAEAD';
@@ -4141,7 +4237,7 @@ function renderLiveBillingPreview() {
   if (docType === 'Quotation') studioState.billingDraft.nextQuotationNumber = docNumber;
   else studioState.billingDraft.nextInvoiceNumber = docNumber;
   const issueDate = document.getElementById('billingIssueDateInput').value || '2026-11-14';
-  const orgName = document.getElementById('billingOrgName').value || 'Zubair Freelance';
+  const orgName = document.getElementById('billingOrgName').value || 'Event Studio';
   const orgTaxId = document.getElementById('billingOrgTaxId').value || '';
   const orgEmail = document.getElementById('billingOrgEmail').value || '';
   const orgAddress = document.getElementById('billingOrgAddress').value || '';
@@ -4171,7 +4267,7 @@ function renderLiveBillingPreview() {
     activeOrg.swift = orgSwift;
   }
 
-  document.getElementById('pdfFilenamePreviewLabel').textContent = `Zubair Freelance - ${docNumber}.pdf`;
+  document.getElementById('pdfFilenamePreviewLabel').textContent = `Event Studio - ${docNumber}.pdf`;
   document.getElementById('previewDocTypeHeading').textContent = docType.toUpperCase();
   document.getElementById('previewDocNumberText').textContent = docNumber;
   document.getElementById('previewDocDateText').textContent = issueDate;
@@ -4292,7 +4388,7 @@ async function buildAndDownloadStyledPDF(payload) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: 'pt', format: 'a4' });
   const cleanRef = (payload.docNumber || 'INV-849201').trim();
-  const strictFileName = `Zubair Freelance - ${cleanRef}.pdf`;
+  const strictFileName = `Event Studio - ${cleanRef}.pdf`;
   const t = getStudioDocumentTheme(payload.template || (studioState.billingDraft && studioState.billingDraft.template) || 'minimal');
   const tpl = t.name;
 
@@ -4317,7 +4413,7 @@ async function buildAndDownloadStyledPDF(payload) {
   doc.setFont(t.font, 'bold');
   doc.setFontSize(15);
   doc.setTextColor(...t.headerText);
-  doc.text(payload.orgName || 'Zubair Freelance', 40, 48);
+  doc.text(payload.orgName || 'Event Studio', 40, 48);
 
   doc.setFont(t.font, 'normal');
   doc.setFontSize(9);
@@ -4546,7 +4642,7 @@ async function buildAndDownloadProjectBriefPDF(proj, client, org, templateName) 
       doc.setFont(t.font, 'bold');
       doc.setFontSize(14);
       doc.setTextColor(...t.headerText);
-      doc.text(org.name || 'Zubair Freelance Studio', 40, 42);
+      doc.text(org.name || 'Event Management Studio', 40, 42);
 
       doc.setFont(t.font, 'normal');
       doc.setFontSize(8.5);
@@ -4833,7 +4929,7 @@ async function buildAndDownloadProjectBriefPDF(proj, client, org, templateName) 
     doc.setFont(t.font, 'normal');
     doc.setFontSize(7.5);
     doc.setTextColor(100, 116, 139);
-    doc.text(`${org.name || 'Zubair Freelance Studio'}  •  ${proj.name || 'Project Brief'}`, 40, 818);
+    doc.text(`${org.name || 'Event Management Studio'}  •  ${proj.name || 'Project Brief'}`, 40, 818);
     doc.text(`Page ${p} of ${pageCount}`, 555, 818, { align: 'right' });
   }
 
@@ -4964,7 +5060,7 @@ async function buildCostBreakdownXlsxBlob(proj, client, curMeta, org) {
 
   // Title & Subtitle
   addMergedRow(1, 6, `${proj.name || 'Event'} — Cost & Revenue Breakdown`, 1, 32);
-  addMergedRow(1, 6, `Prepared by ${org.name || 'Zubair Freelance Studio'}  •  Currency: ${curMeta.code}  •  Exported: ${todayIso}`, 2, 20);
+  addMergedRow(1, 6, `Prepared by ${org.name || 'Event Management Studio'}  •  Currency: ${curMeta.code}  •  Exported: ${todayIso}`, 2, 20);
   rowsXml.push(`<row r="${r}" ht="10" customHeight="1"/>`);
   r++;
 
@@ -5400,7 +5496,7 @@ function handleSaveMeeting(event) {
     startTime: newMeeting.startTime,
     endTime: newMeeting.endTime,
     location: '',
-    details: newMeeting.notes || 'Scheduled via Zubair Freelance Studio',
+    details: newMeeting.notes || 'Scheduled via Event Management Studio',
     add: newMeeting.attendeeEmail
   });
 }
@@ -5433,7 +5529,7 @@ function openGoogleCalendarTemplate(item) {
 }
 
 function exportFullCalendarICS() {
-  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Zubair Freelance//Studio//EN'];
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Event Studio//Workspace//EN'];
   (studioState.projects || []).filter(p => (p.status || '') !== 'Cancelled').forEach(p => {
     const spans = getProjectWorkingDateSpans(p);
     spans.forEach((sp, idx) => {
@@ -5446,7 +5542,7 @@ function exportFullCalendarICS() {
         dt.setUTCDate(dt.getUTCDate() + 1);
         dEnd = dt.toISOString().slice(0, 10).replace(/-/g, '');
       }
-      const uid = spans.length > 1 ? `${p.id}-${idx + 1}@zubairfreelance` : `${p.id}@zubairfreelance`;
+      const uid = spans.length > 1 ? `${p.id}-${idx + 1}@eventstudio` : `${p.id}@eventstudio`;
       lines.push('BEGIN:VEVENT', `UID:${uid}`, `DTSTART;VALUE=DATE:${dStart}`, `DTEND;VALUE=DATE:${dEnd}`, `SUMMARY:${p.name}`, 'END:VEVENT');
     });
   });
@@ -5454,10 +5550,10 @@ function exportFullCalendarICS() {
     const d = (m.date || '20261118').replace(/-/g, '');
     const s = (m.startTime || '10:00').replace(':', '') + '00';
     const e = (m.endTime || '11:00').replace(':', '') + '00';
-    lines.push('BEGIN:VEVENT', `UID:${m.id}@zubairfreelance`, `DTSTART:${d}T${s}`, `DTEND:${d}T${e}`, `SUMMARY:${m.title}`, 'END:VEVENT');
+    lines.push('BEGIN:VEVENT', `UID:${m.id}@eventstudio`, `DTSTART:${d}T${s}`, `DTEND:${d}T${e}`, `SUMMARY:${m.title}`, 'END:VEVENT');
   });
   lines.push('END:VCALENDAR');
-  triggerBrowserBlobDownload(new Blob([lines.join('\r\n')], { type: 'text/calendar' }), 'Zubair-Freelance-Calendar.ics');
+  triggerBrowserBlobDownload(new Blob([lines.join('\r\n')], { type: 'text/calendar' }), 'Event-Studio-Calendar.ics');
   showToast('Exported .ICS file.');
 }
 
@@ -5699,7 +5795,7 @@ async function downloadOrganizedZipArchive() {
   }
 
   const blob = await zip.generateAsync({ type: 'blob' });
-  triggerBrowserBlobDownload(blob, 'Zubair_Freelance_Archive.zip');
+  triggerBrowserBlobDownload(blob, 'Event_Studio_Archive.zip');
   showToast('Downloaded .ZIP archive.');
 }
 
@@ -5748,7 +5844,7 @@ const OCR_VALID_3_LETTER = new Set([
 const OCR_KNOWN_DOC_WORDS = new Set([
   'united','arab','emirates','federal','authority','identity','citizenship','resident','card',
   'number','name','date','birth','nationality','issuing','expiry','signature','holder','sex',
-  'bangladesh','mohammed','zubair','alam','fakhrul','invoice','quotation','receipt','subtotal',
+  'bangladesh','invoice','quotation','receipt','subtotal',
   'total','amount','balance','client','supplier','company','address','email','phone','mobile',
   'website','event','meeting','schedule','agenda','venue','location','project','studio','management',
   'description','price','quantity','discount','payment','account','bank','transfer','cash','check',
@@ -6827,10 +6923,12 @@ async function handleChangeProfilePasscode(event) {
     await persistEncryptedProfileState(activeProfileId, studioState, newDataKey);
 
     const overrides = getAuthMetaOverrides();
+    const activeBuiltIn = STUDIO_PROFILES[activeProfileId] || {};
     overrides[activeProfileId] = {
       authSalt: newAuthSalt,
       dataSalt: newDataSalt,
       verifier: newVerifier,
+      builtinVerifier: activeBuiltIn.verifier || '',
       iterations,
       updatedAt: new Date().toISOString()
     };
@@ -6864,7 +6962,7 @@ async function exportEncryptedZencBackup() {
     const backupKey = await StudioCrypto.deriveDataKey(passphrase, saltHex, iterations);
     const payload = {
       backupV: 2,
-      app: 'ZubairFreelanceStudio',
+      app: 'EventManagementStudio',
       profileId: activeProfileId,
       studio: profile.name,
       exportedAt: new Date().toISOString(),
