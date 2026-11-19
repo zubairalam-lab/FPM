@@ -951,6 +951,9 @@
                       + Attach Project Files
                       <input id="projAttachFileInput" type="file" multiple class="hidden" onchange="handleAttachFileToCurrentProject(event)" />
                     </label>
+                    <button type="button" onclick="openWhatsappModalForCurrentProject()" class="btn-mac-secondary px-3 py-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-semibold inline-flex items-center gap-1.5">
+                      <span>WhatsApp Invoice / Files</span>
+                    </button>
                     <button type="button" onclick="enableProjectEditMode()" class="btn-mac-primary px-3.5 py-1.5 text-xs">
                       Edit Existing Information
                     </button>
@@ -995,6 +998,24 @@
                   <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Saved &amp; Attached Files for This Project</div>
                   <div id="viewProjLinkedFilesList" class="space-y-1.5 text-xs"></div>
                 </div>
+              </div>
+
+              <!-- PRODUCTION TOOLKIT: Run of Show, Crew Call Sheet, Payments, Gear, Client Sign-off -->
+              <div id="productionToolkitCard" class="p-4 rounded-xl bg-slate-500/5 border border-slate-200/60 dark:border-white/10 space-y-4">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div class="text-xs font-semibold">Production Toolkit</div>
+                    <div class="text-[11px] text-slate-500 dark:text-slate-400">Show running, crew, payment milestones, gear &amp; client approval — saved encrypted with this project</div>
+                  </div>
+                  <div class="mac-segmented-bar flex-wrap" role="tablist" aria-label="Production toolkit sections">
+                    <button type="button" data-ptab="ros" onclick="setProductionTab('ros')" class="mac-segment-btn active">Run of Show</button>
+                    <button type="button" data-ptab="crew" onclick="setProductionTab('crew')" class="mac-segment-btn">Crew</button>
+                    <button type="button" data-ptab="pay" onclick="setProductionTab('pay')" class="mac-segment-btn">Payments</button>
+                    <button type="button" data-ptab="gear" onclick="setProductionTab('gear')" class="mac-segment-btn">Gear</button>
+                    <button type="button" data-ptab="sign" onclick="setProductionTab('sign')" class="mac-segment-btn">Sign-off</button>
+                  </div>
+                </div>
+                <div id="productionToolkitBody" class="text-xs"></div>
               </div>
             </div>
 
@@ -1534,9 +1555,14 @@
 
                 <div class="flex flex-wrap items-center justify-between gap-2 pt-4 border-t border-slate-200/70 dark:border-white/10">
                   <button type="button" onclick="window.print()" class="btn-mac-secondary px-4 py-2 text-xs">Print</button>
-                  <button type="button" onclick="downloadAndArchiveBillingPDF()" class="btn-mac-primary px-5 py-2.5 text-xs">
-                    Download &amp; Archive PDF
-                  </button>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <button type="button" onclick="openWhatsappModalForCurrentBillingDoc()" class="btn-mac-secondary px-4 py-2 text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
+                      Send via WhatsApp
+                    </button>
+                    <button type="button" onclick="downloadAndArchiveBillingPDF()" class="btn-mac-primary px-5 py-2.5 text-xs">
+                      Download &amp; Archive PDF
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1737,14 +1763,22 @@
           </div>
 
           <div class="helios-card p-6">
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="text-sm font-semibold">Saved Files</h3>
-              <span id="vaultTotalBlobsBadge" class="text-xs text-slate-400">0 Files</span>
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <div class="flex items-center gap-2.5">
+                <h3 class="text-sm font-semibold">Saved Files</h3>
+                <span id="vaultTotalBlobsBadge" class="text-xs text-slate-400">0 Files</span>
+              </div>
+              <button id="vaultSendWhatsappSelectedBtn" type="button" onclick="openWhatsappModalForSelectedVaultFiles()" class="btn-mac-secondary px-3.5 py-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
+                Send Selected via WhatsApp
+              </button>
             </div>
             <div class="overflow-x-auto">
               <table class="w-full text-left border-collapse">
                 <thead>
                   <tr class="border-b border-slate-200/70 dark:border-white/10 text-xs text-slate-400 font-medium">
+                    <th class="py-2.5 pr-2 w-8">
+                      <input id="vaultSelectAllCheckbox" type="checkbox" onchange="toggleSelectAllVaultFiles(this.checked)" aria-label="Select all saved files" class="rounded accent-emerald-600 cursor-pointer" />
+                    </th>
                     <th class="py-2.5 pr-3">File Name</th>
                     <th class="py-2.5 px-3">Folder</th>
                     <th class="py-2.5 px-3">Size</th>
@@ -2172,12 +2206,83 @@
     </div>
   </div>
 
+  <!-- WhatsApp Invoice & File Dispatch Modal -->
+  <div id="whatsappDispatchModal" class="fixed inset-0 z-50 hidden bg-slate-900/50 flex items-center justify-center p-4">
+    <div class="helios-card w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 space-y-5">
+      <div class="flex items-start justify-between gap-4 border-b border-slate-200/70 dark:border-white/10 pb-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+          </div>
+          <div>
+            <h3 class="text-base font-semibold tracking-tight">Send Invoices &amp; Files via WhatsApp</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Select recipient phone number, check invoices/files to prepare, and dispatch directly to WhatsApp.</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeWhatsappDispatchModal()" aria-label="Close WhatsApp Modal" class="btn-mac-secondary px-2.5 py-1 text-xs">&times;</button>
+      </div>
+
+      <!-- 1. Recipient Phone Selection -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-xl bg-slate-500/5 border border-slate-200/60 dark:border-white/10">
+        <div>
+          <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Select Saved Client / Supplier</label>
+          <select id="waRecipientSelect" onchange="handleWhatsappRecipientPick(this.value)" class="helios-input w-full px-3 py-2 text-xs"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">WhatsApp Number (with Country Code) *</label>
+          <input id="waPhoneNumberInput" type="tel" placeholder="e.g., +971 50 123 4567 or +1 212 555 0194" class="helios-input w-full px-3 py-2 text-xs font-mono" />
+        </div>
+      </div>
+
+      <!-- 2. Select Invoices & Files -->
+      <div class="p-4 rounded-xl bg-slate-500/5 border border-slate-200/60 dark:border-white/10 space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-semibold">Select Invoices &amp; Files</span>
+            <span id="waSelectedCountBadge" class="text-[11px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">0 selected</span>
+          </div>
+          <div class="flex items-center gap-2 text-xs">
+            <button type="button" onclick="setWhatsappModalSelectionAll(true)" class="btn-mac-secondary px-2.5 py-1 text-[11px]">Select All</button>
+            <button type="button" onclick="setWhatsappModalSelectionAll(false)" class="btn-mac-secondary px-2.5 py-1 text-[11px]">Clear</button>
+          </div>
+        </div>
+        <div id="waFilesChecklistContainer" class="max-h-48 overflow-y-auto space-y-1.5 pr-1 text-xs"></div>
+      </div>
+
+      <!-- 3. Message Preview -->
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-semibold">WhatsApp Message</label>
+          <button type="button" onclick="rebuildWhatsappMessageFromSelection()" class="text-[11px] text-[#007AFF] dark:text-[#0A84FF] hover:underline">
+            Refresh Message from Selection
+          </button>
+        </div>
+        <textarea id="waMessageTextarea" rows="5" placeholder="Write your WhatsApp message..." class="helios-input w-full p-3 text-xs font-mono leading-relaxed"></textarea>
+      </div>
+
+      <!-- 4. Actions -->
+      <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-200/70 dark:border-white/10">
+        <button type="button" onclick="executeWhatsappNativeFileShare()" id="waNativeFileShareBtn" class="btn-mac-secondary px-3.5 py-2 text-xs">
+          Share File Blobs (App Sheet)
+        </button>
+        <div class="flex flex-wrap items-center gap-2">
+          <button type="button" onclick="executeWhatsappSendToNumber(false)" class="btn-mac-secondary px-3.5 py-2 text-xs">
+            Send Message Only
+          </button>
+          <button type="button" onclick="executeWhatsappSendToNumber(true)" class="btn-mac-primary px-4 py-2 text-xs bg-emerald-600 hover:bg-emerald-700">
+            Download Selected &amp; Open WhatsApp Chat
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Minimal Toast -->
   <div id="studioToast" class="fixed bottom-5 right-5 z-50 helios-card px-4 py-2.5 text-xs font-medium shadow-lg flex items-center gap-2">
     <span class="w-1.5 h-1.5 rounded-full bg-[#007AFF] dark:bg-[#0A84FF]"></span>
     <span id="studioToastText">Done</span>
   </div>
 
-  <script src="script.js?v=16"></script>
+  <script src="script.js?v=20"></script>
 </body>
 </html>
