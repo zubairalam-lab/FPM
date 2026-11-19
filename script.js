@@ -1422,6 +1422,8 @@ function lockWorkspace(reasonMessage = '') {
   studioState = createEmptyLockedState(activeProfileId || 'tester1');
   scrubDomSensitiveFields();
   closeSecurityCenterModal();
+  if (typeof closeWhatsappDispatchModal === 'function') closeWhatsappDispatchModal();
+  if (typeof selectedVaultFileIds !== 'undefined' && selectedVaultFileIds) selectedVaultFileIds.clear();
 
   const mainShell = document.getElementById('mainStudioShell');
   const input = document.getElementById('passcodeInput');
@@ -2423,7 +2425,7 @@ function renderProjectsModule() {
         <span>${escapeHtml(formatProjectDateRange(p))}</span>
         ${daysBadge}${offBadge}
       </td>
-      <td class="py-3.5 px-4">${getStatusPillHTML(p.status)}</td>
+      <td class="py-3.5 px-4">${getStatusPillHTML(p.status)}${typeof getPaymentBadgeHTML === 'function' ? getPaymentBadgeHTML(p) : ''}</td>
       <td class="py-3.5 pl-4 text-right space-x-2">
         <button type="button" onclick="openProjectWorkspaceForEdit('${p.id}')" class="btn-mac-secondary px-3 py-1.5 text-xs text-[#007AFF] dark:text-[#0A84FF]">${isSolo ? 'Open Event' : 'Open Project'}</button>
         <button type="button" onclick="removeProjectById('${p.id}')" class="btn-mac-secondary px-3 py-1.5 text-xs text-rose-500">Remove</button>
@@ -2620,6 +2622,7 @@ async function renderProjectInfoOverview(proj) {
   document.getElementById('dlCardQuotationRef').textContent = `${qtn}.pdf`;
   document.getElementById('dlCardInvoiceRef').textContent = `${inv}.pdf`;
 
+  if (typeof renderProductionToolkit === 'function') renderProductionToolkit(proj);
   await refreshProjectLinkedFilesList(proj);
 }
 
@@ -2648,6 +2651,7 @@ async function refreshProjectLinkedFilesList(proj) {
         <div class="text-[11px] font-mono text-slate-400">${escapeHtml(f.folder || '/01_Event_Projects/')} • ${formatBytes(f.size)}</div>
       </div>
       <div class="flex items-center gap-2 shrink-0">
+        <button type="button" onclick="openWhatsappModalWithVaultIds(['${f.id}'], '${proj.clientId || ''}')" class="btn-mac-secondary px-2.5 py-1 text-xs text-emerald-600 dark:text-emerald-400">WhatsApp</button>
         <button type="button" onclick="downloadVaultFileById('${f.id}')" class="btn-mac-secondary px-2.5 py-1 text-xs text-[#007AFF] dark:text-[#0A84FF]">Download</button>
       </div>
     </div>
@@ -3022,6 +3026,10 @@ function saveProjectFromWorkspace(event) {
   };
 
   const idx = (studioState.projects || []).findIndex(p => p.id === record.id);
+  if (idx >= 0 && studioState.projects[idx].production) {
+    // Preserve Production Toolkit data (run of show, crew, payments, gear, sign-off)
+    record.production = studioState.projects[idx].production;
+  }
   if (idx >= 0) studioState.projects[idx] = record;
   else studioState.projects.unshift(record);
 
@@ -3069,7 +3077,8 @@ async function generateProjectDirectPDF(docType) {
     clientBankName: client.bankName || '', clientAccountNumber: client.accountNumber || '', clientIban: client.iban || '',
     projectName: project.name, projectRole: project.role, projectScope: project.scope,
     currency: project.currency || getActiveCurrencyCode(),
-    lineItems: project.lineItems
+    lineItems: project.lineItems,
+    clientSignature: getProjectSignatureForPdf(project)
   });
 
   if (!Array.isArray(studioState.usedDocNumbers)) studioState.usedDocNumbers = [];
@@ -4385,10 +4394,22 @@ function getStudioDocumentTheme(tpl) {
 }
 
 async function buildAndDownloadStyledPDF(payload) {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
   const cleanRef = (payload.docNumber || 'INV-849201').trim();
   const strictFileName = `Event Studio - ${cleanRef}.pdf`;
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    const fallbackLines = [
+      `${(payload.docType || 'INVOICE').toUpperCase()} ${cleanRef}`,
+      `From: ${payload.orgName || 'Event Studio'}`,
+      `To: ${payload.clientCompany || 'Client'}`,
+      `Date: ${payload.issueDate || ''}`
+    ];
+    const fbBlob = new Blob([fallbackLines.join('\n')], { type: 'application/pdf' });
+    if (!payload.skipBrowserDownload) triggerBrowserBlobDownload(fbBlob, strictFileName);
+    const rec = await saveFileToIndexedDBVault(strictFileName, '/03_Invoices_And_Quotations/', 'application/pdf', fbBlob);
+    return { blob: fbBlob, filename: strictFileName, record: rec };
+  }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
   const t = getStudioDocumentTheme(payload.template || (studioState.billingDraft && studioState.billingDraft.template) || 'minimal');
   const tpl = t.name;
 
@@ -4572,10 +4593,34 @@ async function buildAndDownloadStyledPDF(payload) {
 
   const totalY = boxY + boxH;
 
+  // Optional client approval signature (captured via Production Toolkit sign-off pad)
+  let sigBottomY = totalY;
+  const sig = payload.clientSignature;
+  if (sig && sig.dataUrl && typeof doc.addImage === 'function') {
+    try {
+      const sigTop = totalY + 14;
+      doc.setFont(t.font, 'bold');
+      doc.setFontSize(7.5);
+      doc.setTextColor(71, 85, 105);
+      doc.text('CLIENT APPROVAL', boxX, sigTop + 8);
+      doc.addImage(sig.dataUrl, 'PNG', boxX, sigTop + 12, 150, 46);
+      doc.setDrawColor(148, 163, 184);
+      doc.line(boxX, sigTop + 60, boxX + boxW, sigTop + 60);
+      doc.setFont(t.font, 'normal');
+      doc.setFontSize(7.5);
+      doc.setTextColor(51, 65, 85);
+      const sigLabel = [sig.name, sig.signedAt ? new Date(sig.signedAt).toLocaleString() : ''].filter(Boolean).join(' • ');
+      doc.text(String(sigLabel).substring(0, 60), boxX, sigTop + 70);
+      sigBottomY = sigTop + 74;
+    } catch (sigErr) {
+      console.warn('Signature embed skipped:', sigErr);
+    }
+  }
+
   // Small Terms of Payment at the bottom
   const termsText = (payload.paymentTerms || '').trim();
   if (termsText) {
-    const termsStartY = Math.max(bankY + 18, totalY + 24, 745);
+    const termsStartY = Math.max(bankY + 18, totalY + 24, sigBottomY + 18, 745);
     doc.setDrawColor(226, 232, 240);
     doc.line(40, termsStartY - 10, 555, termsStartY - 10);
     doc.setFont(t.font, 'bold');
@@ -4590,9 +4635,14 @@ async function buildAndDownloadStyledPDF(payload) {
   }
 
   const pdfBlob = doc.output('blob');
-  triggerBrowserBlobDownload(pdfBlob, strictFileName);
-  await saveFileToIndexedDBVault(strictFileName, '/03_Invoices_And_Quotations/', 'application/pdf', pdfBlob);
-  showToast(`Saved "${strictFileName}"`);
+  if (!payload.skipBrowserDownload) {
+    triggerBrowserBlobDownload(pdfBlob, strictFileName);
+  }
+  const savedRec = await saveFileToIndexedDBVault(strictFileName, '/03_Invoices_And_Quotations/', 'application/pdf', pdfBlob);
+  if (!payload.skipBrowserDownload) {
+    showToast(`Saved "${strictFileName}"`);
+  }
+  return { blob: pdfBlob, filename: strictFileName, record: savedRec };
 }
 
 async function buildAndDownloadProjectBriefPDF(proj, client, org, templateName) {
@@ -5558,9 +5608,41 @@ function exportFullCalendarICS() {
 }
 
 /* ARCHIVE & ZIP */
+const selectedVaultFileIds = new Set();
+
+function syncVaultSelectionControls(totalFiles = 0) {
+  const sendBtn = document.getElementById('vaultSendWhatsappSelectedBtn');
+  if (sendBtn) {
+    const cnt = selectedVaultFileIds.size;
+    sendBtn.textContent = cnt > 0 ? `Send Selected via WhatsApp (${cnt})` : 'Send Selected via WhatsApp';
+  }
+  const allCb = document.getElementById('vaultSelectAllCheckbox');
+  if (allCb) {
+    allCb.checked = totalFiles > 0 && selectedVaultFileIds.size >= totalFiles;
+  }
+}
+
+function toggleVaultFileSelection(id, checked) {
+  if (checked) selectedVaultFileIds.add(id);
+  else selectedVaultFileIds.delete(id);
+  syncVaultSelectionControls();
+}
+
+async function toggleSelectAllVaultFiles(checked) {
+  const files = await getAllVaultFiles();
+  selectedVaultFileIds.clear();
+  if (checked) files.forEach(f => selectedVaultFileIds.add(f.id));
+  await refreshVaultTableUI();
+}
+
 async function refreshVaultTableUI() {
   const files = await getAllVaultFiles();
   files.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+
+  const validIds = new Set(files.map(f => f.id));
+  Array.from(selectedVaultFileIds).forEach(id => {
+    if (!validIds.has(id)) selectedVaultFileIds.delete(id);
+  });
 
   const invoiceFiles = files.filter(f => f.folder === '/03_Invoices_And_Quotations/');
   const convertedFiles = files.filter(f => f.folder === '/04_Converted_Files/');
@@ -5573,10 +5655,15 @@ async function refreshVaultTableUI() {
 
   const tbody = document.getElementById('localVaultTableBody');
   if (files.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-400">No archived files yet.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-400">No archived files yet.</td></tr>`;
   } else {
-    tbody.innerHTML = files.map(f => `
+    tbody.innerHTML = files.map(f => {
+      const isChecked = selectedVaultFileIds.has(f.id);
+      return `
       <tr class="hover:bg-slate-500/5">
+        <td class="py-3 pr-2 w-8">
+          <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleVaultFileSelection('${f.id}', this.checked)" aria-label="Select ${escapeHtml(f.filename)}" class="rounded accent-emerald-600 cursor-pointer" />
+        </td>
         <td class="py-3 pr-3 font-mono text-xs font-medium">
           <span>${escapeHtml(f.filename)}</span>
           <span class="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono ${f.encrypted ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'}">${f.encrypted ? 'AES' : 'Legacy'}</span>
@@ -5584,13 +5671,16 @@ async function refreshVaultTableUI() {
         <td class="py-3 px-3 font-mono text-xs text-slate-500 dark:text-slate-400">${escapeHtml(f.folder)}</td>
         <td class="py-3 px-3 font-mono text-xs text-slate-500 dark:text-slate-400">${formatBytes(f.size)}</td>
         <td class="py-3 px-3 font-mono text-xs text-slate-500 dark:text-slate-400">${escapeHtml((f.createdAt || '').substring(0, 10))}</td>
-        <td class="py-3 pl-3 text-right space-x-2">
+        <td class="py-3 pl-3 text-right space-x-1.5 whitespace-nowrap">
+          <button type="button" onclick="openWhatsappModalWithVaultIds(['${f.id}'])" class="btn-mac-secondary px-2.5 py-1 text-xs text-emerald-600 dark:text-emerald-400">WhatsApp</button>
           <button type="button" onclick="downloadVaultFileById('${f.id}')" class="btn-mac-secondary px-2.5 py-1 text-xs text-[#007AFF] dark:text-[#0A84FF]">Download</button>
           <button type="button" onclick="deleteVaultFileById('${f.id}')" class="btn-mac-secondary px-2.5 py-1 text-xs text-rose-500">Delete</button>
         </td>
       </tr>
-    `).join('');
+    `;
+    }).join('');
   }
+  syncVaultSelectionControls(files.length);
 
   const convEl = document.getElementById('converterRecentVaultList');
   if (convEl) {
@@ -5603,6 +5693,395 @@ async function refreshVaultTableUI() {
         </div>
       `).join('');
   }
+}
+
+/* WHATSAPP INVOICE & FILE DISPATCH */
+const whatsappDispatchState = {
+  items: [],
+  selectedKeys: new Set()
+};
+
+function normalizeWhatsappPhone(rawPhone) {
+  let digits = String(rawPhone || '').replace(/[^\d]/g, '');
+  if (digits.startsWith('00')) digits = digits.slice(2);
+  // Automatically expand UAE local mobile format (05XXXXXXXX -> 9715XXXXXXXX)
+  if (digits.length === 10 && digits.startsWith('05')) {
+    digits = '971' + digits.slice(1);
+  }
+  return digits;
+}
+
+function populateWhatsappRecipientsDropdown(preferredClientId = '', preferredPhone = '') {
+  const sel = document.getElementById('waRecipientSelect');
+  const phoneInput = document.getElementById('waPhoneNumberInput');
+  if (!sel || !phoneInput) return;
+
+  const options = [`<option value="">Custom Number / Manual Entry</option>`];
+  let matchedPhone = preferredPhone || '';
+
+  (studioState.clients || []).forEach(c => {
+    if (!c.phone) return;
+    const isPref = preferredClientId && c.id === preferredClientId;
+    if (isPref && !matchedPhone) matchedPhone = c.phone;
+    options.push(`<option value="${escapeHtml(c.phone)}" ${isPref ? 'selected' : ''}>Client: ${escapeHtml(c.company)}${c.contactPerson ? ' (' + escapeHtml(c.contactPerson) + ')' : ''} — ${escapeHtml(c.phone)}</option>`);
+  });
+
+  (studioState.suppliers || []).forEach(s => {
+    if (!s.phone) return;
+    options.push(`<option value="${escapeHtml(s.phone)}">Supplier: ${escapeHtml(s.name)} — ${escapeHtml(s.phone)}</option>`);
+  });
+
+  sel.innerHTML = options.join('');
+  if (matchedPhone) {
+    phoneInput.value = matchedPhone;
+  } else if (!phoneInput.value && (studioState.clients || [])[0] && studioState.clients[0].phone) {
+    phoneInput.value = studioState.clients[0].phone;
+    sel.value = studioState.clients[0].phone;
+  }
+}
+
+function handleWhatsappRecipientPick(phoneVal) {
+  const phoneInput = document.getElementById('waPhoneNumberInput');
+  if (phoneInput && phoneVal) {
+    phoneInput.value = phoneVal;
+  }
+}
+
+async function buildWhatsappSelectableItemsList() {
+  const items = [];
+  const d = (studioState && studioState.billingDraft) || {};
+  const docType = d.docType || 'Invoice';
+  const docNum = (document.getElementById('billingDocNumberInput') && document.getElementById('billingDocNumberInput').value) || d.docNumber || 'INV-849201';
+  const curCode = d.currency || getActiveCurrencyCode();
+  const lineItems = Array.isArray(d.lineItems) ? d.lineItems : [];
+  const billingTotal = lineItems.reduce((s, it) => s + ((Number(it.qty) || 0) * (Number(it.price) || 0)), 0);
+  const clientName = (document.getElementById('billingClientCompany') && document.getElementById('billingClientCompany').value) || d.clientCompany || 'Client';
+
+  items.push({
+    key: 'live:billing',
+    kind: 'live_billing',
+    title: `${docType} ${docNum} — ${clientName}`,
+    subtitle: `Live Billing Generator (${formatCurrency(billingTotal, curCode)}) • PDF`,
+    filename: `Event Studio - ${docNum}.pdf`,
+    docType,
+    docNumber: docNum,
+    clientName,
+    amountFormatted: formatCurrency(billingTotal, curCode)
+  });
+
+  // Active projects with invoices/quotations
+  (studioState.projects || []).forEach(p => {
+    if (p.entryType === 'solo') return;
+    const rev = getProjectRevenue(p);
+    const pCur = p.currency || getActiveCurrencyCode();
+    const invRef = p.invoiceNumber || 'INV';
+    items.push({
+      key: `proj_inv:${p.id}`,
+      kind: 'project_invoice',
+      projectId: p.id,
+      title: `Invoice ${invRef} — ${p.name}`,
+      subtitle: `Project Invoice (${formatCurrency(rev, pCur)}) • PDF`,
+      filename: `Event Studio - ${invRef}.pdf`,
+      docType: 'Invoice',
+      docNumber: invRef,
+      projectName: p.name,
+      amountFormatted: formatCurrency(rev, pCur)
+    });
+  });
+
+  // Saved IndexedDB Vault files
+  const vaultFiles = await getAllVaultFiles();
+  vaultFiles.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+  vaultFiles.forEach(vf => {
+    items.push({
+      key: `vault:${vf.id}`,
+      kind: 'vault_file',
+      vaultId: vf.id,
+      title: vf.filename,
+      subtitle: `${vf.folder || '/'} • ${formatBytes(vf.size)}`,
+      filename: vf.filename
+    });
+  });
+
+  whatsappDispatchState.items = items;
+  return items;
+}
+
+function renderWhatsappFilesChecklist() {
+  const container = document.getElementById('waFilesChecklistContainer');
+  const badge = document.getElementById('waSelectedCountBadge');
+  if (badge) badge.textContent = `${whatsappDispatchState.selectedKeys.size} selected`;
+  if (!container) return;
+
+  if (whatsappDispatchState.items.length === 0) {
+    container.innerHTML = `<div class="py-4 text-center text-slate-400">No invoices or files available.</div>`;
+    return;
+  }
+
+  container.innerHTML = whatsappDispatchState.items.map((it, idx) => {
+    const checked = whatsappDispatchState.selectedKeys.has(it.key);
+    const tagBadge = it.kind === 'live_billing'
+      ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[#007AFF]/15 text-[#007AFF] dark:text-[#0A84FF]">Live Draft</span>`
+      : (it.kind === 'project_invoice'
+          ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">Invoice PDF</span>`
+          : `<span class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-slate-500/10 text-slate-500 dark:text-slate-400">Saved File</span>`);
+    return `
+      <label class="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-white/50 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/10 cursor-pointer hover:bg-slate-500/5">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleWhatsappModalItem('${it.key}', this.checked)" class="rounded accent-emerald-600 cursor-pointer shrink-0" />
+          <div class="min-w-0">
+            <div class="font-medium truncate">${escapeHtml(it.title)}</div>
+            <div class="text-[11px] font-mono text-slate-400 truncate">${escapeHtml(it.subtitle)}</div>
+          </div>
+        </div>
+        <div class="shrink-0">${tagBadge}</div>
+      </label>
+    `;
+  }).join('');
+}
+
+function toggleWhatsappModalItem(key, checked) {
+  if (checked) whatsappDispatchState.selectedKeys.add(key);
+  else whatsappDispatchState.selectedKeys.delete(key);
+  renderWhatsappFilesChecklist();
+  rebuildWhatsappMessageFromSelection();
+}
+
+function setWhatsappModalSelectionAll(selectAll) {
+  whatsappDispatchState.selectedKeys.clear();
+  if (selectAll) {
+    whatsappDispatchState.items.forEach(it => whatsappDispatchState.selectedKeys.add(it.key));
+  }
+  renderWhatsappFilesChecklist();
+  rebuildWhatsappMessageFromSelection();
+}
+
+function rebuildWhatsappMessageFromSelection() {
+  const textarea = document.getElementById('waMessageTextarea');
+  if (!textarea) return;
+  const org = (typeof getSelectedOrgProfile === 'function' ? getSelectedOrgProfile() : null) || { name: 'Event Management Studio' };
+  const selectedItems = whatsappDispatchState.items.filter(it => whatsappDispatchState.selectedKeys.has(it.key));
+
+  const lines = [
+    `Hello,`,
+    `Please find the following document(s) from *${org.name || 'Event Management Studio'}*:`
+  ];
+
+  if (selectedItems.length === 0) {
+    lines.push(`• (No files selected yet)`);
+  } else {
+    selectedItems.forEach(it => {
+      if (it.kind === 'live_billing' || it.kind === 'project_invoice') {
+        lines.push(`• *${it.docType || 'Invoice'} ${it.docNumber}* — Amount: *${it.amountFormatted}* (${it.filename})`);
+      } else {
+        lines.push(`• *${it.filename}*`);
+      }
+    });
+  }
+
+  if (org.bankName || org.iban) {
+    lines.push(
+      ``,
+      `*Payment / Remittance Details:*`,
+      org.bankName ? `Bank: ${org.bankName}` : '',
+      org.accountHolder ? `Account Holder: ${org.accountHolder}` : '',
+      org.iban ? `IBAN: ${org.iban}` : ''
+    );
+  }
+  lines.push(``, `Thank you!`);
+  textarea.value = lines.filter(l => l !== '').join('\n');
+}
+
+async function openWhatsappDispatchModal({ preselectKeys = [], preferredClientId = '', preferredPhone = '' } = {}) {
+  const modal = document.getElementById('whatsappDispatchModal');
+  if (!modal) return;
+  await buildWhatsappSelectableItemsList();
+  whatsappDispatchState.selectedKeys = new Set(preselectKeys);
+  if (whatsappDispatchState.selectedKeys.size === 0 && whatsappDispatchState.items.length > 0) {
+    whatsappDispatchState.selectedKeys.add(whatsappDispatchState.items[0].key);
+  }
+  populateWhatsappRecipientsDropdown(preferredClientId, preferredPhone);
+  renderWhatsappFilesChecklist();
+  rebuildWhatsappMessageFromSelection();
+  modal.classList.remove('hidden');
+}
+
+function closeWhatsappDispatchModal() {
+  const modal = document.getElementById('whatsappDispatchModal');
+  if (modal) modal.classList.add('hidden');
+}
+
+async function openWhatsappModalForCurrentBillingDoc() {
+  const d = (studioState && studioState.billingDraft) || {};
+  await openWhatsappDispatchModal({
+    preselectKeys: ['live:billing'],
+    preferredClientId: d.selectedClientId || ''
+  });
+}
+
+async function openWhatsappModalForCurrentProject() {
+  const projId = (document.getElementById('projIdInput') || {}).value;
+  const proj = (studioState.projects || []).find(p => p.id === projId);
+  if (!proj) return;
+  const pre = [];
+  if (proj.entryType !== 'solo') pre.push(`proj_inv:${proj.id}`);
+  const allFiles = await getAllVaultFiles();
+  allFiles.forEach(f => {
+    if (f.projectId === proj.id) pre.push(`vault:${f.id}`);
+  });
+  await openWhatsappDispatchModal({
+    preselectKeys: pre,
+    preferredClientId: proj.clientId || ''
+  });
+}
+
+async function openWhatsappModalForSelectedVaultFiles() {
+  const pre = Array.from(selectedVaultFileIds).map(id => `vault:${id}`);
+  await openWhatsappDispatchModal({ preselectKeys: pre });
+}
+
+async function openWhatsappModalWithVaultIds(ids = [], preferredClientId = '') {
+  const pre = (ids || []).map(id => `vault:${id}`);
+  await openWhatsappDispatchModal({ preselectKeys: pre, preferredClientId });
+}
+
+async function prepareSelectedWhatsappFileObjects() {
+  const selectedItems = whatsappDispatchState.items.filter(it => whatsappDispatchState.selectedKeys.has(it.key));
+  const prepared = [];
+
+  for (const it of selectedItems) {
+    if (it.kind === 'live_billing') {
+      const d = studioState.billingDraft || {};
+      const res = await buildAndDownloadStyledPDF({
+        skipBrowserDownload: true,
+        docType: d.docType || 'Invoice',
+        docNumber: (document.getElementById('billingDocNumberInput') && document.getElementById('billingDocNumberInput').value) || d.docNumber || 'INV-849201',
+        issueDate: (document.getElementById('billingIssueDateInput') && document.getElementById('billingIssueDateInput').value) || d.issueDate || new Date().toISOString().split('T')[0],
+        template: d.template || 'minimal',
+        orgName: (document.getElementById('billingOrgName') && document.getElementById('billingOrgName').value) || 'Event Studio',
+        orgTaxId: (document.getElementById('billingOrgTaxId') && document.getElementById('billingOrgTaxId').value) || '',
+        orgEmail: (document.getElementById('billingOrgEmail') && document.getElementById('billingOrgEmail').value) || '',
+        orgAddress: (document.getElementById('billingOrgAddress') && document.getElementById('billingOrgAddress').value) || '',
+        orgBankName: (document.getElementById('billingOrgBankName') && document.getElementById('billingOrgBankName').value) || '',
+        orgAccountHolder: (document.getElementById('billingOrgAccountHolder') && document.getElementById('billingOrgAccountHolder').value) || '',
+        orgAccountNumber: (document.getElementById('billingOrgAccountNumber') && document.getElementById('billingOrgAccountNumber').value) || '',
+        orgIban: (document.getElementById('billingOrgIban') && document.getElementById('billingOrgIban').value) || '',
+        orgSwift: (document.getElementById('billingOrgSwift') && document.getElementById('billingOrgSwift').value) || '',
+        paymentTerms: (document.getElementById('billingPaymentTermsInput') && document.getElementById('billingPaymentTermsInput').value) || d.paymentTerms || '',
+        clientCompany: (document.getElementById('billingClientCompany') && document.getElementById('billingClientCompany').value) || d.clientCompany || '',
+        clientContact: (document.getElementById('billingClientContact') && document.getElementById('billingClientContact').value) || d.clientContact || '',
+        clientAddress: (document.getElementById('billingClientAddress') && document.getElementById('billingClientAddress').value) || d.clientAddress || '',
+        clientEmail: (document.getElementById('billingClientEmail') && document.getElementById('billingClientEmail').value) || d.clientEmail || '',
+        currency: d.currency || getActiveCurrencyCode(),
+        lineItems: d.lineItems || []
+      });
+      if (res && res.blob) {
+        prepared.push({ filename: res.filename, mimeType: 'application/pdf', blob: res.blob });
+      }
+    } else if (it.kind === 'project_invoice') {
+      const proj = (studioState.projects || []).find(p => p.id === it.projectId);
+      if (proj) {
+        const client = (studioState.clients || []).find(c => c.id === proj.clientId) || {};
+        const org = getSelectedOrgProfile();
+        const res = await buildAndDownloadStyledPDF({
+          skipBrowserDownload: true,
+          docType: 'Invoice',
+          docNumber: proj.invoiceNumber || 'INV-000000',
+          issueDate: proj.dateCreated || new Date().toISOString().split('T')[0],
+          orgName: org.name, orgAddress: org.address, orgTaxId: org.taxId, orgEmail: org.email,
+          orgBankName: org.bankName || '', orgAccountHolder: org.accountHolder || org.name || '',
+          orgAccountNumber: org.accountNumber || '', orgIban: org.iban || '', orgSwift: org.swift || '',
+          paymentTerms: (studioState.billingDraft && studioState.billingDraft.paymentTerms) || '',
+          clientCompany: client.company || 'Client', clientContact: client.contactPerson || '',
+          clientAddress: client.address || '', clientEmail: client.email || '',
+          projectName: proj.name, projectRole: proj.role, projectScope: proj.scope,
+          currency: proj.currency || getActiveCurrencyCode(),
+          lineItems: proj.lineItems || [],
+          clientSignature: getProjectSignatureForPdf(proj)
+        });
+        if (res && res.blob) {
+          prepared.push({ filename: res.filename, mimeType: 'application/pdf', blob: res.blob });
+        }
+      }
+    } else if (it.kind === 'vault_file' && it.vaultId) {
+      const rec = await getRawVaultRecordById(it.vaultId);
+      if (rec) {
+        const res = await getDecryptedVaultBlobByRecord(rec, sessionCryptoState.keyObj);
+        if (res && res.blob) {
+          prepared.push({
+            filename: res.meta.filename || it.filename,
+            mimeType: res.meta.mimeType || 'application/octet-stream',
+            blob: res.blob
+          });
+        }
+      }
+    }
+  }
+  await refreshVaultTableUI();
+  return prepared;
+}
+
+async function executeWhatsappSendToNumber(downloadFiles = true) {
+  const phoneEl = document.getElementById('waPhoneNumberInput');
+  const msgEl = document.getElementById('waMessageTextarea');
+  const cleanPhone = normalizeWhatsappPhone(phoneEl ? phoneEl.value : '');
+  if (!cleanPhone || cleanPhone.length < 7) {
+    showToast('Enter a valid WhatsApp phone number with country code.');
+    if (phoneEl) phoneEl.focus();
+    return null;
+  }
+
+  let downloadedCount = 0;
+  if (downloadFiles && whatsappDispatchState.selectedKeys.size > 0) {
+    const files = await prepareSelectedWhatsappFileObjects();
+    files.forEach(f => {
+      triggerBrowserBlobDownload(f.blob, f.filename);
+      downloadedCount++;
+    });
+  }
+
+  const message = (msgEl && msgEl.value ? msgEl.value : '').trim();
+  const waUrl = `https://wa.me/${cleanPhone}${message ? '?text=' + encodeURIComponent(message) : ''}`;
+  if (typeof window.open === 'function') {
+    window.open(waUrl, '_blank', 'noopener,noreferrer');
+  }
+  closeWhatsappDispatchModal();
+  showToast(
+    downloadedCount > 0
+      ? `Downloaded ${downloadedCount} file(s) & opened WhatsApp chat (+${cleanPhone}).`
+      : `Opened WhatsApp chat (+${cleanPhone}).`
+  );
+  return { phone: cleanPhone, url: waUrl, downloadedCount };
+}
+
+async function executeWhatsappNativeFileShare() {
+  const msgEl = document.getElementById('waMessageTextarea');
+  const message = (msgEl && msgEl.value ? msgEl.value : '').trim();
+  const prepared = await prepareSelectedWhatsappFileObjects();
+  if (prepared.length === 0) {
+    showToast('Select at least one invoice or file to share.');
+    return false;
+  }
+  if (typeof File === 'function' && navigator && typeof navigator.share === 'function') {
+    try {
+      const shareFiles = prepared.map(f => new File([f.blob], f.filename, { type: f.mimeType || 'application/pdf' }));
+      if (!navigator.canShare || navigator.canShare({ files: shareFiles })) {
+        await navigator.share({
+          title: 'Invoices & Project Files',
+          text: message,
+          files: shareFiles
+        });
+        closeWhatsappDispatchModal();
+        showToast(`Shared ${shareFiles.length} file(s) via system share sheet.`);
+        return true;
+      }
+    } catch (err) {
+      if (err && err.name === 'AbortError') return false;
+    }
+  }
+  // Fallback: download files + open direct WhatsApp chat to the selected number
+  await executeWhatsappSendToNumber(true);
+  return true;
 }
 
 function exportWorkspaceJsonBackup() {
@@ -7764,3 +8243,1000 @@ window.addEventListener('DOMContentLoaded', () => {
   if (typeof playLockScreenEntrance === 'function') playLockScreenEntrance();
   ensureStudioInitialized();
 });
+
+/* =====================================================================
+   PRODUCTION TOOLKIT
+   Run of Show / Cue Sheet • Crew Call Sheet • Milestone Payments •
+   Gear Load-in/Load-out Checklist • Client Sign-off Signature Pad
+   All data lives on project.production and is persisted through the
+   existing encrypted saveStudioState() pipeline (AES-GCM, per profile).
+   ===================================================================== */
+let productionActiveTab = 'ros';
+let signaturePadState = { drawing: false, hasInk: false, lastX: 0, lastY: 0 };
+
+const ROS_FIELDS = [
+  { key: 'time', label: 'Time', type: 'time', w: 'w-24' },
+  { key: 'duration', label: 'Min', type: 'number', w: 'w-16' },
+  { key: 'cue', label: 'Cue', type: 'text', w: 'w-16' },
+  { key: 'segment', label: 'Segment / Item', type: 'text', w: 'min-w-[150px]' },
+  { key: 'audio', label: 'Audio / Mics', type: 'text', w: 'min-w-[110px]' },
+  { key: 'lighting', label: 'Lighting', type: 'text', w: 'min-w-[100px]' },
+  { key: 'visuals', label: 'LED / Visuals', type: 'text', w: 'min-w-[110px]' },
+  { key: 'talent', label: 'Talent / Presenter', type: 'text', w: 'min-w-[120px]' },
+  { key: 'notes', label: 'Stage Manager Notes', type: 'text', w: 'min-w-[150px]' }
+];
+
+const CREW_FIELDS = [
+  { key: 'name', label: 'Name', type: 'text', w: 'min-w-[120px]' },
+  { key: 'role', label: 'Role', type: 'text', w: 'min-w-[110px]' },
+  { key: 'phone', label: 'WhatsApp / Phone', type: 'tel', w: 'min-w-[120px]' },
+  { key: 'date', label: 'Date', type: 'date', w: 'w-36' },
+  { key: 'callTime', label: 'Call', type: 'time', w: 'w-24' },
+  { key: 'wrapTime', label: 'Wrap', type: 'time', w: 'w-24' },
+  { key: 'rate', label: 'Day Rate', type: 'number', w: 'w-24' }
+];
+
+const GEAR_STARTER_KITS = {
+  conference: [
+    ['Audio', 'Wireless handheld mic', 4], ['Audio', 'Lavalier / lapel mic', 4], ['Audio', 'Lectern gooseneck mic', 1],
+    ['Audio', 'Digital mixer + stage box', 1], ['Visuals', 'LED wall processor', 1], ['Visuals', 'Confidence monitor', 2],
+    ['Visuals', 'Presentation clicker + spare batteries', 2], ['Visuals', 'Laptop (show + backup)', 2],
+    ['Comms', 'Clear-Com / walkie-talkie set', 6], ['Cables', 'HDMI / SDI runs + adapters', 1], ['Power', 'Power distro + extension reels', 1]
+  ],
+  concert: [
+    ['Audio', 'Line array + subs', 1], ['Audio', 'IEM packs', 6], ['Audio', 'Wedge monitors', 6], ['Audio', 'Drum mic kit', 1],
+    ['Lighting', 'Moving heads', 12], ['Lighting', 'LED wash fixtures', 16], ['Lighting', 'Hazer + fluid', 1], ['Lighting', 'Lighting console', 1],
+    ['Staging', 'Truss + motors', 1], ['Staging', 'Risers / drum riser', 2], ['Power', '3-phase distro', 1], ['Comms', 'Intercom belt packs', 8]
+  ],
+  exhibition: [
+    ['Visuals', 'Booth LED screen / TV', 2], ['Visuals', 'Media player', 2], ['Audio', 'Booth speaker + mic', 1],
+    ['Furniture', 'Reception counter', 1], ['Furniture', 'Bar stools', 4], ['Lighting', 'Spotlights / track lights', 8],
+    ['Branding', 'Graphics / vinyl kit', 1], ['Power', 'Multi-plug boards', 4], ['Tools', 'Toolkit + cable ties + gaffer tape', 1]
+  ]
+};
+
+function prodUid(prefix) {
+  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+}
+
+function getToolkitProject() {
+  const idEl = document.getElementById('projIdInput');
+  const id = idEl ? idEl.value : '';
+  return (studioState.projects || []).find(p => p.id === id) || null;
+}
+
+function ensureProduction(proj) {
+  if (!proj) return null;
+  if (!proj.production || typeof proj.production !== 'object') proj.production = {};
+  const pr = proj.production;
+  if (!Array.isArray(pr.ros)) pr.ros = [];
+  if (!Array.isArray(pr.crew)) pr.crew = [];
+  if (!Array.isArray(pr.payments)) pr.payments = [];
+  if (!Array.isArray(pr.gear)) pr.gear = [];
+  if (!pr.callInfo || typeof pr.callInfo !== 'object') pr.callInfo = {};
+  return pr;
+}
+
+function persistProduction(rerender = true) {
+  saveStudioState();
+  if (rerender) {
+    const proj = getToolkitProject();
+    if (proj) renderProductionToolkit(proj);
+  }
+}
+
+function setProductionTab(tab) {
+  productionActiveTab = tab;
+  document.querySelectorAll('#productionToolkitCard [data-ptab]').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-ptab') === tab);
+  });
+  const proj = getToolkitProject();
+  if (proj) renderProductionToolkit(proj);
+}
+
+function getProjectClientPhone(proj) {
+  if (!proj || !proj.clientId) return '';
+  const c = (studioState.clients || []).find(x => x.id === proj.clientId);
+  return c && c.phone ? c.phone : '';
+}
+
+function openWhatsappText(phone, text) {
+  const clean = normalizeWhatsappPhone(phone || '');
+  const url = `https://wa.me/${clean}?text=${encodeURIComponent(text || '')}`;
+  if (typeof window.open === 'function') window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+async function copyTextToClipboard(text, okMsg) {
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+    }
+    showToast(okMsg || 'Copied to clipboard.');
+  } catch (e) {
+    showToast('Clipboard unavailable. Please copy manually.');
+  }
+}
+
+function prodSafeSlug(str) {
+  return String(str || 'Event').replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'Event';
+}
+
+function prodDownloadCsv(filename, header, rows) {
+  const esc = v => {
+    const s = String(v === undefined || v === null ? '' : v);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const csv = [header.map(esc).join(','), ...rows.map(r => r.map(esc).join(','))].join('\n');
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+  triggerBrowserBlobDownload(blob, filename);
+  showToast(`Downloaded "${filename}"`);
+}
+
+/* Generic jsPDF table document used by Run of Show, Call Sheet and Gear list */
+async function buildProductionTablePdf({ title, subtitle, infoLines = [], columns, rows, filename, orientation = 'landscape', projectId = '' }) {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    showToast('PDF engine is still loading. Please try again in a moment.');
+    return null;
+  }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'pt', format: 'a4', orientation });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const margin = 32;
+  const usableW = pageW - margin * 2;
+  const totalWeight = columns.reduce((s, c) => s + (c.weight || 1), 0);
+  const colW = columns.map(c => (usableW * (c.weight || 1)) / totalWeight);
+
+  const drawHeader = () => {
+    doc.setFillColor(15, 23, 42);
+    doc.rect(0, 0, pageW, 64, 'F');
+    doc.setFillColor(0, 122, 255);
+    doc.rect(0, 0, pageW, 4, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(15);
+    doc.text(String(title || ''), margin, 30);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(203, 213, 225);
+    doc.text(String(subtitle || ''), margin, 47);
+    doc.text(`Generated ${new Date().toLocaleString()}`, pageW - margin, 47, { align: 'right' });
+  };
+
+  const drawTableHead = (y) => {
+    doc.setFillColor(241, 245, 249);
+    doc.rect(margin, y, usableW, 20, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(51, 65, 85);
+    let x = margin;
+    columns.forEach((c, i) => {
+      doc.text(String(c.label), x + 4, y + 13);
+      x += colW[i];
+    });
+    return y + 20;
+  };
+
+  drawHeader();
+  let y = 82;
+  if (infoLines.length) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(30, 41, 59);
+    infoLines.filter(Boolean).forEach(line => {
+      const wrapped = doc.splitTextToSize(String(line), usableW);
+      doc.text(wrapped, margin, y);
+      y += 12 * wrapped.length;
+    });
+    y += 6;
+  }
+  y = drawTableHead(y);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  rows.forEach((row, rIdx) => {
+    const cells = columns.map((c, i) => doc.splitTextToSize(String(row[i] === undefined || row[i] === null ? '' : row[i]), colW[i] - 8));
+    const lines = Math.max(1, ...cells.map(c => c.length));
+    const rowH = lines * 10 + 8;
+    if (y + rowH > pageH - margin) {
+      doc.addPage();
+      drawHeader();
+      y = drawTableHead(82);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+    }
+    if (rIdx % 2 === 1) {
+      doc.setFillColor(248, 250, 252);
+      doc.rect(margin, y, usableW, rowH, 'F');
+    }
+    doc.setTextColor(15, 23, 42);
+    let x = margin;
+    cells.forEach((lines2, i) => {
+      doc.text(lines2, x + 4, y + 12);
+      x += colW[i];
+    });
+    doc.setDrawColor(226, 232, 240);
+    doc.line(margin, y + rowH, margin + usableW, y + rowH);
+    y += rowH;
+  });
+
+  if (rows.length === 0) {
+    doc.setTextColor(148, 163, 184);
+    doc.text('No entries yet.', margin + 4, y + 14);
+  }
+
+  const blob = doc.output('blob');
+  triggerBrowserBlobDownload(blob, filename);
+  try {
+    await saveFileToIndexedDBVault(filename, '/01_Event_Projects/', 'application/pdf', blob, { projectId });
+  } catch (e) { /* vault optional */ }
+  showToast(`Saved "${filename}"`);
+  return blob;
+}
+
+/* ---------- Generic row editing ---------- */
+function updateProductionRow(listKey, rowId, field, value) {
+  const proj = getToolkitProject();
+  const pr = ensureProduction(proj);
+  if (!pr) return;
+  const row = (pr[listKey] || []).find(r => r.id === rowId);
+  if (!row) return;
+  if (field === 'rate' || field === 'amount' || field === 'qty' || field === 'duration') {
+    row[field] = parseFloat(value) || 0;
+  } else if (field === 'confirmed' || field === 'loadIn' || field === 'loadOut') {
+    row[field] = !!value;
+  } else {
+    row[field] = value;
+  }
+  if (listKey === 'payments' && field === 'status') {
+    row.paidDate = value === 'paid' ? (row.paidDate || new Date().toISOString().split('T')[0]) : '';
+    persistProduction(true);
+    return;
+  }
+  persistProduction(false);
+  refreshProductionSummaries(proj);
+}
+
+function removeProductionRow(listKey, rowId) {
+  const proj = getToolkitProject();
+  const pr = ensureProduction(proj);
+  if (!pr) return;
+  pr[listKey] = (pr[listKey] || []).filter(r => r.id !== rowId);
+  persistProduction(true);
+}
+
+function moveProductionRow(listKey, rowId, dir) {
+  const proj = getToolkitProject();
+  const pr = ensureProduction(proj);
+  if (!pr) return;
+  const list = pr[listKey];
+  const i = list.findIndex(r => r.id === rowId);
+  const j = i + dir;
+  if (i < 0 || j < 0 || j >= list.length) return;
+  [list[i], list[j]] = [list[j], list[i]];
+  persistProduction(true);
+}
+
+function prodInput(listKey, row, f) {
+  const val = row[f.key] === undefined || row[f.key] === null ? '' : row[f.key];
+  return `<input type="${f.type}" ${f.type === 'number' ? 'min="0" step="any"' : ''} value="${escapeHtml(val)}" aria-label="${escapeHtml(f.label)}" placeholder="${escapeHtml(f.label)}" onchange="updateProductionRow('${listKey}', '${row.id}', '${f.key}', this.value)" class="helios-input ${f.w} w-full px-2 py-1 text-xs ${f.type === 'time' || f.type === 'number' || f.type === 'date' ? 'font-mono' : ''}" />`;
+}
+
+/* ---------- Master render ---------- */
+function renderProductionToolkit(proj) {
+  const body = document.getElementById('productionToolkitBody');
+  if (!body || !proj) return;
+  ensureProduction(proj);
+  document.querySelectorAll('#productionToolkitCard [data-ptab]').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-ptab') === productionActiveTab);
+  });
+  if (productionActiveTab === 'crew') body.innerHTML = renderCrewTab(proj);
+  else if (productionActiveTab === 'pay') body.innerHTML = renderPaymentsTab(proj);
+  else if (productionActiveTab === 'gear') body.innerHTML = renderGearTab(proj);
+  else if (productionActiveTab === 'sign') { body.innerHTML = renderSignTab(proj); initSignaturePad(); }
+  else body.innerHTML = renderRosTab(proj);
+  refreshProductionSummaries(proj);
+}
+
+function refreshProductionSummaries(proj) {
+  const pr = ensureProduction(proj);
+  if (!pr) return;
+  const cur = proj.currency || getActiveCurrencyCode();
+  const crewEl = document.getElementById('prodCrewSummary');
+  if (crewEl) {
+    const total = pr.crew.reduce((s, c) => s + (Number(c.rate) || 0), 0);
+    const confirmed = pr.crew.filter(c => c.confirmed).length;
+    crewEl.innerHTML = `<span class="font-semibold">${pr.crew.length}</span> crew • <span class="text-emerald-600 dark:text-emerald-400 font-semibold">${confirmed} confirmed</span> • Labour cost <span class="font-mono font-semibold">${escapeHtml(formatCurrency(total, cur))}</span>`;
+  }
+  const payEl = document.getElementById('prodPaySummary');
+  if (payEl) payEl.innerHTML = renderPaymentSummaryHTML(proj);
+  const rosEl = document.getElementById('prodRosSummary');
+  if (rosEl) {
+    const mins = pr.ros.reduce((s, r) => s + (Number(r.duration) || 0), 0);
+    const first = pr.ros.find(r => r.time);
+    rosEl.textContent = `${pr.ros.length} cue${pr.ros.length === 1 ? '' : 's'} • ${Math.floor(mins / 60)}h ${mins % 60}m running time${first ? ' • starts ' + first.time : ''}`;
+  }
+  const gearEl = document.getElementById('prodGearSummary');
+  if (gearEl) {
+    const n = pr.gear.length;
+    const inC = pr.gear.filter(g => g.loadIn).length;
+    const outC = pr.gear.filter(g => g.loadOut).length;
+    gearEl.innerHTML = `${n} items • Load-in <span class="font-mono font-semibold">${inC}/${n}</span> • Load-out <span class="font-mono font-semibold ${n && outC < n ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}">${outC}/${n}</span>`;
+  }
+}
+
+/* =================== RUN OF SHOW =================== */
+function renderRosTab(proj) {
+  const pr = proj.production;
+  const rows = pr.ros.map((r, idx) => `
+    <tr class="align-top">
+      <td class="py-1 pr-1 text-slate-400 font-mono">${idx + 1}</td>
+      ${ROS_FIELDS.map(f => `<td class="py-1 px-1">${prodInput('ros', r, f)}</td>`).join('')}
+      <td class="py-1 pl-1 whitespace-nowrap">
+        <button type="button" onclick="moveProductionRow('ros','${r.id}',-1)" class="btn-mac-secondary px-1.5 py-1 text-[10px]" aria-label="Move up">↑</button>
+        <button type="button" onclick="moveProductionRow('ros','${r.id}',1)" class="btn-mac-secondary px-1.5 py-1 text-[10px]" aria-label="Move down">↓</button>
+        <button type="button" onclick="removeProductionRow('ros','${r.id}')" class="btn-mac-secondary px-1.5 py-1 text-[10px] text-rose-500" aria-label="Remove cue">&times;</button>
+      </td>
+    </tr>`).join('');
+  return `
+    <div class="space-y-3">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div id="prodRosSummary" class="text-[11px] text-slate-500 dark:text-slate-400"></div>
+        <div class="flex flex-wrap gap-1.5">
+          <button type="button" onclick="addRosCue()" class="btn-mac-primary px-3 py-1.5 text-xs">+ Add Cue</button>
+          <button type="button" onclick="loadRosTemplate()" class="btn-mac-secondary px-3 py-1.5 text-xs">Starter Template</button>
+          <button type="button" onclick="autoChainRosTimes()" class="btn-mac-secondary px-3 py-1.5 text-xs" title="Recalculate each cue time from the first cue + durations">Auto-chain Times</button>
+          <button type="button" onclick="sortRosByTime()" class="btn-mac-secondary px-3 py-1.5 text-xs">Sort by Time</button>
+          <button type="button" onclick="exportRosPdf()" class="btn-mac-secondary px-3 py-1.5 text-xs">Cue Sheet PDF</button>
+          <button type="button" onclick="exportRosCsv()" class="btn-mac-secondary px-3 py-1.5 text-xs">CSV</button>
+          <button type="button" onclick="shareRosWhatsapp()" class="btn-mac-secondary px-3 py-1.5 text-xs text-emerald-600 dark:text-emerald-400">WhatsApp</button>
+        </div>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead><tr class="text-[10px] uppercase tracking-wider text-slate-400 border-b border-slate-200/70 dark:border-white/10">
+            <th class="py-1.5 pr-1">#</th>${ROS_FIELDS.map(f => `<th class="py-1.5 px-1">${f.label}</th>`).join('')}<th></th>
+          </tr></thead>
+          <tbody>${rows || `<tr><td colspan="${ROS_FIELDS.length + 2}" class="py-5 text-center text-slate-400">No cues yet. Add a cue or load the starter template.</td></tr>`}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+function rosTimeToMin(t) {
+  const m = /^(\d{1,2}):(\d{2})/.exec(t || '');
+  return m ? (parseInt(m[1], 10) * 60 + parseInt(m[2], 10)) : null;
+}
+function rosMinToTime(min) {
+  const v = ((min % 1440) + 1440) % 1440;
+  return `${String(Math.floor(v / 60)).padStart(2, '0')}:${String(v % 60).padStart(2, '0')}`;
+}
+
+function addRosCue() {
+  const proj = getToolkitProject();
+  const pr = ensureProduction(proj);
+  if (!pr) return;
+  const last = pr.ros[pr.ros.length - 1];
+  let time = '';
+  if (last && rosTimeToMin(last.time) !== null) time = rosMinToTime(rosTimeToMin(last.time) + (Number(last.duration) || 0));
+  pr.ros.push({ id: prodUid('cue'), time, duration: 5, cue: `Q${pr.ros.length + 1}`, segment: '', audio: '', lighting: '', visuals: '', talent: '', notes: '' });
+  persistProduction(true);
+}
+
+function loadRosTemplate() {
+  const proj = getToolkitProject();
+  const pr = ensureProduction(proj);
+  if (!pr) return;
+  if (pr.ros.length && !confirm('Append the starter template to the existing cues?')) return;
+  const tpl = [
+    ['18:00', 30, 'Doors open • Registration & welcome drinks', 'Walk-in playlist', 'Ambient wash', 'Holding slide / sponsor loop', 'Hostesses', 'Check VIP seating'],
+    ['18:30', 2, 'Voice of God — welcome & housekeeping', 'VOG mic live', 'House to half', 'VOG slide', 'VOG', 'Phones on silent'],
+    ['18:32', 3, 'Opening video', 'Video playback audio', 'House out', 'Opener video', '—', 'Standby for MC'],
+    ['18:35', 10, 'MC welcome', 'HH mic 1', 'Stage special', 'MC lower third', 'MC', ''],
+    ['18:45', 20, 'Keynote address', 'Lectern mic + Lav 1', 'Lectern special', 'Presenter deck', 'Keynote speaker', 'Clicker check'],
+    ['19:05', 30, 'Panel discussion', 'Lav 2–5', 'Panel wash', 'Panel names', 'Moderator + panelists', 'Q&A mics standby'],
+    ['19:35', 25, 'Awards segment', 'Award walk-up stings', 'Chase spots', 'Winner slides', 'MC + presenters', 'Trophies stage left'],
+    ['20:00', 5, 'Closing remarks & photo', 'HH mic 1', 'Full stage', 'Thank you slide', 'Host', 'Group photo cue'],
+    ['20:05', 60, 'Dinner & networking', 'Background playlist', 'Dinner state', 'Sponsor loop', '—', '']
+  ];
+  tpl.forEach((t, i) => pr.ros.push({ id: prodUid('cue'), time: t[0], duration: t[1], cue: `Q${pr.ros.length + 1}`, segment: t[2], audio: t[3], lighting: t[4], visuals: t[5], talent: t[6], notes: t[7] }));
+  persistProduction(true);
+  showToast('Starter run of show loaded.');
+}
+
+function autoChainRosTimes() {
+  const proj = getToolkitProject();
+  const pr = ensureProduction(proj);
+  if (!pr || !pr.ros.length) return;
+  let cursor = rosTimeToMin(pr.ros[0].time);
+  if (cursor === null) { showToast('Set a time on the first cue first.'); return; }
+  pr.ros.forEach(r => { r.time = rosMinToTime(cursor); cursor += Number(r.duration) || 0; });
+  persistProduction(true);
+  showToast('Cue times recalculated.');
+}
+
+function sortRosByTime() {
+  const proj = getToolkitProject();
+  const pr = ensureProduction(proj);
+  if (!pr) return;
+  pr.ros.sort((a, b) => (rosTimeToMin(a.time) ?? 99999) - (rosTimeToMin(b.time) ?? 99999));
+  persistProduction(true);
+}
+
+function getRosRows(proj) {
+  return proj.production.ros.map(r => [r.time, r.duration ? `${r.duration}m` : '', r.cue, r.segment, r.audio, r.lighting, r.visuals, r.talent, r.notes]);
+}
+
+function exportRosPdf() {
+  const proj = getToolkitProject();
+  if (!proj) return;
+  ensureProduction(proj);
+  const ci = proj.production.callInfo || {};
+  buildProductionTablePdf({
+    title: `RUN OF SHOW — ${proj.name}`,
+    subtitle: `${formatProjectDateRange(proj)}${ci.venue ? ' • ' + ci.venue : ''}`,
+    columns: [
+      { label: 'Time', weight: 0.7 }, { label: 'Dur', weight: 0.5 }, { label: 'Cue', weight: 0.5 }, { label: 'Segment', weight: 2.2 },
+      { label: 'Audio', weight: 1.4 }, { label: 'Lighting', weight: 1.2 }, { label: 'LED / Visuals', weight: 1.4 }, { label: 'Talent', weight: 1.3 }, { label: 'Notes', weight: 1.8 }
+    ],
+    rows: getRosRows(proj),
+    filename: `${prodSafeSlug(proj.name)}-Run-of-Show.pdf`,
+    projectId: proj.id
+  });
+}
+
+function exportRosCsv() {
+  const proj = getToolkitProject();
+  if (!proj) return;
+  ensureProduction(proj);
+  prodDownloadCsv(`${prodSafeSlug(proj.name)}-Run-of-Show.csv`, ['Time', 'Duration (min)', 'Cue', 'Segment', 'Audio', 'Lighting', 'LED / Visuals', 'Talent', 'Notes'],
+    proj.production.ros.map(r => [r.time, r.duration, r.cue, r.segment, r.audio, r.lighting, r.visuals, r.talent, r.notes]));
+}
+
+function shareRosWhatsapp() {
+  const proj = getToolkitProject();
+  if (!proj) return;
+  ensureProduction(proj);
+  const lines = [`*RUN OF SHOW — ${proj.name}*`, formatProjectDateRange(proj), ''];
+  proj.production.ros.forEach(r => {
+    lines.push(`*${r.time || '--:--'}* ${r.cue ? '[' + r.cue + '] ' : ''}${r.segment || ''}${r.talent ? ' — ' + r.talent : ''}${r.duration ? ` (${r.duration}m)` : ''}`);
+  });
+  const phone = prompt('Send run of show to WhatsApp number (leave blank to choose a chat):', '');
+  if (phone === null) return;
+  openWhatsappText(phone, lines.join('\n'));
+}
+
+/* =================== CREW CALL SHEET =================== */
+function renderCrewTab(proj) {
+  const pr = proj.production;
+  const ci = pr.callInfo;
+  const supplierOpts = (studioState.suppliers || []).map(s => `<option value="${escapeHtml(s.id)}">${escapeHtml(s.name)}${s.category ? ' — ' + escapeHtml(s.category) : ''}</option>`).join('');
+  const infoField = (key, label, ph) => `
+    <div>
+      <label class="block text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">${label}</label>
+      <input type="text" value="${escapeHtml(ci[key] || '')}" placeholder="${escapeHtml(ph)}" onchange="updateCallInfo('${key}', this.value)" class="helios-input w-full px-2.5 py-1.5 text-xs" />
+    </div>`;
+  const rows = pr.crew.map(c => `
+    <tr class="align-top">
+      ${CREW_FIELDS.map(f => `<td class="py-1 px-1">${prodInput('crew', c, f)}</td>`).join('')}
+      <td class="py-1 px-1 text-center"><input type="checkbox" ${c.confirmed ? 'checked' : ''} aria-label="Confirmed" onchange="updateProductionRow('crew','${c.id}','confirmed', this.checked)" class="mt-1.5 accent-emerald-500" /></td>
+      <td class="py-1 pl-1 whitespace-nowrap">
+        <button type="button" onclick="sendCrewCallWhatsapp('${c.id}')" class="btn-mac-secondary px-2 py-1 text-[10px] text-emerald-600 dark:text-emerald-400">WhatsApp</button>
+        <button type="button" onclick="removeProductionRow('crew','${c.id}')" class="btn-mac-secondary px-1.5 py-1 text-[10px] text-rose-500" aria-label="Remove crew">&times;</button>
+      </td>
+    </tr>`).join('');
+  return `
+    <div class="space-y-3">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+        ${infoField('venue', 'Venue', 'e.g., DWTC Hall 4, Loading Bay 2')}
+        ${infoField('mapLink', 'Map / Location Pin', 'Google Maps link')}
+        ${infoField('dressCode', 'Dress Code', 'e.g., All black, closed shoes')}
+        ${infoField('meals', 'Meals / Breaks', 'e.g., Lunch 13:00, Dinner 19:30')}
+        ${infoField('parking', 'Parking / Access', 'e.g., Gate 3, passes at security')}
+        ${infoField('onsiteContact', 'On-site Contact', 'Name + mobile')}
+      </div>
+      <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+        <div id="prodCrewSummary" class="text-[11px] text-slate-500 dark:text-slate-400"></div>
+        <div class="flex flex-wrap items-center gap-1.5">
+          <button type="button" onclick="addCrewMember()" class="btn-mac-primary px-3 py-1.5 text-xs">+ Add Crew</button>
+          ${supplierOpts ? `<select aria-label="Add from suppliers" onchange="addCrewFromSupplier(this.value); this.value='';" class="helios-input px-2 py-1.5 text-xs"><option value="">+ From Suppliers…</option>${supplierOpts}</select>` : ''}
+          <button type="button" onclick="copyGroupCallSheet()" class="btn-mac-secondary px-3 py-1.5 text-xs">Copy Group Call Sheet</button>
+          <button type="button" onclick="exportCallSheetPdf()" class="btn-mac-secondary px-3 py-1.5 text-xs">Call Sheet PDF</button>
+          <button type="button" onclick="applyCrewCostToProject()" class="btn-mac-secondary px-3 py-1.5 text-xs" title="Add crew labour total into this project's supplier costs">Apply to Costs</button>
+        </div>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead><tr class="text-[10px] uppercase tracking-wider text-slate-400 border-b border-slate-200/70 dark:border-white/10">
+            ${CREW_FIELDS.map(f => `<th class="py-1.5 px-1">${f.label}</th>`).join('')}<th class="py-1.5 px-1 text-center">OK</th><th></th>
+          </tr></thead>
+          <tbody>${rows || `<tr><td colspan="${CREW_FIELDS.length + 2}" class="py-5 text-center text-slate-400">No crew assigned yet.</td></tr>`}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+function updateCallInfo(key, value) {
+  const proj = getToolkitProject();
+  const pr = ensureProduction(proj);
+  if (!pr) return;
+  pr.callInfo[key] = (value || '').trim();
+  persistProduction(false);
+}
+
+function addCrewMember(seed = {}) {
+  const proj = getToolkitProject();
+  const pr = ensureProduction(proj);
+  if (!pr) return;
+  const start = getProjectWorkingSummary(proj).start || proj.dateCreated || '';
+  pr.crew.push(Object.assign({ id: prodUid('crew'), name: '', role: '', phone: '', date: start, callTime: '08:00', wrapTime: '', rate: 0, confirmed: false }, seed));
+  persistProduction(true);
+}
+
+function addCrewFromSupplier(supplierId) {
+  if (!supplierId) return;
+  const s = (studioState.suppliers || []).find(x => x.id === supplierId);
+  if (!s) return;
+  addCrewMember({ name: s.contactPerson ? `${s.contactPerson} (${s.name})` : s.name, role: s.category || '', phone: s.phone || '' });
+}
+
+function buildCallSheetText(proj, crewMember) {
+  const ci = proj.production.callInfo || {};
+  const lines = [];
+  lines.push(`*CALL SHEET — ${proj.name}*`);
+  if (crewMember) {
+    lines.push(`Hi ${crewMember.name || 'there'}, here are your call details${crewMember.role ? ' as *' + crewMember.role + '*' : ''}:`);
+    lines.push('');
+    lines.push(`📅 Date: ${crewMember.date || formatProjectDateRange(proj)}`);
+    lines.push(`⏰ Call time: *${crewMember.callTime || 'TBC'}*${crewMember.wrapTime ? ' • Est. wrap ' + crewMember.wrapTime : ''}`);
+  } else {
+    lines.push(`📅 ${formatProjectDateRange(proj)}`);
+  }
+  if (ci.venue) lines.push(`📍 Venue: ${ci.venue}`);
+  if (ci.mapLink) lines.push(`🗺️ Pin: ${ci.mapLink}`);
+  if (ci.parking) lines.push(`🚗 Access: ${ci.parking}`);
+  if (ci.dressCode) lines.push(`👕 Dress code: ${ci.dressCode}`);
+  if (ci.meals) lines.push(`🍽️ Meals: ${ci.meals}`);
+  if (ci.onsiteContact) lines.push(`📞 On-site contact: ${ci.onsiteContact}`);
+  if (!crewMember) {
+    lines.push('');
+    lines.push('*CREW*');
+    proj.production.crew.forEach(c => {
+      lines.push(`• ${c.callTime || '--:--'} — ${c.name || 'TBC'}${c.role ? ' (' + c.role + ')' : ''}${c.date ? ' • ' + c.date : ''}`);
+    });
+  }
+  lines.push('');
+  lines.push('Please reply to confirm. Thank you!');
+  return lines.join('\n');
+}
+
+function sendCrewCallWhatsapp(crewId) {
+  const proj = getToolkitProject();
+  const pr = ensureProduction(proj);
+  const c = pr && pr.crew.find(x => x.id === crewId);
+  if (!c) return;
+  if (!c.phone) showToast('No phone saved — choose the chat in WhatsApp.');
+  openWhatsappText(c.phone, buildCallSheetText(proj, c));
+}
+
+function copyGroupCallSheet() {
+  const proj = getToolkitProject();
+  if (!proj) return;
+  ensureProduction(proj);
+  copyTextToClipboard(buildCallSheetText(proj, null), 'Group call sheet copied — paste into your crew WhatsApp group.');
+}
+
+function exportCallSheetPdf() {
+  const proj = getToolkitProject();
+  if (!proj) return;
+  const pr = ensureProduction(proj);
+  const ci = pr.callInfo;
+  buildProductionTablePdf({
+    title: `CREW CALL SHEET — ${proj.name}`,
+    subtitle: formatProjectDateRange(proj),
+    infoLines: [
+      ci.venue ? `Venue: ${ci.venue}` : '', ci.mapLink ? `Location: ${ci.mapLink}` : '', ci.parking ? `Access / Parking: ${ci.parking}` : '',
+      ci.dressCode ? `Dress code: ${ci.dressCode}` : '', ci.meals ? `Meals: ${ci.meals}` : '', ci.onsiteContact ? `On-site contact: ${ci.onsiteContact}` : ''
+    ],
+    columns: [{ label: 'Name', weight: 1.6 }, { label: 'Role', weight: 1.3 }, { label: 'Phone', weight: 1.2 }, { label: 'Date', weight: 0.9 }, { label: 'Call', weight: 0.6 }, { label: 'Wrap', weight: 0.6 }, { label: 'Confirmed', weight: 0.7 }],
+    rows: pr.crew.map(c => [c.name, c.role, c.phone, c.date, c.callTime, c.wrapTime, c.confirmed ? 'Yes' : 'Pending']),
+    filename: `${prodSafeSlug(proj.name)}-Call-Sheet.pdf`,
+    projectId: proj.id
+  });
+}
+
+function applyCrewCostToProject() {
+  const proj = getToolkitProject();
+  const pr = ensureProduction(proj);
+  if (!pr) return;
+  const total = pr.crew.reduce((s, c) => s + (Number(c.rate) || 0), 0);
+  const prev = Number(pr.crewCostApplied) || 0;
+  const base = Math.max(0, (Number(proj.supplierCosts) || 0) - prev);
+  const next = base + total;
+  const cur = proj.currency || getActiveCurrencyCode();
+  if (!confirm(`Update supplier costs to ${formatCurrency(next, cur)} (includes crew labour ${formatCurrency(total, cur)})?`)) return;
+  proj.supplierCosts = Math.round(next * 100) / 100;
+  pr.crewCostApplied = total;
+  const costInput = document.getElementById('projSupplierCostInput');
+  if (costInput) costInput.value = proj.supplierCosts;
+  saveStudioState();
+  renderProjectInfoOverview(proj);
+  showToast('Crew labour applied to project costs.');
+}
+
+/* =================== MILESTONE PAYMENTS =================== */
+function getPaymentStats(proj) {
+  const pr = ensureProduction(proj);
+  const total = getProjectRevenue(proj);
+  const today = new Date().toISOString().split('T')[0];
+  let received = 0;
+  let overdue = 0;
+  let nextDue = null;
+  (pr ? pr.payments : []).forEach(p => {
+    const amt = Number(p.amount) || 0;
+    if (p.status === 'paid') received += amt;
+    else {
+      if (p.dueDate && p.dueDate < today) overdue++;
+      if (p.dueDate && (!nextDue || p.dueDate < nextDue.dueDate)) nextDue = p;
+    }
+  });
+  const scheduled = (pr ? pr.payments : []).reduce((s, p) => s + (Number(p.amount) || 0), 0);
+  return { total, received, balance: Math.max(0, total - received), overdue, nextDue, scheduled, count: pr ? pr.payments.length : 0 };
+}
+
+function getPaymentBadgeHTML(proj) {
+  if (!proj || !proj.production || !Array.isArray(proj.production.payments) || !proj.production.payments.length) return '';
+  if ((proj.status || '') === 'Cancelled') return '';
+  const s = getPaymentStats(proj);
+  let cls = 'bg-amber-500/15 text-amber-700 dark:text-amber-300';
+  let label = s.received > 0 ? 'Deposit Paid' : 'Unpaid';
+  if (s.total > 0 && s.received >= s.total - 0.005) { cls = 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'; label = 'Fully Paid'; }
+  else if (s.overdue > 0) { cls = 'bg-rose-500/15 text-rose-600 dark:text-rose-300'; label = `${s.overdue} Overdue`; }
+  return `<span class="ml-1.5 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${cls}">${label}</span>`;
+}
+
+function renderPaymentSummaryHTML(proj) {
+  const s = getPaymentStats(proj);
+  const cur = proj.currency || getActiveCurrencyCode();
+  const pct = s.total > 0 ? Math.min(100, Math.round((s.received / s.total) * 100)) : 0;
+  const mismatch = s.count && Math.abs(s.scheduled - s.total) > 0.01
+    ? `<div class="text-[11px] text-amber-600 dark:text-amber-400">Scheduled milestones (${escapeHtml(formatCurrency(s.scheduled, cur))}) don't match project total.</div>` : '';
+  return `
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+      <div class="p-2.5 rounded-lg bg-white/50 dark:bg-white/5 border border-slate-200/60 dark:border-white/10"><div class="text-[10px] uppercase tracking-wider text-slate-400">Project Total</div><div class="font-mono font-semibold">${escapeHtml(formatCurrency(s.total, cur))}</div></div>
+      <div class="p-2.5 rounded-lg bg-white/50 dark:bg-white/5 border border-slate-200/60 dark:border-white/10"><div class="text-[10px] uppercase tracking-wider text-slate-400">Received</div><div class="font-mono font-semibold text-emerald-600 dark:text-emerald-400">${escapeHtml(formatCurrency(s.received, cur))}</div></div>
+      <div class="p-2.5 rounded-lg bg-white/50 dark:bg-white/5 border border-slate-200/60 dark:border-white/10"><div class="text-[10px] uppercase tracking-wider text-slate-400">Balance Due</div><div class="font-mono font-semibold ${s.balance > 0 ? 'text-amber-600 dark:text-amber-400' : ''}">${escapeHtml(formatCurrency(s.balance, cur))}</div></div>
+      <div class="p-2.5 rounded-lg bg-white/50 dark:bg-white/5 border border-slate-200/60 dark:border-white/10"><div class="text-[10px] uppercase tracking-wider text-slate-400">Overdue</div><div class="font-mono font-semibold ${s.overdue ? 'text-rose-500' : ''}">${s.overdue}</div></div>
+    </div>
+    <div class="mt-2 h-2 rounded-full bg-slate-500/10 overflow-hidden"><div class="h-full bg-emerald-500 transition-all" style="width:${pct}%"></div></div>
+    <div class="mt-1 flex justify-between text-[10px] text-slate-400"><span>${pct}% collected</span><span>${s.nextDue ? 'Next due ' + escapeHtml(s.nextDue.dueDate) : ''}</span></div>
+    ${mismatch}`;
+}
+
+function renderPaymentsTab(proj) {
+  const pr = proj.production;
+  const today = new Date().toISOString().split('T')[0];
+  const rows = pr.payments.map(p => {
+    const isOverdue = p.status !== 'paid' && p.dueDate && p.dueDate < today;
+    return `
+    <tr class="align-top ${isOverdue ? 'bg-rose-500/5' : ''}">
+      <td class="py-1 px-1">${prodInput('payments', p, { key: 'label', label: 'Milestone', type: 'text', w: 'min-w-[140px]' })}</td>
+      <td class="py-1 px-1">${prodInput('payments', p, { key: 'amount', label: 'Amount', type: 'number', w: 'w-28' })}</td>
+      <td class="py-1 px-1">${prodInput('payments', p, { key: 'dueDate', label: 'Due', type: 'date', w: 'w-36' })}</td>
+      <td class="py-1 px-1">
+        <select aria-label="Status" onchange="updateProductionRow('payments','${p.id}','status', this.value)" class="helios-input w-28 px-2 py-1 text-xs ${p.status === 'paid' ? 'text-emerald-600 dark:text-emerald-400' : (isOverdue ? 'text-rose-500' : '')}">
+          <option value="pending" ${p.status !== 'paid' ? 'selected' : ''}>${isOverdue ? 'Overdue' : 'Pending'}</option>
+          <option value="paid" ${p.status === 'paid' ? 'selected' : ''}>Paid</option>
+        </select>
+      </td>
+      <td class="py-1 px-1">${prodInput('payments', p, { key: 'paidDate', label: 'Paid on', type: 'date', w: 'w-36' })}</td>
+      <td class="py-1 px-1">${prodInput('payments', p, { key: 'method', label: 'Method', type: 'text', w: 'min-w-[100px]' })}</td>
+      <td class="py-1 pl-1 whitespace-nowrap">
+        ${p.status !== 'paid' ? `<button type="button" onclick="sendPaymentReminderWhatsapp('${p.id}')" class="btn-mac-secondary px-2 py-1 text-[10px] text-emerald-600 dark:text-emerald-400">Remind</button>` : ''}
+        <button type="button" onclick="removeProductionRow('payments','${p.id}')" class="btn-mac-secondary px-1.5 py-1 text-[10px] text-rose-500" aria-label="Remove milestone">&times;</button>
+      </td>
+    </tr>`;
+  }).join('');
+  return `
+    <div class="space-y-3">
+      <div id="prodPaySummary"></div>
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="flex flex-wrap items-center gap-1.5">
+          <span class="text-[11px] text-slate-500 dark:text-slate-400">Split presets:</span>
+          <button type="button" onclick="applyPaymentPreset([50,50])" class="btn-mac-secondary px-2.5 py-1 text-xs">50 / 50</button>
+          <button type="button" onclick="applyPaymentPreset([30,70])" class="btn-mac-secondary px-2.5 py-1 text-xs">30 / 70</button>
+          <button type="button" onclick="applyPaymentPreset([40,40,20])" class="btn-mac-secondary px-2.5 py-1 text-xs">40 / 40 / 20</button>
+          <button type="button" onclick="applyPaymentPreset([100])" class="btn-mac-secondary px-2.5 py-1 text-xs">100% on completion</button>
+        </div>
+        <button type="button" onclick="addPaymentMilestone()" class="btn-mac-primary px-3 py-1.5 text-xs">+ Add Milestone</button>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead><tr class="text-[10px] uppercase tracking-wider text-slate-400 border-b border-slate-200/70 dark:border-white/10">
+            <th class="py-1.5 px-1">Milestone</th><th class="py-1.5 px-1">Amount</th><th class="py-1.5 px-1">Due Date</th><th class="py-1.5 px-1">Status</th><th class="py-1.5 px-1">Paid On</th><th class="py-1.5 px-1">Method</th><th></th>
+          </tr></thead>
+          <tbody>${rows || `<tr><td colspan="7" class="py-5 text-center text-slate-400">No payment milestones yet. Pick a split preset to start.</td></tr>`}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+function addDaysIso(iso, days) {
+  const d = iso ? new Date(iso + 'T00:00:00') : new Date();
+  d.setDate(d.getDate() + days);
+  return d.toISOString().split('T')[0];
+}
+
+function applyPaymentPreset(splits) {
+  const proj = getToolkitProject();
+  const pr = ensureProduction(proj);
+  if (!pr) return;
+  if (pr.payments.length && !confirm('Replace existing payment milestones with this split?')) return;
+  const total = getProjectRevenue(proj);
+  const ws = getProjectWorkingSummary(proj);
+  const today = new Date().toISOString().split('T')[0];
+  const labels = splits.length === 1 ? ['Full payment on completion']
+    : splits.length === 2 ? ['Booking deposit', 'Final balance (post-event)']
+      : ['Booking deposit', 'Pre-event payment', 'Final balance (post-event)'];
+  const dues = splits.length === 1 ? [addDaysIso(ws.end, 14)]
+    : splits.length === 2 ? [today, addDaysIso(ws.end, 14)]
+      : [today, addDaysIso(ws.start, -7), addDaysIso(ws.end, 14)];
+  let allocated = 0;
+  pr.payments = splits.map((pct, i) => {
+    const amt = i === splits.length - 1 ? Math.round((total - allocated) * 100) / 100 : Math.round(total * pct) / 100;
+    allocated += amt;
+    return { id: prodUid('pay'), label: `${labels[i]} (${pct}%)`, amount: amt, dueDate: dues[i], status: 'pending', paidDate: '', method: '' };
+  });
+  persistProduction(true);
+  showToast('Payment schedule created.');
+}
+
+function addPaymentMilestone() {
+  const proj = getToolkitProject();
+  const pr = ensureProduction(proj);
+  if (!pr) return;
+  const s = getPaymentStats(proj);
+  pr.payments.push({ id: prodUid('pay'), label: 'Milestone', amount: Math.max(0, Math.round((s.total - s.scheduled) * 100) / 100), dueDate: addDaysIso('', 14), status: 'pending', paidDate: '', method: '' });
+  persistProduction(true);
+}
+
+function sendPaymentReminderWhatsapp(payId) {
+  const proj = getToolkitProject();
+  const pr = ensureProduction(proj);
+  const p = pr && pr.payments.find(x => x.id === payId);
+  if (!p) return;
+  const cur = proj.currency || getActiveCurrencyCode();
+  const org = getSelectedOrgProfile();
+  const client = (studioState.clients || []).find(c => c.id === proj.clientId);
+  const today = new Date().toISOString().split('T')[0];
+  const overdue = p.dueDate && p.dueDate < today;
+  const lines = [
+    `Hi ${client && client.contactPerson ? client.contactPerson : 'there'},`,
+    '',
+    overdue
+      ? `A gentle reminder that the *${p.label}* for *${proj.name}* was due on ${p.dueDate}.`
+      : `Friendly reminder that the *${p.label}* for *${proj.name}* is due${p.dueDate ? ' on ' + p.dueDate : ''}.`,
+    `Amount: *${formatCurrency(p.amount, cur)}*${proj.invoiceNumber ? ` • Ref: ${proj.invoiceNumber}` : ''}`,
+    ''
+  ];
+  if (org && (org.iban || org.accountNumber)) {
+    lines.push('*Bank details*');
+    if (org.bankName) lines.push(`Bank: ${org.bankName}`);
+    if (org.accountHolder || org.name) lines.push(`Account: ${org.accountHolder || org.name}`);
+    if (org.iban) lines.push(`IBAN: ${org.iban}`);
+    if (org.swift) lines.push(`SWIFT: ${org.swift}`);
+    lines.push('');
+  }
+  lines.push('Kindly share the remittance once processed. Thank you!');
+  openWhatsappText(getProjectClientPhone(proj), lines.join('\n'));
+}
+
+/* =================== GEAR CHECKLIST =================== */
+function renderGearTab(proj) {
+  const pr = proj.production;
+  const rows = pr.gear.map(g => `
+    <tr class="align-top ${g.loadIn && g.loadOut ? 'opacity-60' : ''}">
+      <td class="py-1 px-1">${prodInput('gear', g, { key: 'category', label: 'Category', type: 'text', w: 'w-28' })}</td>
+      <td class="py-1 px-1">${prodInput('gear', g, { key: 'item', label: 'Item', type: 'text', w: 'min-w-[180px]' })}</td>
+      <td class="py-1 px-1">${prodInput('gear', g, { key: 'qty', label: 'Qty', type: 'number', w: 'w-16' })}</td>
+      <td class="py-1 px-1 text-center"><input type="checkbox" ${g.loadIn ? 'checked' : ''} aria-label="Loaded in" onchange="updateProductionRow('gear','${g.id}','loadIn', this.checked)" class="mt-1.5 accent-sky-500" /></td>
+      <td class="py-1 px-1 text-center"><input type="checkbox" ${g.loadOut ? 'checked' : ''} aria-label="Loaded out" onchange="updateProductionRow('gear','${g.id}','loadOut', this.checked)" class="mt-1.5 accent-emerald-500" /></td>
+      <td class="py-1 pl-1"><button type="button" onclick="removeProductionRow('gear','${g.id}')" class="btn-mac-secondary px-1.5 py-1 text-[10px] text-rose-500" aria-label="Remove item">&times;</button></td>
+    </tr>`).join('');
+  return `
+    <div class="space-y-3">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div id="prodGearSummary" class="text-[11px] text-slate-500 dark:text-slate-400"></div>
+        <div class="flex flex-wrap items-center gap-1.5">
+          <button type="button" onclick="addGearItem()" class="btn-mac-primary px-3 py-1.5 text-xs">+ Add Item</button>
+          <select aria-label="Load starter kit" onchange="loadGearKit(this.value); this.value='';" class="helios-input px-2 py-1.5 text-xs">
+            <option value="">Starter Kit…</option>
+            <option value="conference">Conference / Corporate AV</option>
+            <option value="concert">Concert / Stage Show</option>
+            <option value="exhibition">Exhibition Booth</option>
+          </select>
+          <button type="button" onclick="resetGearChecks()" class="btn-mac-secondary px-3 py-1.5 text-xs">Reset Checks</button>
+          <button type="button" onclick="exportGearPdf()" class="btn-mac-secondary px-3 py-1.5 text-xs">Checklist PDF</button>
+          <button type="button" onclick="copyMissingGear()" class="btn-mac-secondary px-3 py-1.5 text-xs text-amber-600 dark:text-amber-400">Copy Missing Items</button>
+        </div>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead><tr class="text-[10px] uppercase tracking-wider text-slate-400 border-b border-slate-200/70 dark:border-white/10">
+            <th class="py-1.5 px-1">Category</th><th class="py-1.5 px-1">Item</th><th class="py-1.5 px-1">Qty</th><th class="py-1.5 px-1 text-center">Load-in</th><th class="py-1.5 px-1 text-center">Load-out</th><th></th>
+          </tr></thead>
+          <tbody>${rows || `<tr><td colspan="6" class="py-5 text-center text-slate-400">No gear listed. Add items or load a starter kit.</td></tr>`}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+function addGearItem() {
+  const proj = getToolkitProject();
+  const pr = ensureProduction(proj);
+  if (!pr) return;
+  pr.gear.push({ id: prodUid('gear'), category: 'General', item: '', qty: 1, loadIn: false, loadOut: false });
+  persistProduction(true);
+}
+
+function loadGearKit(kit) {
+  const items = GEAR_STARTER_KITS[kit];
+  if (!items) return;
+  const proj = getToolkitProject();
+  const pr = ensureProduction(proj);
+  if (!pr) return;
+  items.forEach(([category, item, qty]) => pr.gear.push({ id: prodUid('gear'), category, item, qty, loadIn: false, loadOut: false }));
+  persistProduction(true);
+  showToast('Starter kit added.');
+}
+
+function resetGearChecks() {
+  const proj = getToolkitProject();
+  const pr = ensureProduction(proj);
+  if (!pr) return;
+  pr.gear.forEach(g => { g.loadIn = false; g.loadOut = false; });
+  persistProduction(true);
+}
+
+function exportGearPdf() {
+  const proj = getToolkitProject();
+  if (!proj) return;
+  const pr = ensureProduction(proj);
+  buildProductionTablePdf({
+    title: `GEAR CHECKLIST — ${proj.name}`,
+    subtitle: `${formatProjectDateRange(proj)}${pr.callInfo.venue ? ' • ' + pr.callInfo.venue : ''}`,
+    columns: [{ label: 'Category', weight: 1 }, { label: 'Item', weight: 3 }, { label: 'Qty', weight: 0.5 }, { label: 'Load-in', weight: 0.7 }, { label: 'Load-out', weight: 0.7 }],
+    rows: pr.gear.map(g => [g.category, g.item, g.qty, g.loadIn ? '[x]' : '[  ]', g.loadOut ? '[x]' : '[  ]']),
+    filename: `${prodSafeSlug(proj.name)}-Gear-Checklist.pdf`,
+    orientation: 'portrait',
+    projectId: proj.id
+  });
+}
+
+function copyMissingGear() {
+  const proj = getToolkitProject();
+  if (!proj) return;
+  const pr = ensureProduction(proj);
+  const missing = pr.gear.filter(g => !g.loadOut);
+  if (!missing.length) { showToast('All gear is loaded out. Nothing missing!'); return; }
+  const text = [`*Gear not yet loaded out — ${proj.name}*`, ...missing.map(g => `• ${g.qty || 1}× ${g.item || 'Item'} (${g.category || 'General'})`)].join('\n');
+  copyTextToClipboard(text, `${missing.length} missing item(s) copied.`);
+}
+
+/* =================== CLIENT SIGN-OFF =================== */
+function getProjectSignatureForPdf(proj) {
+  return proj && proj.production && proj.production.signature && proj.production.signature.dataUrl
+    ? proj.production.signature : null;
+}
+
+function renderSignTab(proj) {
+  const sig = proj.production.signature;
+  const client = (studioState.clients || []).find(c => c.id === proj.clientId);
+  const defaultName = sig ? sig.name : (client && client.contactPerson ? client.contactPerson : '');
+  return `
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div class="space-y-2.5">
+        <div class="text-[11px] text-slate-500 dark:text-slate-400">Have the client sign below on a phone, tablet or trackpad. The approval is stamped onto this project's Quotation &amp; Invoice PDFs.</div>
+        <div>
+          <label class="block text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Signer Name &amp; Title</label>
+          <input id="sigSignerNameInput" type="text" value="${escapeHtml(defaultName || '')}" placeholder="e.g., Sarah Khan, Marketing Director" class="helios-input w-full px-2.5 py-1.5 text-xs" />
+        </div>
+        <canvas id="signaturePadCanvas" width="600" height="200" class="w-full h-40 rounded-xl bg-white border-2 border-dashed border-slate-300 dark:border-white/20 touch-none cursor-crosshair" aria-label="Signature pad"></canvas>
+        <div class="flex flex-wrap gap-1.5">
+          <button type="button" onclick="saveSignatureFromPad()" class="btn-mac-primary px-3 py-1.5 text-xs">Save Approval Signature</button>
+          <button type="button" onclick="clearSignaturePad()" class="btn-mac-secondary px-3 py-1.5 text-xs">Clear Pad</button>
+        </div>
+      </div>
+      <div class="p-3 rounded-xl bg-white/50 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 space-y-2">
+        <div class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Current Approval</div>
+        ${sig && sig.dataUrl ? `
+          <img src="${sig.dataUrl}" alt="Client signature" class="max-h-28 bg-white rounded-lg border border-slate-200 p-1" />
+          <div class="text-xs font-semibold">${escapeHtml(sig.name || 'Client')}</div>
+          <div class="text-[11px] font-mono text-slate-500 dark:text-slate-400">Signed ${escapeHtml(new Date(sig.signedAt).toLocaleString())}${sig.docRef ? ' • ' + escapeHtml(sig.docRef) : ''}</div>
+          <div class="text-[11px] text-emerald-600 dark:text-emerald-400">✓ Will appear on Quotation &amp; Invoice PDFs</div>
+          <button type="button" onclick="removeProjectSignature()" class="btn-mac-secondary px-3 py-1.5 text-xs text-rose-500">Remove Signature</button>
+        ` : `<div class="py-6 text-center text-slate-400">No client approval captured yet.</div>`}
+      </div>
+    </div>`;
+}
+
+function initSignaturePad() {
+  const canvas = document.getElementById('signaturePadCanvas');
+  if (!canvas || typeof canvas.getContext !== 'function') return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  signaturePadState = { drawing: false, hasInk: false, lastX: 0, lastY: 0 };
+  ctx.lineWidth = 2.6;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = '#0f172a';
+  const pos = (e) => {
+    const r = canvas.getBoundingClientRect();
+    return { x: (e.clientX - r.left) * (canvas.width / (r.width || canvas.width)), y: (e.clientY - r.top) * (canvas.height / (r.height || canvas.height)) };
+  };
+  canvas.onpointerdown = (e) => {
+    e.preventDefault();
+    if (canvas.setPointerCapture && e.pointerId !== undefined) canvas.setPointerCapture(e.pointerId);
+    const p = pos(e);
+    signaturePadState.drawing = true;
+    signaturePadState.lastX = p.x;
+    signaturePadState.lastY = p.y;
+  };
+  canvas.onpointermove = (e) => {
+    if (!signaturePadState.drawing) return;
+    e.preventDefault();
+    const p = pos(e);
+    ctx.beginPath();
+    ctx.moveTo(signaturePadState.lastX, signaturePadState.lastY);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    signaturePadState.lastX = p.x;
+    signaturePadState.lastY = p.y;
+    signaturePadState.hasInk = true;
+  };
+  const end = () => { signaturePadState.drawing = false; };
+  canvas.onpointerup = end;
+  canvas.onpointerleave = end;
+  canvas.onpointercancel = end;
+}
+
+function clearSignaturePad() {
+  const canvas = document.getElementById('signaturePadCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+  signaturePadState.hasInk = false;
+}
+
+function saveSignatureFromPad() {
+  const proj = getToolkitProject();
+  const pr = ensureProduction(proj);
+  const canvas = document.getElementById('signaturePadCanvas');
+  if (!pr || !canvas) return;
+  if (!signaturePadState.hasInk) { showToast('Please sign on the pad first.'); return; }
+  const name = ((document.getElementById('sigSignerNameInput') || {}).value || '').trim();
+  if (!name) { showToast('Enter the signer name.'); return; }
+  pr.signature = {
+    dataUrl: canvas.toDataURL('image/png'),
+    name,
+    signedAt: new Date().toISOString(),
+    docRef: proj.quotationNumber || proj.invoiceNumber || ''
+  };
+  persistProduction(true);
+  showToast('Client approval saved.');
+}
+
+function removeProjectSignature() {
+  const proj = getToolkitProject();
+  const pr = ensureProduction(proj);
+  if (!pr || !confirm('Remove the saved client signature?')) return;
+  delete pr.signature;
+  persistProduction(true);
+}
